@@ -70,5 +70,5 @@ packages/shared/src/
 - Assets solo CC0 o propios, en `apps/client/public/assets`, anotados en `ASSETS.md` con origen y licencia.
 - Textos de la interfaz en español.
 - El plan completo está en `docs/PLAN.md`, el catálogo de contenido en `docs/CONTENIDO.md`
-  y los prompts por fase en `docs/PROMPTS.md`. Las físicas de referencia (y sus fuentes) están en `docs/FISICAS.md`.
+  y los prompts por fase en `docs/PROMPTS.md`. Las físicas de referencia (y sus fuentes) están en `docs/FISICAS.md` y la comparativa con los juegos de referencia en `docs/REFERENCIA.md`.
   Al terminar una fase, marca su casilla en `docs/PLAN.md`.
