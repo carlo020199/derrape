@@ -87,6 +87,49 @@ export const KART = {
 
 export type KartTuning = typeof KART;
 
+/** Reglas de la carrera. */
+export const RACE = {
+  /** Duración de la cuenta atrás 3-2-1 (s). El "2" sale en el segundo 1. */
+  countdown: 3,
+  /** Vueltas por defecto (cada circuito puede cambiarlo). */
+  laps: 3,
+  /** Un checkpoint cada tantos metros. */
+  checkpointSpacing: 50,
+  /** Reaparecer si estás casi parado (m/s) durante tantos segundos. */
+  stuckSpeed: 1.5,
+  stuckTime: 3,
+  /**
+   * Salida con turbo: empezar a mantener el acelerador entre `startPerfectFrom` y `startPerfectTo`
+   * (justo al salir el "2") da el turbo largo; hasta `startGoodTo`, uno corto; antes del "2", se cala.
+   */
+  startPerfectFrom: 1,
+  startPerfectTo: 1.4,
+  startGoodTo: 2.2,
+  startPerfectBoost: 1.2,
+  startGoodBoost: 0.5,
+  startBoostMult: 1.3,
+  startStallTime: 1,
+};
+
+/**
+ * Superficies. Los turbos (mini-turbo, nitro, paneles) ignoran el terreno, como en la referencia.
+ * Fuera de pista: MK7 usa ×0,78 / ×0,43 / ×0,31 según lo malo que sea el terreno.
+ */
+export const SURFACE = {
+  /** Velocidad punta en el arcén (hierba, tierra). */
+  offroadSpeedMult: 0.45,
+  /** Velocidad punta en zonas lentas (arena profunda, barro). */
+  slowSpeedMult: 0.35,
+  /** Frenada al entrar en una superficie lenta yendo más rápido que su punta (m/s²). */
+  roughDecel: 20,
+  /** Hielo: fracción del giro y de la aceleración que se conserva. */
+  lowGripTurnMult: 0.55,
+  lowGripAccelMult: 0.6,
+  /** Panel de turbo: duración y fuerza. */
+  boostPadTime: 1,
+  boostPadMult: 1.3,
+};
+
 /** Objetos y cajas. Tiempos en s, distancias en m. */
 export const ITEMS = {
   /** Segundos que tarda una caja en reaparecer. */

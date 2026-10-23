@@ -103,7 +103,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* `npm run dev` muestra un cubo girando y el servidor responde.
 - [x] **Fase 1 — Conducir.** Kart arcade con teclado en un óvalo de prueba, cámara de persecución, derrape con turbo.
   *Hecho cuando:* conducir y derrapar en PC es divertido.
-- [ ] **Fase 2 — Móvil.** Controles táctiles en vertical, PWA, HUD básico, medidor de fps. Probar en iPhone y Android.
+- [x] **Fase 2 — Móvil.** Controles táctiles en vertical, PWA, HUD básico, medidor de fps. Probar en iPhone y Android.
   *Hecho cuando:* se juega cómodo y a ~60 fps en los móviles de tus amigos.
 - [ ] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
   (Paseo del Puerto); checkpoints, vueltas, cuenta atrás, tiempos, pantalla final.

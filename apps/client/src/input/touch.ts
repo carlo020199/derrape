@@ -4,6 +4,8 @@
 import { FingerGesture, type ItemAction } from "./gestures";
 
 export interface TouchState {
+  /** Hay algún dedo en la pantalla (sirve de "acelerador" en la salida con turbo). */
+  holding: boolean;
   steer: number;
   /** El dedo que gira está derrapando. */
   drift: boolean;
@@ -13,7 +15,7 @@ export interface TouchState {
   active: boolean;
 }
 
-export const touch: TouchState = { steer: 0, drift: false, driftSide: 0, active: false };
+export const touch: TouchState = { holding: false, steer: 0, drift: false, driftSide: 0, active: false };
 
 const itemQueue: ItemAction[] = [];
 
@@ -41,6 +43,7 @@ export function setupTouchControls(zone: HTMLElement) {
   window.addEventListener("touchstart", activate, { passive: true });
 
   const sync = () => {
+    touch.holding = fingers.size > 0;
     const g = steering === null ? undefined : fingers.get(steering);
     touch.steer = g?.steer ?? 0;
     touch.driftSide = g?.driftSide ?? 0;
@@ -83,6 +86,7 @@ export function setupTouchControls(zone: HTMLElement) {
 
 /** Suelta todo (al pausar o cambiar de app). */
 export function releaseTouch() {
+  touch.holding = false;
   touch.steer = 0;
   touch.drift = false;
   touch.driftSide = 0;

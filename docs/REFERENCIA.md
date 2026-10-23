@@ -39,12 +39,12 @@ comprueba que salta y luego derrapa; levanta el dedo y mira si sale el turbo.
 | Niveles de chispas | 3: azul, naranja, rosa/morado (morado solo en manual) | 2: azul y naranja | ✅ 3: azul, naranja, morado |
 | Carga | No carga en el aire. Más rápida cerrando la curva (dato de otras entregas) | Las chispas dependen de lo cerrada que sea la curva | ✅ Cerrando la curva 2,5× más rápido; no carga en el aire |
 | Duración del mini-turbo | Según la estadística del kart | 30 / 90 fotogramas (0,5 / 1,5 s) por defecto | ✅ 0,62 / 1,67 / 2,63 s (cifras de 8 Deluxe) |
-| Salida con turbo | Existe; el momento exacto no está documentado | Pulsar acelerar cuando sale el "2" | ⏳ Fase 3 |
+| Salida con turbo | Existe; el momento exacto no está documentado | Pulsar acelerar cuando sale el "2" | ✅ Mantener el dedo en la pantalla (o la flecha arriba) desde que sale el "2": perfecta = turbo de 1,2 s; algo tarde = 0,5 s; antes del "2" = calado 1 s |
 | Rebufo | Existe | Ir detrás de otro 3–5 s → acelerón de ~3 s | ⏳ Después de la 1.0 |
 | Saltos con truco | Sí, cuentan para combos | Truco en una rampa → turbo al aterrizar | ⏳ Fase 3/8 (rampas) |
 | Planeador | Sí | Sí (rampas azules) | ➖ No previsto |
 | Bajo el agua | Sí (puntos por agua) | Sí, con otra velocidad y manejo | ➖ No previsto |
-| Fuera de pista | Te frena | Punta ×0,78 / ×0,43 / ×0,31 según el terreno | ⏳ Fase 3 (hoy hay muros) |
+| Fuera de pista | Te frena | Punta ×0,78 / ×0,43 / ×0,31 según el terreno | ✅ Arcén a ×0,45 y zonas de arena a ×0,35; los turbos lo ignoran |
 | Monedas | Hasta 99 por carrera (sirven para la tienda) | Hasta 10; cada una sube un poco la punta; las pierdes al recibir un golpe | ➖ No previsto |
 
 **Cómo probarlo:** cronometra cuánto tardas en ver cada color cerrando la curva (debería ser
@@ -128,6 +128,11 @@ un kart por delante en otro carril; pon el escudo y busca que te den.
 | 11 | Ruleta | ~1 s antes de poder usarlo | |
 | 12 | Ir último vs primero | Detrás salen más cohetes y nitros | |
 | 13 | Fps en tu móvil | ~60 | |
+| 14 | Salida: mantener el dedo justo al salir el "2" | "¡Salida perfecta!" y acelerón | |
+| 15 | Salida: tocar antes del "2" | "¡Calado!" y 1 s sin moverte | |
+| 16 | Salirte al arcén | Frenas mucho; con turbo no | |
+| 17 | Ir al revés | Aviso "¡Dirección contraria!" y no suma vueltas | |
+| 18 | Quedarte atascado 3 s | Reapareces en el último punto de control | |
 
 ## Lo que no está documentado (o no pude confirmar)
 - Momento exacto de la salida con turbo en Tour.

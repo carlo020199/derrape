@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { closestPoint, createOvalTrack, pointAt, type Track } from "./track";
-import { pruebasTrack } from "./tracks/00-pruebas";
+import { KART } from "./tuning";
+import { TRACKS } from "./tracks/index";
+import { buildTrackFromDef } from "./tracks/types";
 
 function checkShape(track: Track) {
   const pts = track.points;
@@ -9,9 +11,10 @@ function checkShape(track: Track) {
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       const along = Math.min(Math.abs(track.lengths[i]! - track.lengths[j]!), track.length - Math.abs(track.lengths[i]! - track.lengths[j]!));
-      if (along < track.width * 2.5) continue;
+      const outer = track.width + track.verge * 2;
+      if (along < outer * 2.5) continue;
       const d = Math.hypot(pts[i]!.x - pts[j]!.x, pts[i]!.z - pts[j]!.z);
-      expect(d, `tramos ${i} y ${j} demasiado cerca`).toBeGreaterThan(track.width + 4);
+      expect(d, `tramos ${i} y ${j} demasiado cerca`).toBeGreaterThan(outer + 4);
     }
   }
   // Las curvas no son tan cerradas que el borde interior se doble.
@@ -29,13 +32,26 @@ function checkShape(track: Track) {
 }
 
 describe("pista", () => {
-  it("el circuito de pruebas no se cruza ni tiene curvas imposibles", () => {
-    checkShape(pruebasTrack);
-    expect(pruebasTrack.length).toBeGreaterThan(500);
+  for (const entry of TRACKS) {
+    it(`${entry.name}: no se cruza ni tiene curvas imposibles`, async () => {
+      const def = await entry.load();
+      expect(def.id).toBe(entry.id);
+      checkShape(buildTrackFromDef(def));
+    });
+  }
+
+  it("Paseo del Puerto: vuelta de 60–75 s a un ritmo realista", async () => {
+    const def = await TRACKS.find((t) => t.id === "paseo-del-puerto")!.load();
+    const track = buildTrackFromDef(def);
+    // Ritmo medio de una vuelta buena: ~85 % de la punta (curvas, derrapes y turbos se compensan).
+    const lap = track.length / (KART.maxSpeed * 0.85);
+    expect(lap).toBeGreaterThan(60);
+    expect(lap).toBeLessThan(75);
   });
 
-  it("pointAt y closestPoint están de acuerdo en distancia y lado", () => {
-    for (const track of [pruebasTrack, createOvalTrack()]) {
+  it("pointAt y closestPoint están de acuerdo en distancia y lado", async () => {
+    const pruebas = buildTrackFromDef(await TRACKS[0]!.load());
+    for (const track of [pruebas, createOvalTrack()]) {
       for (const d of [0, 37, track.length * 0.4, track.length * 0.8]) {
         for (const lateral of [-4, 0, 4]) {
           const p = pointAt(track, d, lateral);

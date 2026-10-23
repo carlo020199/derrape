@@ -227,3 +227,79 @@ body.touch #touch-help { display: block; }
 #debug .debug-section { margin: 8px 0 4px; font-weight: 700; color: #ff9f1c; }
 #debug label { display: grid; grid-template-columns: 130px 1fr 40px; gap: 6px; align-items: center; }
 #debug output { text-align: right; }
+
+/* --- Carrera: vueltas, tiempo, cuenta atrás, resultados --- */
+#race-info {
+  position: fixed;
+  top: calc(8px + var(--safe-t));
+  right: calc(62px + var(--safe-r));
+  text-align: right;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+#lap { font: 800 18px/1.2 system-ui, sans-serif; }
+#race-time { font: 600 14px/1.2 system-ui, sans-serif; font-variant-numeric: tabular-nums; opacity: 0.9; }
+
+#countdown {
+  position: fixed;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  font: 900 96px/1 system-ui, sans-serif;
+  color: #ffd23f;
+  text-shadow: 0 4px 0 #c8553d, 0 8px 18px rgb(0 0 0 / 0.4);
+  pointer-events: none;
+}
+#countdown[hidden] { display: none; }
+#countdown.pop { animation: count-pop 900ms ease-out forwards; }
+@keyframes count-pop {
+  0% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+  15% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+}
+
+#wrong-way {
+  position: fixed;
+  left: 50%;
+  top: 24%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #d62828;
+  font: 800 16px system-ui, sans-serif;
+  pointer-events: none;
+}
+#wrong-way[hidden] { display: none; }
+
+#results ol { margin: 0 0 10px; padding: 0; list-style: none; }
+#results li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  font-variant-numeric: tabular-nums;
+}
+#results li.me { color: #ffd23f; font-weight: 700; }
+#results button {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  font-weight: 700;
+}
+.note-dim { font-size: 13px; opacity: 0.75; }
+
+#menu label.select { justify-content: space-between; }
+#menu select {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 0;
+  padding: 0 8px;
+  font: inherit;
+  background: rgb(255 255 255 / 0.15);
+  color: inherit;
+}
+#menu select option { color: #111; }

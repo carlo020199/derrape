@@ -4,4 +4,6 @@ export * from "./kart";
 export * from "./track";
 export * from "./items";
 export * from "./bot";
-export { pruebasTrack } from "./tracks/00-pruebas";
+export * from "./race";
+export * from "./tracks/types";
+export * from "./tracks/index";

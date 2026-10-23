@@ -22,15 +22,20 @@ export class ChaseCamera {
 
   constructor(readonly camera: THREE.PerspectiveCamera) {}
 
+  /** Coloca la cámara de golpe la próxima vez (al reaparecer o empezar). */
+  snap() {
+    this.initialized = false;
+  }
+
   /** `speedRatio` = velocidad / velocidad punta (puede pasar de 1 con turbo). */
-  update(x: number, z: number, heading: number, speedRatio: number, dt: number) {
+  update(x: number, y: number, z: number, heading: number, speedRatio: number, dt: number) {
     const fx = Math.sin(heading);
     const fz = Math.cos(heading);
     const portrait = this.camera.aspect < 1;
     const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * 1.2;
     const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
-    const targetPos = new THREE.Vector3(x - fx * dist, height, z - fz * dist);
-    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, 0.8, z + fz * CAMERA.lookAhead);
+    const targetPos = new THREE.Vector3(x - fx * dist, y + height, z - fz * dist);
+    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, y + 0.8, z + fz * CAMERA.lookAhead);
 
     if (!this.initialized) {
       this.pos.copy(targetPos);

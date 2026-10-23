@@ -1,7 +1,8 @@
 // Simulación arcade de un kart a paso fijo. Sin Three.js: se ejecuta igual en cliente, servidor y tests.
 // El comportamiento imita a los juegos de karts de referencia; ver docs/FISICAS.md.
 
-import { ITEMS, KART, type KartTuning } from "./tuning";
+import type { Surface } from "./track";
+import { ITEMS, KART, SURFACE, type KartTuning } from "./tuning";
 
 export interface KartInput {
   /** -1 (izquierda) .. 1 (derecha). */
@@ -40,6 +41,8 @@ export interface KartState {
   spinTime: number;
   /** Escudo restante (s). */
   shieldTime: number;
+  /** Superficie bajo las ruedas (la pone quien conoce la pista antes de cada paso). */
+  surface: Surface;
 }
 
 export const NO_INPUT: KartInput = { steer: 0, throttle: false, brake: false, drift: false };
@@ -58,6 +61,7 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     boostMult: 1,
     spinTime: 0,
     shieldTime: 0,
+    surface: "road",
   };
 }
 
@@ -119,6 +123,8 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   }
 
   const steer = Math.max(-1, Math.min(1, input.steer));
+  const icy = s.surface === "lowGrip";
+  if (s.surface === "boostPad") giveBoost(s, SURFACE.boostPadTime, SURFACE.boostPadMult);
 
   // --- Salto y derrape ---
   // Pulsar derrape = saltito. Al aterrizar, si se sigue pulsando y hay dirección, empieza el derrape.
@@ -141,7 +147,8 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
 
   // --- Velocidad ---
   const boosting = s.boostTime > 0;
-  const normalTop = t.maxSpeed * (s.driftDir !== 0 ? 1 - t.driftSpeedLoss : 1);
+  const terrain = s.surface === "offroad" ? SURFACE.offroadSpeedMult : s.surface === "slow" ? SURFACE.slowSpeedMult : 1;
+  const normalTop = t.maxSpeed * terrain * (s.driftDir !== 0 ? 1 - t.driftSpeedLoss : 1);
   const topSpeed = boosting ? t.maxSpeed * s.boostMult : normalTop;
 
   if (boosting) {
@@ -155,14 +162,17 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
     if (s.speed < 0) s.speed = Math.min(0, s.speed + t.brake * dt);
     else if (s.speed < topSpeed) {
       // Dos fases: tope absoluto al arrancar; proporcional a lo que falta cerca de la punta.
-      const gain = Math.min(t.accelLimit, t.accelRelative * (topSpeed - s.speed));
+      const gain = Math.min(t.accelLimit, t.accelRelative * (topSpeed - s.speed)) * (icy ? SURFACE.lowGripAccelMult : 1);
       s.speed = Math.min(topSpeed, s.speed + gain * dt);
     }
   } else {
     s.speed = approach(s.speed, 0, t.coastDrag * dt);
   }
   // Tras acabar el turbo, volver suavemente a la velocidad punta normal.
-  if (!boosting && s.speed > topSpeed) s.speed = approach(s.speed, topSpeed, t.coastDrag * 2 * dt);
+  if (!boosting && s.speed > topSpeed) {
+    const decel = terrain < 1 ? SURFACE.roughDecel : t.coastDrag * 2;
+    s.speed = approach(s.speed, topSpeed, decel * dt);
+  }
 
   // --- Giro ---
   let turn: number;
@@ -178,7 +188,7 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
     const high = 1 - (1 - t.turnAtTopSpeed) * Math.min(1, abs / t.maxSpeed);
     turn = -steer * t.turnRate * low * high * Math.sign(s.speed);
   }
-  s.heading += turn * dt;
+  s.heading += turn * (icy ? SURFACE.lowGripTurnMult : 1) * dt;
 
   // --- Posición ---
   s.x += Math.sin(s.heading) * s.speed * dt;

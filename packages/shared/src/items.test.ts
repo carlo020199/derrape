@@ -12,7 +12,10 @@ import {
 } from "./items";
 import { createKart, stepKart, type KartInput } from "./kart";
 import { collideKartWithTrack, pointAt } from "./track";
-import { pruebasTrack as track } from "./tracks/00-pruebas";
+import pruebasDef from "./tracks/00-pruebas";
+import { buildTrackFromDef } from "./tracks/types";
+
+const track = buildTrackFromDef(pruebasDef);
 import { ITEMS, KART, PHYSICS_DT } from "./tuning";
 
 /** Generador determinista para tests. */
