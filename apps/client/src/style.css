@@ -1,0 +1,28 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #1b1f3a;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100dvh;
+}
+
+#fps {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  padding: 2px 6px;
+  font: 600 12px/1.4 system-ui, sans-serif;
+  color: #fff;
+  background: rgb(0 0 0 / 0.45);
+  border-radius: 4px;
+  pointer-events: none;
+}
