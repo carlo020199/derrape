@@ -10,6 +10,7 @@ import {
   NET_SEND_HZ,
   PHYSICS_DT,
   RACE,
+  ITEMS,
   applyStart,
   botInput,
   buildTrackFromDef,
@@ -22,6 +23,7 @@ import {
   createRaceKart,
   driftLevel,
   formatTime,
+  giveBoost,
   gridPose,
   hopHeight,
   needsRespawn,
@@ -37,6 +39,8 @@ import {
   type BotDriver,
   type CountdownMessage,
   type ItemEvent,
+  type ItemEventsMessage,
+  type ItemType,
   type ItemWorld,
   type KartState,
   type LapProgress,
@@ -51,7 +55,7 @@ import {
 import { readInput } from "../input";
 import { readKeyboard } from "../input/keyboard";
 import { takeItemAction, touch } from "../input/touch";
-import { INTERP_DELAY, SnapshotBuffer } from "../net/interpolation";
+import { INTERP_DELAY, ItemsBuffer, SnapshotBuffer } from "../net/interpolation";
 import type { Net } from "../net/net";
 import type { ChaseCamera } from "../render/chaseCamera";
 import { ItemsView } from "../render/itemsView";
@@ -93,6 +97,8 @@ export interface RaceSession {
   /** Solo en solitario: empezar otra vez. */
   restart(): void;
   dispose(): void;
+  /** Para depurar desde la consola: el estado del kart del jugador y las cajas. */
+  debug(): { kart: KartState; boxes: { x: number; z: number }[] };
 }
 
 /** Kart que se simula en este móvil (el jugador y, en solitario, los de prueba). */
@@ -209,11 +215,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     ];
   }
 
-  // Objetos: en solitario, en local. Online llegan en la Fase 5 (los decidirá el servidor).
+  // Objetos. En solitario se simulan aquí. Online los decide el servidor: este mundo solo sirve
+  // para dibujar lo que llega por red (las cajas salen en los mismos sitios en todos los móviles).
   const world: ItemWorld = {
     track,
     karts: locals.map((r) => r.race),
-    boxes: online ? [] : createItemBoxes(track, def.itemRows, 4),
+    boxes: createItemBoxes(track, def.itemRows, 4),
     oils: [],
     rockets: [],
     random: Math.random,
@@ -233,7 +240,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   let paused = false;
   let sendTimer = 0;
   /** Online: lo último que dice el servidor de mí. */
-  let serverMe: { lap: number; position: number } | null = null;
+  let serverMe: { lap: number; position: number; item: ItemType | null; rolling: boolean } | null = null;
+  const itemsBuffer = new ItemsBuffer();
 
   const lapLabel = $<HTMLDivElement>("#lap");
   const timeLabel = $<HTMLDivElement>("#race-time");
@@ -255,7 +263,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       if (r === player) r.bot = undefined;
     });
     world.karts = locals.map((r) => r.race);
-    world.boxes = online ? [] : createItemBoxes(track, def.itemRows, 4);
+    world.boxes = createItemBoxes(track, def.itemRows, 4);
     world.oils = [];
     world.rockets = [];
     phase = "countdown";
@@ -297,8 +305,37 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         if (e.type === "hit") showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
         if (e.type === "blocked") showFlash("¡Escudo!");
         if (e.type === "use") showFlash(ITEM_NAMES[e.item]);
-      } else if (e.type === "hit") {
+      } else if (e.type === "hit" && e.owner === player.race.id) {
         showFlash("¡Tocado!");
+      }
+    }
+  }
+
+  /**
+   * Online: el servidor dice qué ha pasado con los objetos. Cada móvil aplica a su propio kart
+   * lo que le toca (trompo, turbo, escudo); los demás karts lo muestran en su estado.
+   */
+  function onNetItemEvents(m: ItemEventsMessage) {
+    if (!online) return;
+    const s = player.race.state;
+    for (const e of m.events) {
+      if (e.kart === online.myId) {
+        if (e.type === "hit") {
+          s.spinTime = e.by === "oil" ? ITEMS.oilSpinTime : ITEMS.rocketSpinTime;
+          showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
+        }
+        if (e.type === "blocked") {
+          s.shieldTime = 0;
+          showFlash("¡Escudo!");
+        }
+        if (e.type === "use" && e.item) {
+          if (e.item === "nitro") giveBoost(s, ITEMS.nitroTime, ITEMS.nitroSpeedMult);
+          if (e.item === "shield") s.shieldTime = ITEMS.shieldTime;
+          showFlash(ITEM_NAMES[e.item]);
+        }
+      } else if (e.type === "hit" && e.owner === online.myId) {
+        const victim = online.players.find((p) => p.id === e.kart)?.name;
+        showFlash(victim ? `¡Le has dado a ${victim}!` : "¡Tocado!");
       }
     }
   }
@@ -340,10 +377,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     unsubscribe.push(
       online.net.on<StatesMessage>(MSG.states, (m) => {
         for (const k of m.karts) {
-          if (k.id === online.myId) serverMe = { lap: k.lap, position: k.position };
+          if (k.id === online.myId) serverMe = { lap: k.lap, position: k.position, item: k.item, rolling: k.rolling };
           else remotes.find((r) => r.id === k.id)?.buffer.push(m.t, k.s);
         }
+        if (m.items) itemsBuffer.push(m.t, m.items);
       }),
+      online.net.on<ItemEventsMessage>(MSG.itemEvents, onNetItemEvents),
       online.net.on<ResultsMessage>(MSG.results, (m) => {
         renderResults(m.results.map((r: RaceResult) => ({ name: r.name, me: r.id === online.myId, time: r.time })));
       }),
@@ -492,6 +531,17 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     }
   }
 
+  /** Online: pasa al mundo de dibujo los objetos que manda el servidor (con el retraso de interpolación). */
+  function syncNetItems() {
+    const serverNow = online?.net.clock.now(performance.now());
+    const snap = serverNow == null ? null : itemsBuffer.sample(serverNow - INTERP_DELAY);
+    if (!snap) return;
+    const hidden = new Set(snap.hiddenBoxes);
+    world.boxes.forEach((b, i) => (b.respawn = hidden.has(i) ? 1 : 0));
+    world.oils = snap.oils.map((o) => ({ ...o, owner: -1, safeTime: 0 }));
+    world.rockets = snap.rockets.map((r) => ({ ...r, owner: -1, distance: 0, lateral: 0, dir: 1, target: null, life: 1 }));
+  }
+
   function updateRaceHud() {
     const lap = Math.min(Math.max(serverMe?.lap ?? player.progress.lap, 1), laps);
     lapLabel.textContent = `Vuelta ${lap}/${laps}`;
@@ -543,7 +593,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
     if (phase === "countdown") stepCountdown(dt);
     for (let a = takeItemAction(); a; a = takeItemAction()) {
-      if (phase !== "racing" || online) continue;
+      if (phase !== "racing") continue;
+      if (online) {
+        // Lo decide el servidor; aquí solo se evita mandar gestos cuando no hay nada que usar.
+        if (serverMe?.item && !serverMe.rolling) online.net.send(MSG.useItem, { action: a });
+        continue;
+      }
       const events: ItemEvent[] = [];
       useItem(world, player.race, a, events);
       onItemEvents(events);
@@ -579,6 +634,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     }
     drawRemotes(dt, time);
     sparks.update(dt);
+    if (online) syncNetItems();
     itemsView.update(world, dt);
 
     const me = player.race.state;
@@ -587,7 +643,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     renderer.render(scene, camera);
 
     updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), me.boostTime > 0);
-    updateItemSlot(player.race.item, player.race.rollTime > 0, time);
+    if (online) updateItemSlot(serverMe?.item ?? null, serverMe?.rolling ?? false, time);
+    else updateItemSlot(player.race.item, player.race.rollTime > 0, time);
     updateRaceHud();
     if (!online && phase === "finished" && !resultsShown && raceTime - (player.progress.finishTime ?? 0) > 1.5) {
       renderResults(ranking().map((r) => ({ name: r.name, me: r === player, time: r.progress.finishTime })));
@@ -609,6 +666,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     },
     restart() {
       if (!online) resetLocals();
+    },
+    debug() {
+      return { kart: player.race.state, boxes: world.boxes };
     },
     dispose() {
       renderer.setAnimationLoop(null);

@@ -115,18 +115,29 @@ $("#menu-home").addEventListener("click", () => {
 // --- Online ---
 function connectNet(): Net {
   const n = new Net();
-  n.on<LobbyMessage>(MSG.lobby, (m) => {
-    lobby = m;
-    renderLobby(m, n.id);
-  });
-  n.on<CountdownMessage>(MSG.countdown, async (m) => {
-    if (!lobby || !n.id) return;
+  /** Cuenta atrás que llegó antes que la lista de jugadores (pasa al volver tras recargar). */
+  let pending: CountdownMessage | null = null;
+  const startOnline = async (m: CountdownMessage) => {
+    if (!lobby || !n.id) {
+      pending = m;
+      return;
+    }
     const players = lobby.players;
     const def = await loadDef(m.trackId);
     endSession();
     showScreen(null);
     session = createRaceSession(view, { def, online: { net: n, myId: n.id, start: m, players }, onExit: backToLobby });
+  };
+  n.on<LobbyMessage>(MSG.lobby, (m) => {
+    lobby = m;
+    renderLobby(m, n.id);
+    if (pending) {
+      const m2 = pending;
+      pending = null;
+      void startOnline(m2);
+    }
   });
+  n.on<CountdownMessage>(MSG.countdown, startOnline);
   n.on<{ message: string }>(MSG.error, (m) => {
     setLobbyError(m.message);
     view.showFlash(m.message);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { NetKartState } from "@derrape/shared";
-import { ServerClock, SnapshotBuffer } from "./interpolation";
+import { ItemsBuffer, ServerClock, SnapshotBuffer } from "./interpolation";
 
 const s = (x: number, extra: Partial<NetKartState> = {}): NetKartState => ({
   x,
@@ -66,5 +66,36 @@ describe("reloj del servidor", () => {
     const before = c.now(0)!;
     c.sample(9_000, 0); // paquete muy retrasado
     expect(before - c.now(0)!).toBeLessThan(30);
+  });
+});
+
+describe("objetos interpolados", () => {
+  const snap = (rockets: { id: number; x: number }[], hidden: number[] = []) => ({
+    hiddenBoxes: hidden,
+    oils: [],
+    rockets: rockets.map((r) => ({ ...r, z: 0 })),
+  });
+
+  it("los cohetes se mueven suaves entre instantáneas", () => {
+    const b = new ItemsBuffer();
+    b.push(1000, snap([{ id: 1, x: 0 }]));
+    b.push(1050, snap([{ id: 1, x: 2 }]));
+    expect(b.sample(1025)!.rockets[0]!.x).toBeCloseTo(1);
+  });
+
+  it("un cohete que explota desaparece y uno nuevo no se ve antes de tiempo", () => {
+    const b = new ItemsBuffer();
+    b.push(1000, snap([{ id: 1, x: 0 }]));
+    b.push(1050, snap([{ id: 2, x: 5 }]));
+    expect(b.sample(1025)!.rockets).toEqual([]);
+    expect(b.sample(1050)!.rockets.map((r) => r.id)).toEqual([2]);
+  });
+
+  it("las cajas ocultas son las de la instantánea de ese momento", () => {
+    const b = new ItemsBuffer();
+    b.push(1000, snap([], [3]));
+    b.push(1050, snap([], []));
+    expect(b.sample(1010)!.hiddenBoxes).toEqual([3]);
+    expect(b.sample(1060)!.hiddenBoxes).toEqual([]);
   });
 });

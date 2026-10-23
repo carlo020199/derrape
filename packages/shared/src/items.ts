@@ -31,6 +31,8 @@ export interface ItemBox {
 }
 
 export interface OilSlick {
+  /** Identificador estable (para reconocerla entre instantáneas de red). */
+  id: number;
   x: number;
   z: number;
   owner: number;
@@ -39,6 +41,7 @@ export interface OilSlick {
 }
 
 export interface Rocket {
+  id: number;
   owner: number;
   /** Distancia a lo largo de la pista (misma escala que raceDistance). */
   distance: number;
@@ -54,7 +57,7 @@ export interface Rocket {
 /** Lo que pasó en un paso, para efectos visuales y sonido. */
 export type ItemEvent =
   | { type: "pickup"; kart: number }
-  | { type: "hit"; kart: number; by: "oil" | "rocket" }
+  | { type: "hit"; kart: number; by: "oil" | "rocket"; owner: number }
   | { type: "blocked"; kart: number }
   | { type: "use"; kart: number; item: ItemType };
 
@@ -66,6 +69,13 @@ export interface ItemWorld {
   rockets: Rocket[];
   /** Generador aleatorio (0..1). Inyectable para tests y para el servidor. */
   random: () => number;
+  /** Siguiente id para aceite y cohetes. */
+  nextId?: number;
+}
+
+function newId(world: ItemWorld): number {
+  world.nextId = (world.nextId ?? 0) + 1;
+  return world.nextId;
 }
 
 export function createRaceKart(id: number, state: KartState, track: Track): RaceKart {
@@ -108,7 +118,7 @@ export function racePositions(karts: RaceKart[]): Map<number, number> {
   return new Map(sorted.map((k, i) => [k.id, i + 1]));
 }
 
-function hitKart(k: RaceKart, by: "oil" | "rocket", events: ItemEvent[]) {
+function hitKart(k: RaceKart, by: "oil" | "rocket", owner: number, events: ItemEvent[]) {
   if (k.state.spinTime > 0) return;
   if (k.state.shieldTime > 0) {
     k.state.shieldTime = 0;
@@ -116,7 +126,7 @@ function hitKart(k: RaceKart, by: "oil" | "rocket", events: ItemEvent[]) {
     return;
   }
   k.state.spinTime = by === "oil" ? ITEMS.oilSpinTime : ITEMS.rocketSpinTime;
-  events.push({ type: "hit", kart: k.id, by });
+  events.push({ type: "hit", kart: k.id, by, owner });
 }
 
 /** Usa el objeto del kart (si tiene y ya pasó la ruleta). Devuelve true si se usó. */
@@ -137,7 +147,7 @@ export function useItem(world: ItemWorld, kart: RaceKart, action: ItemAction, ev
     case "oil": {
       const ahead = action === "forward";
       const p = pointAt(world.track, c.distance + (ahead ? ITEMS.oilThrowDistance : -ITEMS.oilDropBack), c.lateral);
-      world.oils.push({ x: p.x, z: p.z, owner: kart.id, safeTime: ahead ? 0 : 1 });
+      world.oils.push({ id: newId(world), x: p.x, z: p.z, owner: kart.id, safeTime: ahead ? 0 : 1 });
       if (world.oils.length > ITEMS.maxOils) world.oils.shift();
       break;
     }
@@ -156,6 +166,7 @@ export function useItem(world: ItemWorld, kart: RaceKart, action: ItemAction, ev
         }
       }
       world.rockets.push({
+        id: newId(world),
         owner: kart.id,
         distance: kart.raceDistance + dir * 2.5,
         lateral: c.lateral,
@@ -213,7 +224,7 @@ export function stepItems(world: ItemWorld, dt: number): ItemEvent[] {
     for (const k of karts) {
       if (k.id === oil.owner && oil.safeTime > 0) continue;
       if (Math.hypot(k.state.x - oil.x, k.state.z - oil.z) <= ITEMS.oilRadius) {
-        hitKart(k, "oil", events);
+        hitKart(k, "oil", oil.owner, events);
         return false;
       }
     }
@@ -238,7 +249,7 @@ export function stepItems(world: ItemWorld, dt: number): ItemEvent[] {
     for (const k of karts) {
       if (k.id === r.owner && r.life > ITEMS.rocketLife - 0.5) continue;
       if (Math.hypot(k.state.x - r.x, k.state.z - r.z) <= ITEMS.rocketHitRadius) {
-        hitKart(k, "rocket", events);
+        hitKart(k, "rocket", r.owner, events);
         return false;
       }
     }

@@ -1,3 +1,5 @@
+import type { ItemAction, ItemType } from "./items";
+
 // Mensajes cliente/servidor. Cada cliente simula su kart y manda su estado; el servidor manda en
 // la sala, la cuenta atrás, las vueltas, las posiciones y los resultados (ver CLAUDE.md).
 
@@ -92,12 +94,43 @@ export interface KartSnapshot {
   lap: number;
   position: number;
   finished: boolean;
+  /** Objeto que lleva (lo decide el servidor) y si aún gira la ruleta. */
+  item: ItemType | null;
+  rolling: boolean;
+}
+
+/** Objetos en pista según el servidor. */
+export interface ItemsSnapshot {
+  /** Índices de las cajas que están reapareciendo (no se ven). */
+  hiddenBoxes: number[];
+  oils: { id: number; x: number; z: number }[];
+  rockets: { id: number; x: number; z: number }[];
 }
 
 export interface StatesMessage {
   /** Reloj del servidor (ms). */
   t: number;
   karts: KartSnapshot[];
+  items?: ItemsSnapshot;
+}
+
+/** Lo que pasa con los objetos. El servidor lo manda en cuanto ocurre; cada móvil aplica lo suyo. */
+export interface NetItemEvent {
+  type: "pickup" | "use" | "hit" | "blocked";
+  /** Jugador afectado. */
+  kart: string;
+  item?: ItemType;
+  by?: "oil" | "rocket";
+  /** En un golpe: quién lanzó el objeto. */
+  owner?: string;
+}
+
+export interface ItemEventsMessage {
+  events: NetItemEvent[];
+}
+
+export interface UseItemMessage {
+  action: ItemAction;
 }
 
 export interface RaceResult {
@@ -113,12 +146,14 @@ export interface ResultsMessage {
   results: RaceResult[];
 }
 
-/** Tipos de mensaje. Cliente → servidor: profile, setTrack, start, state. Servidor → cliente: el resto. */
+/** Tipos de mensaje. Cliente → servidor: profile, setTrack, start, state, useItem. Servidor → cliente: el resto. */
 export const MSG = {
   profile: "profile",
   setTrack: "setTrack",
   start: "start",
   state: "state",
+  useItem: "useItem",
+  itemEvents: "itemEvents",
   lobby: "lobby",
   countdown: "countdown",
   states: "states",

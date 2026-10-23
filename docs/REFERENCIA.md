@@ -56,7 +56,7 @@ comprueba que salta y luego derrapa; levanta el dedo y mira si sale el turbo.
 |---|---|---|---|
 | Huecos de objeto | 3 por defecto (1 o 2 en algunas partidas multijugador) | 1 | 🟡 1 |
 | Ruleta | Sí | Sí | ✅ 1 s |
-| Reparto según posición | Sí | Sí | ✅ Delante: defensa; detrás: ataque |
+| Reparto según posición | Sí | Sí | ✅ Delante: defensa; detrás: ataque. Online lo decide el servidor |
 | Frenesí | 3 objetos iguales → 9 s usándolo sin límite y siendo invencible | No | ➖ No previsto (sería con 3 huecos) |
 | Objeto especial por personaje | Sí | No | ➖ No previsto |
 | Cantidad de objetos | Muchos (más los especiales) | 15 (sin contar los triples) | 🟡 4: Nitro, Aceite, Cohete, Escudo |

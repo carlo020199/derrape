@@ -6,6 +6,7 @@ import {
   findTrack,
   gridPose,
   pointAt,
+  type NetItemEvent,
   type NetKartState,
   type Track,
 } from "@derrape/shared";
@@ -147,9 +148,9 @@ describe("carrera", () => {
     const track = await loadTrack("pruebas");
     const lapsTime = (track.length * 3 + 40) / KART.maxSpeed;
     drive(room, track, "a", 0, now, lapsTime, KART.maxSpeed);
-    expect(room.tick(now + lapsTime * 1000)).toBeNull(); // falta "b"
+    expect(room.tick(now + lapsTime * 1000).results).toBeNull(); // falta "b"
     const end = drive(room, track, "b", 1, now, lapsTime + 5, KART.maxSpeed * 0.95);
-    const results = room.tick(end);
+    const results = room.tick(end).results;
     expect(results?.results.map((r) => r.id)).toEqual(["a", "b"]);
     expect(results!.results[0]!.time).toBeGreaterThan(0);
     expect(room.phase).toBe("lobby");
@@ -161,8 +162,8 @@ describe("carrera", () => {
     const lapsTime = (track.length * 3 + 40) / KART.maxSpeed;
     const finish = drive(room, track, "a", 0, now, lapsTime, KART.maxSpeed);
     drive(room, track, "b", 1, now, 5, 10); // "b" se queda atrás
-    expect(room.tick(finish + 1000)).toBeNull();
-    const results = room.tick(finish + FINISH_GRACE * 1000 + 100);
+    expect(room.tick(finish + 1000).results).toBeNull();
+    const results = room.tick(finish + FINISH_GRACE * 1000 + 100).results;
     expect(results?.results).toMatchObject([
       { id: "a", position: 1 },
       { id: "b", position: 2, time: null },
@@ -198,5 +199,105 @@ describe("carrera", () => {
     room.onState("a", { ...net(0, 0), x: Number.NaN }, now);
     room.onState("a", "hola" as unknown as NetKartState, now);
     expect(room.snapshot(now).karts.find((k) => k.id === "a")).toBeUndefined();
+  });
+});
+
+/**
+ * Simulación de una carrera de dos jugadores al ritmo del servidor (un estado y un tick cada 50 ms).
+ * Cada jugador avanza por el centro de la pista a la velocidad que se le diga.
+ */
+class Sim {
+  now = RACE.countdown * 1000;
+  events: NetItemEvent[] = [];
+  private d = new Map<string, number>();
+  constructor(
+    readonly room: RaceLogic,
+    readonly track: Track,
+  ) {
+    // Distancia inicial: la de la parrilla (negativa, detrás de la meta), igual que gridPose.
+    this.d.set("a", -6);
+    this.d.set("b", -9);
+  }
+  run(seconds: number, speeds: Record<string, number>) {
+    for (let t = 0; t < seconds; t += 0.05) {
+      this.now += 50;
+      for (const [id, v] of Object.entries(speeds)) {
+        const d = this.d.get(id)! + v * 0.05;
+        this.d.set(id, d);
+        const p = pointAt(this.track, d);
+        this.room.onState(id, { ...net(p.x, p.z), heading: p.heading, speed: v }, this.now);
+      }
+      this.events.push(...this.room.tick(this.now).events);
+    }
+  }
+  use(id: string, action: "use" | "forward" | "back") {
+    this.events.push(...this.room.useItem(id, action));
+  }
+}
+
+async function itemRace() {
+  let seed = 7;
+  const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const room = new RaceLogic("ABCD", random);
+  room.addPlayer("a", "Ana");
+  room.addPlayer("b", "Beto");
+  room.setTrack("a", "pruebas");
+  await room.startRace("a", 0);
+  room.tick(RACE.countdown * 1000);
+  return new Sim(room, await loadTrack("pruebas"));
+}
+
+describe("objetos en red", () => {
+  it("pasar por una fila de cajas da un objeto (lo decide el servidor) tras la ruleta", async () => {
+    const sim = await itemRace();
+    // La primera fila de cajas está al 12 % de la vuelta.
+    sim.run((sim.track.length * 0.12 + 20) / 20, { a: 20 });
+    expect(sim.events).toContainEqual({ type: "pickup", kart: "a" });
+    const a = sim.room.snapshot(sim.now).karts.find((k) => k.id === "a")!;
+    expect(a.item).not.toBeNull();
+    expect(sim.room.snapshot(sim.now).items!.hiddenBoxes.length).toBeGreaterThan(0);
+  });
+
+  it("sin objeto, o con una acción rara, no pasa nada", async () => {
+    const sim = await itemRace();
+    sim.run(0.5, { a: 10 });
+    expect(sim.room.useItem("a", "forward")).toEqual([]);
+    sim.room.kartOf("a")!.item = "nitro";
+    expect(sim.room.useItem("a", "volar")).toEqual([]);
+    expect(sim.room.useItem("a", "forward")).toEqual([{ type: "use", kart: "a", item: "nitro" }]);
+  });
+
+  it("el aceite soltado detrás hace trompear al que viene detrás, y se sabe quién lo soltó", async () => {
+    const sim = await itemRace();
+    sim.run(2, { a: 20, b: 10 }); // Ana se escapa
+    sim.room.kartOf("a")!.item = "oil";
+    sim.use("a", "back");
+    expect(sim.room.snapshot(sim.now).items!.oils).toHaveLength(1);
+    sim.run(4, { a: 0, b: 15 }); // Ana para; Beto pasa por encima del aceite
+    expect(sim.events).toContainEqual({ type: "hit", kart: "b", by: "oil", owner: "a" });
+    expect(sim.room.snapshot(sim.now).items!.oils).toHaveLength(0);
+  });
+
+  it("el cohete alcanza al de delante", async () => {
+    const sim = await itemRace();
+    sim.run(2, { a: 20, b: 10 });
+    sim.room.kartOf("b")!.item = "rocket";
+    sim.use("b", "forward");
+    expect(sim.room.snapshot(sim.now).items!.rockets).toHaveLength(1);
+    sim.run(3, { a: 20, b: 10 });
+    expect(sim.events).toContainEqual({ type: "hit", kart: "a", by: "rocket", owner: "b" });
+  });
+
+  it("el escudo para el golpe y se gasta", async () => {
+    const sim = await itemRace();
+    sim.run(2, { a: 20, b: 10 });
+    sim.room.kartOf("a")!.item = "shield";
+    sim.use("a", "use");
+    sim.room.kartOf("b")!.item = "rocket";
+    sim.use("b", "forward");
+    sim.run(3, { a: 20, b: 10 });
+    expect(sim.events).toContainEqual({ type: "blocked", kart: "a" });
+    expect(sim.events.some((e) => e.type === "hit" && e.kart === "a")).toBe(false);
+    expect(sim.room.kartOf("a")!.state.shieldTime).toBe(0);
   });
 });

@@ -110,7 +110,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* puedes completar una carrera de 3 vueltas tú solo.
 - [ ] **Fase 4 — Multijugador.** (Hecho y probado en local; falta la prueba con móviles en redes distintas, tras la Fase 6.) Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
   *Hecho cuando:* 2+ móviles en redes distintas corren juntos sin tirones.
-- [ ] **Fase 5 — Objetos.** (Ya hay versión local en solitario para probar: `packages/shared/src/items.ts`.) Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
+- [ ] **Fase 5 — Objetos.** (Hecho: en solitario y online, decididos por el servidor. Probado en local con jugadores falsos; falta probarlo en móviles de verdad.) Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
   *Hecho cuando:* los objetos funcionan igual en todos los móviles.
 - [ ] **Fase 6 — Despliegue.** Cliente y servidor publicados, HTTPS, enlace de invitación.
   *Hecho cuando:* abres el enlace desde el móvil fuera de casa y funciona (aún no se invita a nadie).

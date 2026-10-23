@@ -1,7 +1,7 @@
 // Interpolación de karts remotos: se dibujan ~100 ms en el pasado, mezclando las dos instantáneas
 // que rodean ese momento. Así se ven fluidos aunque los estados lleguen a saltos (20/s) y con retraso.
 
-import type { NetKartState } from "@derrape/shared";
+import type { ItemsSnapshot, NetKartState } from "@derrape/shared";
 
 /** Retraso con el que se dibujan los karts remotos (ms). */
 export const INTERP_DELAY = 100;
@@ -80,5 +80,40 @@ export class ServerClock {
 
   now(localNow: number): number | null {
     return this.offset === null ? null : localNow + this.offset;
+  }
+}
+
+/**
+ * Objetos en pista según el servidor. Se dibujan con el mismo retraso que los karts remotos;
+ * los cohetes (rápidos) se interpolan reconociéndolos por su id.
+ */
+export class ItemsBuffer {
+  private items: { t: number; s: ItemsSnapshot }[] = [];
+
+  push(t: number, s: ItemsSnapshot) {
+    const last = this.items[this.items.length - 1];
+    if (last && t <= last.t) return;
+    this.items.push({ t, s });
+    if (this.items.length > MAX_ITEMS) this.items.shift();
+  }
+
+  sample(t: number): ItemsSnapshot | null {
+    const items = this.items;
+    if (items.length === 0) return null;
+    let i = items.length - 1;
+    while (i > 0 && items[i]!.t > t) i--;
+    const a = items[i]!;
+    const b = items[i + 1];
+    if (!b || t <= a.t) return a.s;
+    const u = (t - a.t) / (b.t - a.t || 1);
+    const before = new Map(a.s.rockets.map((r) => [r.id, r]));
+    return {
+      ...a.s,
+      // Un cohete que aún no existía en `a` no se dibuja hasta su momento; uno que ya explotó, tampoco.
+      rockets: b.s.rockets.flatMap((r) => {
+        const old = before.get(r.id);
+        return old ? [{ id: r.id, x: old.x + (r.x - old.x) * u, z: old.z + (r.z - old.z) * u }] : [];
+      }),
+    };
   }
 }

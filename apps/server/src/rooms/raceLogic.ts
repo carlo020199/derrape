@@ -1,5 +1,6 @@
 // Lógica de una sala de carrera, sin red (se testea sola). RaceRoom la conecta con Colyseus.
-// El servidor manda en: sala, anfitrión, colores, cuenta atrás, vueltas, posiciones y resultados.
+// El servidor manda en: sala, anfitrión, colores, cuenta atrás, vueltas, posiciones, resultados
+// y objetos (cajas, qué objeto toca, aceite, cohetes, impactos y escudos).
 
 import {
   DEFAULT_TRACK,
@@ -10,16 +11,27 @@ import {
   RACE,
   buildTrackFromDef,
   closestPoint,
+  createItemBoxes,
+  createKart,
   createProgress,
+  createRaceKart,
   findTrack,
   gridPose,
   normalizeName,
   standings,
+  stepItems,
   updateProgress,
+  useItem,
   type CountdownMessage,
+  type ItemAction,
+  type ItemEvent,
+  type ItemWorld,
+  type ItemsSnapshot,
   type LapProgress,
   type LobbyMessage,
+  type NetItemEvent,
   type NetKartState,
+  type RaceKart,
   type ResultsMessage,
   type RoomPhase,
   type StatesMessage,
@@ -30,6 +42,9 @@ import {
 export const FINISH_GRACE = 30;
 /** Más rápido que esto (m/s) entre dos estados es un salto sospechoso: no cuenta para el progreso. */
 const MAX_PLAUSIBLE_SPEED = KART.maxSpeed * 2;
+/** Subpasos de la simulación de objetos por cada tick del servidor (para que los cohetes no se salten a nadie). */
+const ITEM_SUBSTEPS = 3;
+const ITEM_ACTIONS: readonly ItemAction[] = ["use", "forward", "back"];
 
 interface Player {
   id: string;
@@ -42,6 +57,8 @@ interface Player {
   raceDistance: number;
   trackDistance: number | null;
   last: { x: number; z: number; t: number; respawns: number } | null;
+  /** Su kart en la simulación de objetos del servidor (posición copiada de lo que manda el cliente). */
+  kart: RaceKart | null;
 }
 
 export class RaceLogic {
@@ -54,8 +71,13 @@ export class RaceLogic {
   /** Momento de la salida (ms, reloj del servidor). */
   private goAt = 0;
   private firstFinishAt: number | null = null;
+  private items: ItemWorld | null = null;
+  private lastTick: number | null = null;
 
-  constructor(readonly code: string) {}
+  constructor(
+    readonly code: string,
+    private readonly random: () => number = Math.random,
+  ) {}
 
   get playerCount() {
     return this.players.size;
@@ -83,6 +105,7 @@ export class RaceLogic {
       raceDistance: 0,
       trackDistance: null,
       last: null,
+      kart: null,
     });
     this.hostId ??= id;
   }
@@ -142,6 +165,7 @@ export class RaceLogic {
       p.raceDistance = 0;
       p.trackDistance = null;
       p.last = null;
+      p.kart = null;
     }
     // Hasta que manden su primer estado, cada uno cuenta desde su sitio en la parrilla
     // (si no, alguien sin conexión parecería ir por delante de los que ya corren).
@@ -150,7 +174,17 @@ export class RaceLogic {
       const d = closestPoint(this.track!, pose.x, pose.z).distance;
       p.trackDistance = d;
       p.raceDistance = d > this.track!.length / 2 ? d - this.track!.length : d;
+      p.kart = createRaceKart(slot, createKart(pose.x, pose.z, pose.heading), this.track!);
     });
+    this.items = {
+      track: this.track,
+      karts: ready.map((p) => p.kart!),
+      boxes: createItemBoxes(this.track, def.itemRows, 4),
+      oils: [],
+      rockets: [],
+      random: this.random,
+    };
+    this.lastTick = null;
     this.phase = "countdown";
     this.goAt = now + RACE.countdown * 1000;
     this.firstFinishAt = null;
@@ -179,6 +213,13 @@ export class RaceLogic {
     const p = this.players.get(id);
     if (!p || !p.racing || !isValidState(s)) return;
     p.state = s;
+    if (p.kart) {
+      const k = p.kart.state;
+      k.x = s.x;
+      k.z = s.z;
+      k.heading = s.heading;
+      k.speed = s.speed;
+    }
     if (this.phase !== "racing" || !this.track) return;
 
     const plausible =
@@ -203,15 +244,30 @@ export class RaceLogic {
     return Math.max(0, (now - this.goAt) / 1000);
   }
 
-  /** Avanza el reloj de la sala. Devuelve los resultados cuando la carrera termina. */
-  tick(now: number): ResultsMessage | null {
+  /** El jugador usa su objeto. Devuelve los eventos (vacío si no tenía nada que usar). */
+  useItem(id: string, action: unknown): NetItemEvent[] {
+    const p = this.players.get(id);
+    if (this.phase !== "racing" || !this.items || !p?.kart || p.progress.finishTime !== null) return [];
+    if (!ITEM_ACTIONS.includes(action as ItemAction)) return [];
+    const events: ItemEvent[] = [];
+    useItem(this.items, p.kart, action as ItemAction, events);
+    return this.toNetEvents(events);
+  }
+
+  /**
+   * Avanza el reloj de la sala: cuenta atrás, objetos y fin de carrera.
+   * Devuelve los resultados cuando la carrera termina y los eventos de objetos de este tick.
+   */
+  tick(now: number): { results: ResultsMessage | null; events: NetItemEvent[] } {
     if (this.phase === "countdown" && now >= this.goAt) this.phase = "racing";
-    if (this.phase !== "racing") return null;
+    if (this.phase !== "racing") return { results: null, events: [] };
+
+    const events = this.stepItems(now);
 
     const racing = [...this.players.values()].filter((p) => p.racing);
     const stillRunning = racing.filter((p) => p.connected && p.progress.finishTime === null);
     const graceOver = this.firstFinishAt !== null && now - this.firstFinishAt >= FINISH_GRACE * 1000;
-    if (racing.length > 0 && stillRunning.length > 0 && !graceOver) return null;
+    if (racing.length > 0 && stillRunning.length > 0 && !graceOver) return { results: null, events };
 
     const results = this.ranking().map((p, i) => ({
       id: p.id,
@@ -221,9 +277,44 @@ export class RaceLogic {
       time: p.progress.finishTime,
     }));
     this.phase = "lobby";
-    for (const p of this.players.values()) p.racing = false;
+    for (const p of this.players.values()) {
+      p.racing = false;
+      p.kart = null;
+    }
     this.track = null;
-    return { results };
+    this.items = null;
+    return { results: { results }, events };
+  }
+
+  private stepItems(now: number): NetItemEvent[] {
+    const world = this.items;
+    if (!world) return [];
+    const dt = Math.min(0.2, this.lastTick === null ? 0 : (now - this.lastTick) / 1000);
+    this.lastTick = now;
+    // El trompo y el escudo los lleva el servidor (los clientes solo los reflejan).
+    for (const k of world.karts) {
+      k.state.spinTime = Math.max(0, k.state.spinTime - dt);
+      k.state.shieldTime = Math.max(0, k.state.shieldTime - dt);
+    }
+    const events: ItemEvent[] = [];
+    for (let i = 0; i < ITEM_SUBSTEPS; i++) events.push(...stepItems(world, dt / ITEM_SUBSTEPS));
+    return this.toNetEvents(events);
+  }
+
+  /** Los eventos de la simulación usan el número de parrilla; en red, el id del jugador. */
+  private toNetEvents(events: ItemEvent[]): NetItemEvent[] {
+    const bySlot = new Map([...this.players.values()].filter((p) => p.kart).map((p) => [p.kart!.id, p.id]));
+    return events.map((e): NetItemEvent => {
+      const kart = bySlot.get(e.kart) ?? "";
+      if (e.type === "hit") return { type: "hit", kart, by: e.by, owner: bySlot.get(e.owner) };
+      if (e.type === "use") return { type: "use", kart, item: e.item };
+      return { type: e.type, kart };
+    });
+  }
+
+  /** Para tests y depuración: el kart de un jugador en la simulación de objetos. */
+  kartOf(id: string): RaceKart | null {
+    return this.players.get(id)?.kart ?? null;
   }
 
   private ranking() {
@@ -242,7 +333,21 @@ export class RaceLogic {
           lap: p.progress.lap,
           position: order.indexOf(p) + 1,
           finished: p.progress.finishTime !== null,
+          item: p.kart?.item ?? null,
+          rolling: (p.kart?.rollTime ?? 0) > 0,
         })),
+      items: this.itemsSnapshot(),
+    };
+  }
+
+  private itemsSnapshot(): ItemsSnapshot | undefined {
+    const w = this.items;
+    if (!w) return undefined;
+    const r = (n: number) => Math.round(n * 100) / 100;
+    return {
+      hiddenBoxes: w.boxes.flatMap((b, i) => (b.respawn > 0 ? [i] : [])),
+      oils: w.oils.map((o) => ({ id: o.id, x: r(o.x), z: r(o.z) })),
+      rockets: w.rockets.map((k) => ({ id: k.id, x: r(k.x), z: r(k.z) })),
     };
   }
 

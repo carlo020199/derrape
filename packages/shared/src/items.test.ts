@@ -111,7 +111,7 @@ describe("objetos", () => {
     const w = world([me]);
     me.item = "shield";
     useItem(w, me, "use");
-    w.oils.push({ x: me.state.x, z: me.state.z, owner: 99, safeTime: 0 });
+    w.oils.push({ id: 1, x: me.state.x, z: me.state.z, owner: 99, safeTime: 0 });
     const events = simulate(w, 0.1, () => 0);
     expect(events.some((e) => e.type === "blocked")).toBe(true);
     expect(me.state.spinTime).toBe(0);
@@ -126,7 +126,7 @@ describe("objetos", () => {
     useItem(w, leader, "back");
     expect(w.oils).toHaveLength(1);
     const events = simulate(w, 3, (k) => (k.id === 0 ? 0 : 1));
-    expect(events).toContainEqual({ type: "hit", kart: 1, by: "oil" });
+    expect(events).toContainEqual({ type: "hit", kart: 1, by: "oil", owner: 0 });
     expect(leader.state.spinTime).toBe(0);
   });
 
@@ -148,7 +148,7 @@ describe("objetos", () => {
     useItem(w, me, "forward");
     expect(w.rockets[0]!.target).toBe(1);
     const events = simulate(w, 4, () => 0);
-    expect(events).toContainEqual({ type: "hit", kart: 1, by: "rocket" });
+    expect(events).toContainEqual({ type: "hit", kart: 1, by: "rocket", owner: 0 });
   });
 
   it("el cohete hacia atrás golpea al de detrás", () => {
@@ -158,7 +158,7 @@ describe("objetos", () => {
     me.item = "rocket";
     useItem(w, me, "back");
     const events = simulate(w, 3, () => 0);
-    expect(events).toContainEqual({ type: "hit", kart: 1, by: "rocket" });
+    expect(events).toContainEqual({ type: "hit", kart: 1, by: "rocket", owner: 0 });
   });
 
   it("tras el trompo se recupera el control", () => {

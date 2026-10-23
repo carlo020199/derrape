@@ -3,10 +3,12 @@
 //   npx tsx scripts/jugador-falso.ts CODIGO [nombre] [servidor]
 //
 // Se une a la sala, espera a que el anfitrión empiece y da vueltas al circuito mandando su
-// estado 20 veces por segundo, como haría un amigo de verdad (sin derrapes ni objetos).
+// estado 20 veces por segundo, como haría un amigo de verdad (sin derrapes). Usa los objetos
+// que le da el servidor al cabo de un momento, hacia delante o hacia atrás al azar.
 
 import { Client } from "colyseus.js";
 import {
+  ITEMS,
   KART,
   MSG,
   NET_SEND_HZ,
@@ -18,11 +20,14 @@ import {
   collideKartWithTrack,
   createKart,
   findTrack,
+  giveBoost,
   gridPose,
   normalizeRoomCode,
   stepKart,
   surfaceAt,
   type CountdownMessage,
+  type ItemEventsMessage,
+  type StatesMessage,
   type NetKartState,
   type Track,
 } from "@derrape/shared";
@@ -39,7 +44,37 @@ const room = await new Client(endpoint).joinById(code, { name, color: 6 });
 console.log(`${name} está en la sala ${code}. Esperando a que el anfitrión empiece…`);
 
 let timer: ReturnType<typeof setInterval> | null = null;
-for (const type of [MSG.lobby, MSG.states, MSG.error]) room.onMessage(type, () => {});
+for (const type of [MSG.lobby, MSG.error]) room.onMessage(type, () => {});
+
+// Objetos: el servidor dice qué lleva; se usa al cabo de 1–3 s.
+let kart: ReturnType<typeof createKart> | null = null;
+let useAt: number | null = null;
+room.onMessage(MSG.states, (m: StatesMessage) => {
+  const me = m.karts.find((k) => k.id === room.sessionId);
+  if (!me?.item || me.rolling) {
+    useAt = null;
+    return;
+  }
+  useAt ??= Date.now() + 1000 + Math.random() * 2000;
+  if (Date.now() >= useAt) {
+    const action = Math.random() < 0.5 ? "forward" : "back";
+    console.log(`Usa ${me.item} (${action === "forward" ? "adelante" : "atrás"})`);
+    room.send(MSG.useItem, { action });
+    useAt = Date.now() + 5000; // por si se pierde el mensaje
+  }
+});
+room.onMessage(MSG.itemEvents, (m: ItemEventsMessage) => {
+  for (const e of m.events) {
+    if (e.kart !== room.sessionId || !kart) continue;
+    if (e.type === "hit") {
+      kart.spinTime = e.by === "oil" ? ITEMS.oilSpinTime : ITEMS.rocketSpinTime;
+      console.log(`¡Le han dado (${e.by})!`);
+    }
+    if (e.type === "blocked") kart.shieldTime = 0;
+    if (e.type === "use" && e.item === "nitro") giveBoost(kart, ITEMS.nitroTime, ITEMS.nitroSpeedMult);
+    if (e.type === "use" && e.item === "shield") kart.shieldTime = ITEMS.shieldTime;
+  }
+});
 room.onMessage(MSG.results, () => {
   console.log("Carrera terminada. Esperando a la siguiente…");
   if (timer) clearInterval(timer);
@@ -50,6 +85,7 @@ room.onMessage(MSG.countdown, async (m: CountdownMessage) => {
   const slot = Math.max(0, m.grid.indexOf(room.sessionId));
   const pose = gridPose(track, slot);
   const s = createKart(pose.x, pose.z, pose.heading);
+  kart = s;
   const lane = (slot % 2 === 0 ? 1 : -1) * 2;
   const tuning = { ...KART, maxSpeed: KART.maxSpeed * 0.92 };
   let clock = 0;
@@ -73,8 +109,8 @@ room.onMessage(MSG.countdown, async (m: CountdownMessage) => {
       driftLevel: 0,
       hop: 0,
       boosting: s.boostTime > 0,
-      spinning: false,
-      shield: false,
+      spinning: s.spinTime > 0,
+      shield: s.shieldTime > 0,
       respawns: 0,
     };
     room.send(MSG.state, state);
