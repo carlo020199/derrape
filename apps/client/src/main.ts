@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {
   KART,
   PHYSICS_DT,
+  TOUCH,
   collideKartWithTrack,
   createKart,
   createOvalTrack,
@@ -11,7 +12,7 @@ import {
   type KartState,
 } from "@derrape/shared";
 import { readInput } from "./input";
-import { releaseTouch, setupTouchControls } from "./input/touch";
+import { releaseTouch, setupTouchControls, takeItemAction } from "./input/touch";
 import { CAMERA, ChaseCamera } from "./render/chaseCamera";
 import { createKartModel } from "./render/kartModel";
 import { AutoQuality } from "./render/quality";
@@ -58,12 +59,22 @@ scene.add(model.root);
 const sparks = new Sparks();
 scene.add(sparks.points);
 
-createDebugPanel({ kart: KART, camera: CAMERA });
-setupTouchControls(document.body);
+createDebugPanel({ kart: KART, camera: CAMERA, touch: TOUCH });
+setupTouchControls(document.querySelector<HTMLDivElement>("#touch-zone")!);
 
 let paused = false;
-/** Mismo criterio que el aviso "gira el móvil" del CSS: en vertical el juego se detiene. */
-const portrait = matchMedia("(orientation: portrait) and (pointer: coarse)");
+/** Mismo criterio que el aviso "pon el móvil en vertical" del CSS: en horizontal el juego se detiene. */
+const wrongOrientation = matchMedia("(orientation: landscape) and (pointer: coarse)");
+
+// Aviso provisional de los gestos de objeto hasta que existan los objetos (Fase 5).
+const itemFlash = document.querySelector<HTMLDivElement>("#item-flash")!;
+const ITEM_LABELS = { use: "Objeto", forward: "Objeto ↑ adelante", back: "Objeto ↓ atrás" } as const;
+function showItemAction(action: keyof typeof ITEM_LABELS) {
+  itemFlash.textContent = ITEM_LABELS[action];
+  itemFlash.hidden = true;
+  void itemFlash.offsetWidth; // reinicia la animación
+  itemFlash.hidden = false;
+}
 setupMenu((p) => {
   paused = p;
   releaseTouch();
@@ -99,7 +110,7 @@ renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
-  if (paused || portrait.matches) {
+  if (paused || wrongOrientation.matches) {
     accumulator = 0;
     fpsStart = now;
     frames = 0;
@@ -108,6 +119,7 @@ renderer.setAnimationLoop((now) => {
 
   accumulator += dt;
   const input = readInput();
+  for (let a = takeItemAction(); a; a = takeItemAction()) showItemAction(a);
   while (accumulator >= PHYSICS_DT) {
     Object.assign(prev, kart);
     stepKart(kart, input, PHYSICS_DT);

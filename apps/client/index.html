@@ -16,30 +16,26 @@
   </head>
   <body>
     <canvas id="game"></canvas>
+    <div id="touch-zone"></div>
 
     <div id="fps">-- fps</div>
     <button id="btn-menu" aria-label="Ajustes">⚙</button>
+
+    <div id="item-slot" aria-label="Objeto"><span>?</span></div>
 
     <div id="hud" data-level="0">
       <div><span id="hud-speed">0</span><small>km/h</small></div>
       <div id="hud-turbo"><span></span><span></span><span></span></div>
     </div>
 
-    <div id="help">Flechas/WASD · Espacio = derrape · Esc = ajustes · F1 = tuning</div>
+    <div id="item-flash" hidden></div>
 
-    <div id="controls">
-      <div id="steer-zone"></div>
-      <div id="stick" hidden><div id="stick-knob"></div></div>
-      <button id="btn-item" class="pad">OBJETO</button>
-      <button id="btn-brake" class="pad">FRENO</button>
-      <button id="btn-gas" class="pad">GAS</button>
-      <button id="btn-drift" class="pad">DERRAPE</button>
-    </div>
+    <div id="help">Flechas/WASD · Espacio = derrape · Esc = ajustes · F1 = tuning</div>
+    <div id="touch-help">Arrastra a los lados para girar · lejos para derrapar<br />Toca = objeto · desliza ↑ adelante · ↓ atrás</div>
 
     <div id="menu" class="overlay" hidden>
       <div class="card">
         <h2>Ajustes</h2>
-        <label><input type="checkbox" data-setting="autoAccel" /> Acelerar automático</label>
         <label><input type="checkbox" data-setting="gyro" /> Girar inclinando el móvil</label>
         <p id="gyro-note" class="note"></p>
         <button id="gyro-calibrate" hidden>Centrar giroscopio</button>
@@ -53,7 +49,7 @@
     </div>
 
     <div id="rotate" class="overlay">
-      <div class="card"><div class="rotate-icon">📱↻</div><h2>Gira el móvil</h2><p>Derrape se juega en horizontal.</p></div>
+      <div class="card"><div class="rotate-icon">↻📱</div><h2>Pon el móvil en vertical</h2><p>Derrape se juega en vertical.</p></div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

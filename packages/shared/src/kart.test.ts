@@ -55,6 +55,17 @@ describe("kart", () => {
     expect(s.speed).toBeGreaterThan(KART.maxSpeed);
   });
 
+  it("un gesto puede empezar el derrape con el giro centrado", () => {
+    const s = createKart();
+    run(s, GAS, 4);
+    stepKart(s, { ...GAS, drift: true, driftSide: 1 }, PHYSICS_DT);
+    expect(s.driftDir).toBe(-1); // hacia la derecha
+    const before = s.heading;
+    run(s, { ...GAS, drift: true }, 0.5); // sigue derrapando sin gesto ni giro
+    expect(s.driftDir).toBe(-1);
+    expect(s.heading).toBeLessThan(before);
+  });
+
   it("soltar el derrape sin carga no da turbo", () => {
     const s = createKart();
     run(s, GAS, 4);

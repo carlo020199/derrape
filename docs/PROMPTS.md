@@ -51,11 +51,11 @@ Commit al terminar.
 ```
 Fase 2 de docs/PLAN.md: que se juegue bien en el móvil. Revisa la checklist de la sección 5 del plan.
 
-- Controles táctiles: mitad izquierda = joystick invisible para girar; mitad derecha = botón grande
-  DERRAPE (mantener), botón OBJETO (de momento sin función) y botón pequeño de frenar.
-  Acelerar automático activado por defecto, con opción en un menú de ajustes.
+- Juego en VERTICAL. Controles táctiles como en la sección 3 del plan: acelerar automático,
+  un dedo arrastra a los lados para girar y lejos para derrapar (soltar = mini-turbo);
+  tocar = objeto, deslizar arriba = lanzar adelante, abajo = lanzar atrás.
 - Multitouch correcto (girar y derrapar a la vez), sin zoom, sin selección de texto, sin scroll.
-- Aviso "gira el móvil" en vertical.
+- Aviso "pon el móvil en vertical" en horizontal.
 - Giroscopio opcional (desactivado por defecto), con petición de permiso en iOS tras un toque.
 - HUD en HTML/CSS: velocímetro y nivel de turbo, respetando safe-area (muesca / isla dinámica).
 - PWA: manifest, iconos provisionales, pantalla completa al añadir a inicio, funciona en iOS y Android.
@@ -116,7 +116,7 @@ Fase 5 de docs/PLAN.md: objetos (ver tabla de la sección 3). Todo original.
 - El servidor decide qué objeto toca, según la posición (los últimos, mejores objetos).
 - Objetos: Nitro, Mancha de aceite, Cohete (persigue al de delante), Escudo (8 s).
 - Los impactos los confirma el servidor y todos los móviles ven lo mismo.
-- Icono del objeto en el HUD y botón OBJETO funcional.
+- Icono del objeto en el HUD; los gestos (tocar / deslizar arriba / abajo) usan y lanzan el objeto.
 - Todos los valores en tuning.ts y tests para el reparto de objetos.
 
 Commit al terminar.

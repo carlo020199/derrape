@@ -1,37 +1,30 @@
-// Controles táctiles: mitad izquierda = joystick invisible; derecha = botones.
+// Controles táctiles en vertical: un dedo en cualquier parte de la pantalla (ver gestures.ts).
+// Acelerar es automático. El primer dedo gira; los demás solo sirven para los objetos.
 
-/** Píxeles de arrastre para girar al máximo. */
-const JOYSTICK_RANGE = 70;
-/** Zona muerta del joystick (fracción del rango). */
-const DEAD_ZONE = 0.08;
+import { FingerGesture, type ItemAction } from "./gestures";
 
 export interface TouchState {
   steer: number;
-  throttle: boolean;
-  brake: boolean;
+  /** El dedo que gira está derrapando. */
   drift: boolean;
-  item: boolean;
-  /** true desde el primer toque: se muestran los controles y se usan. */
+  /** Lado del derrape (-1/1) o 0. */
+  driftSide: number;
+  /** true desde el primer toque: se usan los controles táctiles. */
   active: boolean;
 }
 
-export const touch: TouchState = {
-  steer: 0,
-  throttle: false,
-  brake: false,
-  drift: false,
-  item: false,
-  active: false,
-};
+export const touch: TouchState = { steer: 0, drift: false, driftSide: 0, active: false };
 
-export function setupTouchControls(root: HTMLElement) {
-  const ring = root.querySelector<HTMLDivElement>("#stick")!;
-  const knob = root.querySelector<HTMLDivElement>("#stick-knob")!;
-  const zone = root.querySelector<HTMLDivElement>("#steer-zone")!;
+const itemQueue: ItemAction[] = [];
 
-  let stickId: number | null = null;
-  let originX = 0;
-  let originY = 0;
+/** Saca el siguiente gesto de objeto pendiente (lo consume el sistema de objetos, Fase 5). */
+export function takeItemAction(): ItemAction | undefined {
+  return itemQueue.shift();
+}
+
+export function setupTouchControls(zone: HTMLElement) {
+  const fingers = new Map<number, FingerGesture>();
+  let steering: number | null = null;
 
   const activate = () => {
     if (touch.active) return;
@@ -40,62 +33,39 @@ export function setupTouchControls(root: HTMLElement) {
   };
   window.addEventListener("touchstart", activate, { passive: true });
 
+  const sync = () => {
+    const g = steering === null ? undefined : fingers.get(steering);
+    touch.steer = g?.steer ?? 0;
+    touch.driftSide = g?.driftSide ?? 0;
+    touch.drift = touch.driftSide !== 0;
+  };
+
   zone.addEventListener("pointerdown", (e) => {
-    if (stickId !== null) return;
-    stickId = e.pointerId;
-    zone.setPointerCapture(e.pointerId);
-    originX = e.clientX;
-    originY = e.clientY;
-    ring.style.transform = `translate(${originX}px, ${originY}px)`;
-    knob.style.transform = "translate(0px, 0px)";
-    ring.hidden = false;
+    if (e.pointerType === "mouse") return;
+    try {
+      zone.setPointerCapture(e.pointerId);
+    } catch {
+      // Puntero ya inactivo: no pasa nada, se siguen recibiendo eventos en la zona.
+    }
+    fingers.set(e.pointerId, new FingerGesture(e.clientX, e.clientY, e.timeStamp));
+    if (steering === null) steering = e.pointerId;
+    sync();
   });
   zone.addEventListener("pointermove", (e) => {
-    if (e.pointerId !== stickId) return;
-    const dx = Math.max(-JOYSTICK_RANGE, Math.min(JOYSTICK_RANGE, e.clientX - originX));
-    const raw = dx / JOYSTICK_RANGE;
-    touch.steer = Math.abs(raw) < DEAD_ZONE ? 0 : raw;
-    knob.style.transform = `translate(${dx}px, 0px)`;
-    // Si el dedo se aleja mucho, el centro le sigue (joystick "flotante").
-    const over = e.clientX - originX - dx;
-    if (over !== 0) {
-      originX += over;
-      ring.style.transform = `translate(${originX}px, ${originY}px)`;
-    }
+    fingers.get(e.pointerId)?.move(e.clientX, e.clientY);
+    if (e.pointerId === steering) sync();
   });
-  const endStick = (e: PointerEvent) => {
-    if (e.pointerId !== stickId) return;
-    stickId = null;
-    touch.steer = 0;
-    ring.hidden = true;
+  const end = (e: PointerEvent, cancelled: boolean) => {
+    const g = fingers.get(e.pointerId);
+    if (!g) return;
+    fingers.delete(e.pointerId);
+    const action = cancelled ? null : g.release(e.timeStamp);
+    if (action) itemQueue.push(action);
+    if (e.pointerId === steering) steering = null;
+    sync();
   };
-  zone.addEventListener("pointerup", endStick);
-  zone.addEventListener("pointercancel", endStick);
-
-  // Botones: cada uno lleva la cuenta de los dedos que lo pulsan.
-  const bind = (id: string, key: "throttle" | "brake" | "drift" | "item") => {
-    const el = root.querySelector<HTMLElement>(id)!;
-    const fingers = new Set<number>();
-    const update = () => {
-      touch[key] = fingers.size > 0;
-      el.classList.toggle("pressed", touch[key]);
-    };
-    el.addEventListener("pointerdown", (e) => {
-      fingers.add(e.pointerId);
-      el.setPointerCapture(e.pointerId);
-      update();
-    });
-    const up = (e: PointerEvent) => {
-      fingers.delete(e.pointerId);
-      update();
-    };
-    el.addEventListener("pointerup", up);
-    el.addEventListener("pointercancel", up);
-  };
-  bind("#btn-drift", "drift");
-  bind("#btn-brake", "brake");
-  bind("#btn-item", "item");
-  bind("#btn-gas", "throttle");
+  zone.addEventListener("pointerup", (e) => end(e, false));
+  zone.addEventListener("pointercancel", (e) => end(e, true));
 
   // Evitar zoom, scroll, selección y menú contextual.
   document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
@@ -107,5 +77,7 @@ export function setupTouchControls(root: HTMLElement) {
 /** Suelta todo (al pausar o cambiar de app). */
 export function releaseTouch() {
   touch.steer = 0;
-  touch.throttle = touch.brake = touch.drift = touch.item = false;
+  touch.drift = false;
+  touch.driftSide = 0;
+  itemQueue.length = 0;
 }

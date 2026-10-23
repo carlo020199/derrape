@@ -10,10 +10,7 @@ export function setupMenu(onPauseChange: (paused: boolean) => void) {
   const fps = document.querySelector<HTMLDivElement>("#fps")!;
   const calibrate = document.querySelector<HTMLButtonElement>("#gyro-calibrate")!;
 
-  const applyFps = () => {
-    fps.hidden = !settings.showFps;
-    document.body.classList.toggle("manual", !settings.autoAccel);
-  };
+  const applyFps = () => (fps.hidden = !settings.showFps);
   applyFps();
 
   const syncGyroUi = () => {

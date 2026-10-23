@@ -9,6 +9,11 @@ export interface KartInput {
   /** Frenar y, parado, marcha atrás. */
   brake: boolean;
   drift: boolean;
+  /**
+   * Lado del derrape pedido por un gesto (-1 izquierda, 1 derecha, como `steer`).
+   * Si viene, el derrape empieza aunque el giro esté centrado.
+   */
+  driftSide?: number;
 }
 
 export interface KartState {
@@ -56,9 +61,10 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
 
   // --- Derrape: empezar, mantener, soltar ---
   if (s.driftDir === 0) {
-    if (input.drift && Math.abs(steer) > 0.3 && s.speed >= t.driftMinSpeed) {
+    const side = input.driftSide || (Math.abs(steer) > 0.3 ? steer : 0);
+    if (input.drift && side !== 0 && s.speed >= t.driftMinSpeed) {
       // Girar a la izquierda (steer < 0) es rumbo positivo.
-      s.driftDir = steer < 0 ? 1 : -1;
+      s.driftDir = side < 0 ? 1 : -1;
       s.driftCharge = 0;
     }
   } else if (!input.drift || s.speed < t.driftMinSpeed * 0.6) {

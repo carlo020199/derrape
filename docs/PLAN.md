@@ -21,17 +21,21 @@ pantalla de inicio" lo abre a pantalla completa como si fuera una app.
 
 ## 3. Diseño del juego
 
-### Controles (móvil, en horizontal)
-- **Acelerar automático** (activado por defecto, desactivable en ajustes).
-- **Mitad izquierda:** arrastrar el dedo para girar (joystick invisible).
-- **Mitad derecha:** botón grande DERRAPE (mantener) y botón OBJETO. Botón pequeño de frenar/marcha atrás.
+### Controles (móvil, en vertical, estilo karts de móvil)
+- **Acelerar siempre automático.** No hay botón de gas ni de freno.
+- **Un dedo en cualquier parte de la pantalla:**
+  - arrastrar a izquierda/derecha = girar (proporcional a lo que arrastras);
+  - arrastrar lejos hacia un lado = **derrapar** en esa dirección; mientras mantienes el dedo
+    el derrape sigue y cargas chispas; al **levantar el dedo**, mini-turbo.
+- **Objetos:** tocar = usar; **deslizar hacia arriba = lanzar adelante**; **deslizar hacia abajo = lanzar atrás**.
+  Con un segundo dedo también se pueden usar mientras el primero gira.
 - **Opcional:** girar inclinando el móvil (giroscopio). En iPhone exige pedir permiso con un toque
   y servir la web por HTTPS.
 - Teclado en PC para desarrollar y probar rápido.
 
 ### Conducción
 - Física arcade: agarre alto, velocidad punta clara, choques suaves que rebotan sin frenar del todo.
-- **Derrape con turbo:** mantener DERRAPE al girar → chispas nivel 1 → 2 → 3 según el tiempo →
+- **Derrape con turbo:** arrastrar lejos al girar (Espacio en PC) → chispas nivel 1 → 2 → 3 según el tiempo →
   al soltar, mini-turbo proporcional.
 - **Turbo de salida:** acelerar en el momento justo de la cuenta atrás.
 - Rampas y saltos (los usan varios circuitos).
@@ -80,7 +84,7 @@ Resumen (detalle en `CLAUDE.md`):
 - Personajes, coches y circuitos son **datos** en `packages/shared` (no código suelto por todas partes).
 
 ## 5. Particularidades de móvil (checklist)
-- [x] iOS no permite bloquear la orientación en el navegador → mostrar aviso "gira el móvil".
+- [x] iOS no permite bloquear la orientación en el navegador → aviso "pon el móvil en vertical".
 - [x] Pantalla completa real en iPhone solo como PWA (añadida a inicio) → manifest + iconos.
 - [ ] Audio: se desbloquea en el primer toque del usuario.
 - [x] Giroscopio en iOS: pedir permiso tras un toque y solo con HTTPS.
@@ -99,7 +103,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* `npm run dev` muestra un cubo girando y el servidor responde.
 - [x] **Fase 1 — Conducir.** Kart arcade con teclado en un óvalo de prueba, cámara de persecución, derrape con turbo.
   *Hecho cuando:* conducir y derrapar en PC es divertido.
-- [ ] **Fase 2 — Móvil.** Controles táctiles, horizontal, PWA, HUD básico, medidor de fps. Probar en iPhone y Android.
+- [ ] **Fase 2 — Móvil.** Controles táctiles en vertical, PWA, HUD básico, medidor de fps. Probar en iPhone y Android.
   *Hecho cuando:* se juega cómodo y a ~60 fps en los móviles de tus amigos.
 - [ ] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
   (Paseo del Puerto); checkpoints, vueltas, cuenta atrás, tiempos, pantalla final.
@@ -145,6 +149,5 @@ de conducción (Fase 1–2) es lo que decide si el juego engancha.
 
 ## 10. Decisiones abiertas (no bloquean empezar)
 - Nombre definitivo del juego
-- ¿Acelerar automático o manual por defecto?
 - ¿Cuántos jugadores máximos? (4 es lo seguro; 8 si va bien)
 - Nombres definitivos de personajes, coches y circuitos

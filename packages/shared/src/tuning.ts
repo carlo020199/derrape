@@ -70,3 +70,21 @@ export const KART = {
 };
 
 export type KartTuning = typeof KART;
+
+/** Controles táctiles (móvil en vertical). Distancias en píxeles CSS, tiempos en ms. */
+export const TOUCH = {
+  /** Arrastre horizontal para girar al máximo. */
+  steerRange: 90,
+  /** Zona muerta del giro (fracción de steerRange). */
+  deadZone: 0.06,
+  /** Fracción de steerRange a partir de la cual el giro se convierte en derrape. */
+  driftTrigger: 0.6,
+  /** Un toque: dura menos que esto... */
+  tapMaxMs: 250,
+  /** ...y el dedo se mueve menos que esto. */
+  tapSlop: 14,
+  /** Un deslizamiento vertical: dura menos que esto... */
+  swipeMaxMs: 400,
+  /** ...y recorre al menos esto en vertical. */
+  swipeMin: 45,
+};

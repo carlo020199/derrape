@@ -97,81 +97,65 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
 }
 body.touch #help { display: none; }
 
-/* --- Controles táctiles (solo tras el primer toque) --- */
-#controls { display: none; }
-body.touch #controls { display: block; }
-
-#steer-zone {
+/* --- Controles táctiles: toda la pantalla es zona de gestos --- */
+#touch-zone {
   position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 50vw;
-}
-#stick {
-  position: fixed;
-  left: -60px;
-  top: -60px;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  border: 2px solid rgb(255 255 255 / 0.35);
-  pointer-events: none;
-}
-#stick[hidden] { display: none; }
-#stick-knob {
-  position: absolute;
-  left: 35px;
-  top: 35px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.45);
-}
-
-.pad {
-  position: fixed;
-  border: 2px solid rgb(255 255 255 / 0.5);
-  border-radius: 50%;
-  background: rgb(0 0 0 / 0.3);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  transition: transform 80ms ease-out, background-color 80ms ease-out;
-}
-.pad.pressed { transform: scale(0.93); background: rgb(255 255 255 / 0.3); }
-
-#btn-drift {
-  right: calc(20px + var(--safe-r));
-  bottom: calc(24px + var(--safe-b));
-  width: 120px;
-  height: 120px;
-  font-size: 15px;
-  border-color: var(--accent);
-  background: rgb(255 107 53 / 0.35);
-}
-#btn-item {
-  right: calc(150px + var(--safe-r));
-  bottom: calc(110px + var(--safe-b));
-  width: 76px;
-  height: 76px;
-  font-size: 11px;
-}
-#btn-brake {
-  right: calc(150px + var(--safe-r));
-  bottom: calc(20px + var(--safe-b));
-  width: 64px;
-  height: 64px;
-  font-size: 11px;
-}
-#btn-gas {
-  right: calc(30px + var(--safe-r));
-  bottom: calc(160px + var(--safe-b));
-  width: 84px;
-  height: 84px;
-  font-size: 13px;
+  inset: 0;
   display: none;
 }
-body.manual #btn-gas { display: block; }
+body.touch #touch-zone { display: block; }
+
+#touch-help {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + var(--safe-b));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  opacity: 0.85;
+  pointer-events: none;
+  animation: fade-out 600ms ease-out 6s forwards;
+}
+body.touch #touch-help { display: block; }
+@keyframes fade-out { to { opacity: 0; } }
+
+#item-slot {
+  position: fixed;
+  top: calc(36px + var(--safe-t));
+  left: calc(10px + var(--safe-l));
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border: 3px solid rgb(255 255 255 / 0.8);
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.35);
+  font: 800 26px system-ui, sans-serif;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+#item-flash {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.5);
+  font: 800 18px system-ui, sans-serif;
+  pointer-events: none;
+  animation: flash 700ms ease-out forwards;
+}
+#item-flash[hidden] { display: none; }
+@keyframes flash {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -80%) scale(1.05); }
+}
 
 /* --- Pantallas superpuestas --- */
 .overlay {
@@ -209,7 +193,7 @@ body.manual #btn-gas { display: block; }
 
 #rotate { display: none; z-index: 20; background: #1b1f3a; }
 .rotate-icon { font-size: 44px; margin-bottom: 8px; }
-@media (orientation: portrait) and (pointer: coarse) {
+@media (orientation: landscape) and (pointer: coarse) {
   #rotate { display: grid; }
 }
 

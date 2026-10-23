@@ -15,7 +15,7 @@ function screenAngle(): number {
 }
 
 function onOrientation(e: DeviceOrientationEvent) {
-  // En horizontal, girar el móvil como un volante cambia "beta".
+  // En vertical se inclina a los lados ("gamma"); en horizontal, como un volante ("beta").
   const a = screenAngle();
   const beta = e.beta ?? 0;
   tilt = a === 90 ? beta : a === 270 || a === -90 ? -beta : (e.gamma ?? 0);

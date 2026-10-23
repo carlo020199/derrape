@@ -9,6 +9,10 @@ export const CAMERA = {
   fastFov: 76,
   /** Rapidez con la que la cámara alcanza su objetivo (1/s). */
   follow: 6,
+  /** En vertical la pantalla es estrecha: más campo de visión y cámara algo más alta y lejos. */
+  portraitExtraFov: 18,
+  portraitHeight: 3.6,
+  portraitDistance: 7.5,
 };
 
 export class ChaseCamera {
@@ -22,8 +26,10 @@ export class ChaseCamera {
   update(x: number, z: number, heading: number, speedRatio: number, dt: number) {
     const fx = Math.sin(heading);
     const fz = Math.cos(heading);
-    const dist = CAMERA.distance + speedRatio * 1.2;
-    const targetPos = new THREE.Vector3(x - fx * dist, CAMERA.height, z - fz * dist);
+    const portrait = this.camera.aspect < 1;
+    const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * 1.2;
+    const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
+    const targetPos = new THREE.Vector3(x - fx * dist, height, z - fz * dist);
     const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, 0.8, z + fz * CAMERA.lookAhead);
 
     if (!this.initialized) {
@@ -38,7 +44,10 @@ export class ChaseCamera {
     this.camera.position.copy(this.pos);
     this.camera.lookAt(this.look);
 
-    const fov = CAMERA.baseFov + (CAMERA.fastFov - CAMERA.baseFov) * Math.min(1.4, Math.max(0, speedRatio));
+    const fov =
+      CAMERA.baseFov +
+      (portrait ? CAMERA.portraitExtraFov : 0) +
+      (CAMERA.fastFov - CAMERA.baseFov) * Math.min(1.4, Math.max(0, speedRatio));
     if (Math.abs(this.camera.fov - fov) > 0.05) {
       this.camera.fov += (fov - this.camera.fov) * k;
       this.camera.updateProjectionMatrix();
