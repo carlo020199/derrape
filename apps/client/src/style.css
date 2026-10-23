@@ -26,3 +26,46 @@ html, body {
   border-radius: 4px;
   pointer-events: none;
 }
+
+#speed {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  font: 800 28px/1 system-ui, sans-serif;
+  color: #fff;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+#speed[data-level="1"] { color: #4cc9f0; }
+#speed[data-level="2"] { color: #ff9f1c; }
+#speed[data-level="3"] { color: #b15cff; }
+
+#help {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  font: 500 12px system-ui, sans-serif;
+  color: #fff;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+#debug {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  width: 320px;
+  padding: 8px 10px;
+  font: 12px system-ui, sans-serif;
+  color: #fff;
+  background: rgb(10 12 30 / 0.85);
+  border-radius: 8px;
+  user-select: auto;
+}
+#debug .debug-title { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
+#debug .debug-section { margin: 8px 0 4px; font-weight: 700; color: #ff9f1c; }
+#debug label { display: grid; grid-template-columns: 130px 1fr 40px; gap: 6px; align-items: center; }
+#debug output { text-align: right; }

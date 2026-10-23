@@ -10,3 +10,63 @@ export const NET_SEND_HZ = 20;
 /** Jugadores por sala. */
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 8;
+
+/**
+ * Constantes del kart. Es un objeto mutable a propósito: el panel de debug (F1)
+ * las cambia en vivo. Unidades: metros, segundos, radianes.
+ */
+export const KART = {
+  /** Velocidad punta (m/s). */
+  maxSpeed: 26,
+  /** Aceleración con el acelerador pisado (m/s²). */
+  accel: 16,
+  /** Frenada (m/s²). */
+  brake: 30,
+  /** Velocidad máxima marcha atrás (m/s). */
+  maxReverse: 8,
+  /** Aceleración marcha atrás (m/s²). */
+  reverseAccel: 10,
+  /** Deceleración sin pisar nada (m/s²). */
+  coastDrag: 6,
+  /** Giro máximo (rad/s). */
+  turnRate: 2.4,
+  /** Velocidad a partir de la cual se gira al máximo (m/s). */
+  turnFullSpeed: 8,
+  /** Fracción del giro que se conserva a velocidad punta (0–1). */
+  turnAtTopSpeed: 0.75,
+  /** Radio de colisión del kart (m). */
+  radius: 0.9,
+
+  /** Velocidad mínima para empezar a derrapar (m/s). */
+  driftMinSpeed: 10,
+  /** Giro durante el derrape con el stick neutro (rad/s). */
+  driftTurnBase: 1.5,
+  /** Giro extra/menos según cuánto cierres o abras el derrape (rad/s). */
+  driftTurnRange: 1.0,
+  /** Velocidad que se pierde derrapando (fracción de la punta). */
+  driftSpeedLoss: 0.08,
+  /** Segundos de derrape para cada nivel de chispas (azul, naranja, morado). */
+  driftLevel1: 0.6,
+  driftLevel2: 1.3,
+  driftLevel3: 2.2,
+  /** Cerrar el derrape carga más rápido (multiplicador con el stick a tope). */
+  driftChargeTightBonus: 0.5,
+  /** Ángulo visual del kart derrapando (rad). Solo estético. */
+  driftVisualAngle: 0.45,
+
+  /** Duración del mini-turbo por nivel (s). */
+  boostTime1: 0.5,
+  boostTime2: 1.0,
+  boostTime3: 1.6,
+  /** Velocidad punta durante el turbo (multiplicador). */
+  boostSpeedMult: 1.35,
+  /** Aceleración durante el turbo (m/s²). */
+  boostAccel: 45,
+
+  /** Velocidad que se conserva al chocar con un borde de frente (0–1). */
+  wallBounceKeep: 0.45,
+  /** Velocidad que se conserva rozando un borde en paralelo (0–1). */
+  wallScrapeKeep: 0.97,
+};
+
+export type KartTuning = typeof KART;
