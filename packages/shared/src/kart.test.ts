@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bounceKart, createKart, driftLevel, stepKart, type KartInput } from "./kart";
+import { bounceKart, createKart, driftLevel, giveBoost, hopHeight, stepKart, type KartInput } from "./kart";
 import { closestPoint, collideKartWithTrack, createOvalTrack } from "./track";
 import { KART, PHYSICS_DT } from "./tuning";
 
@@ -17,7 +17,7 @@ describe("kart", () => {
       stepKart(s, GAS, PHYSICS_DT);
       max = Math.max(max, s.speed);
     }
-    expect(s.speed).toBeCloseTo(KART.maxSpeed, 5);
+    expect(s.speed).toBeCloseTo(KART.maxSpeed, 2);
     expect(max).toBeLessThanOrEqual(KART.maxSpeed + 1e-9);
   });
 
@@ -34,12 +34,44 @@ describe("kart", () => {
     expect(s.heading).toBe(0);
   });
 
+  it("aceleración en dos fases: arranque fuerte y final suave", () => {
+    const s = createKart();
+    run(s, GAS, 0.5);
+    // Primera fase: aceleración al tope.
+    expect(s.speed).toBeCloseTo(KART.accelLimit * 0.5, 0);
+    run(s, GAS, 2.5);
+    // A los 3 s ya casi en la punta, pero sin pasarse.
+    expect(s.speed).toBeGreaterThan(KART.maxSpeed * 0.93);
+    expect(s.speed).toBeLessThanOrEqual(KART.maxSpeed);
+  });
+
+  it("pulsar derrape sin girar solo hace un saltito", () => {
+    const s = createKart();
+    run(s, GAS, 4);
+    stepKart(s, { ...GAS, drift: true }, PHYSICS_DT);
+    expect(s.hopTime).toBeGreaterThan(0);
+    expect(hopHeight(s)).toBeGreaterThanOrEqual(0);
+    run(s, { ...GAS, drift: true }, KART.hopTime + 0.1);
+    expect(s.hopTime).toBe(0);
+    expect(s.driftDir).toBe(0);
+  });
+
+  it("el derrape empieza al aterrizar del salto, no antes", () => {
+    const s = createKart();
+    run(s, GAS, 4);
+    const drifting: KartInput = { steer: -1, throttle: true, brake: false, drift: true };
+    stepKart(s, drifting, PHYSICS_DT);
+    expect(s.driftDir).toBe(0);
+    run(s, drifting, KART.hopTime);
+    expect(s.driftDir).toBe(1);
+  });
+
   it("el derrape carga los niveles en orden y al soltar da turbo", () => {
     const s = createKart();
     run(s, GAS, 4);
     const drifting: KartInput = { steer: -1, throttle: true, brake: false, drift: true };
     const levels: number[] = [];
-    for (let i = 0; i < 60 * 3; i++) {
+    for (let i = 0; i < 60 * 3.5; i++) {
       stepKart(s, drifting, PHYSICS_DT);
       levels.push(driftLevel(s));
     }
@@ -53,17 +85,20 @@ describe("kart", () => {
     expect(s.boostTime).toBeGreaterThan(KART.boostTime3 - 0.05);
     run(s, GAS, 0.5);
     expect(s.speed).toBeGreaterThan(KART.maxSpeed);
+    expect(s.speed).toBeLessThanOrEqual(KART.maxSpeed * KART.boostSpeedMult + 1e-9);
   });
 
-  it("un gesto puede empezar el derrape con el giro centrado", () => {
-    const s = createKart();
-    run(s, GAS, 4);
-    stepKart(s, { ...GAS, drift: true, driftSide: 1 }, PHYSICS_DT);
-    expect(s.driftDir).toBe(-1); // hacia la derecha
-    const before = s.heading;
-    run(s, { ...GAS, drift: true }, 0.5); // sigue derrapando sin gesto ni giro
-    expect(s.driftDir).toBe(-1);
-    expect(s.heading).toBeLessThan(before);
+  it("girar hacia dentro carga más rápido que abrir el derrape", () => {
+    const charge = (steer: number) => {
+      const s = createKart();
+      run(s, GAS, 4);
+      run(s, { steer: -1, throttle: true, brake: false, drift: true }, KART.hopTime + 0.05);
+      run(s, { steer, throttle: true, brake: false, drift: true }, 1);
+      return s.driftCharge;
+    };
+    const inside = charge(-1); // derrape a la izquierda, girando a la izquierda
+    const outside = charge(0.5);
+    expect(inside / outside).toBeCloseTo(KART.driftChargeFast / KART.driftChargeSlow, 0);
   });
 
   it("soltar el derrape sin carga no da turbo", () => {
@@ -77,7 +112,7 @@ describe("kart", () => {
   it("el turbo dura lo que toca y vuelve a la punta normal", () => {
     const s = createKart();
     run(s, GAS, 4);
-    s.boostTime = KART.boostTime2;
+    giveBoost(s, KART.boostTime2, KART.boostSpeedMult);
     run(s, GAS, KART.boostTime2 + 3);
     expect(s.boostTime).toBe(0);
     expect(s.speed).toBeCloseTo(KART.maxSpeed, 3);

@@ -10,6 +10,7 @@ import {
   createKart,
   createRaceKart,
   driftLevel,
+  hopHeight,
   pointAt,
   pruebasTrack,
   racePositions,
@@ -217,7 +218,7 @@ renderer.setAnimationLoop((now) => {
     const x = r.prev.x + (s.x - r.prev.x) * alpha;
     const z = r.prev.z + (s.z - r.prev.z) * alpha;
     const m = r.model;
-    m.root.position.set(x, 0, z);
+    m.root.position.set(x, hopHeight(s), z);
     m.root.rotation.y = lerpAngle(r.prev.heading, s.heading, alpha);
     r.driftVisual += (s.driftDir * KART.driftVisualAngle - r.driftVisual) * Math.min(1, dt * 10);
     // Trompo: dos vueltas completas mientras dura.

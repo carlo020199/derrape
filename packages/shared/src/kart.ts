@@ -1,4 +1,5 @@
 // Simulación arcade de un kart a paso fijo. Sin Three.js: se ejecuta igual en cliente, servidor y tests.
+// El comportamiento imita a los juegos de karts de referencia; ver docs/FISICAS.md.
 
 import { ITEMS, KART, type KartTuning } from "./tuning";
 
@@ -8,10 +9,11 @@ export interface KartInput {
   throttle: boolean;
   /** Frenar y, parado, marcha atrás. */
   brake: boolean;
+  /** Botón/gesto de derrape mantenido. Al pulsarlo, el kart da un saltito. */
   drift: boolean;
   /**
    * Lado del derrape pedido por un gesto (-1 izquierda, 1 derecha, como `steer`).
-   * Si viene, el derrape empieza aunque el giro esté centrado.
+   * Si viene, el derrape empieza al aterrizar aunque el giro esté centrado.
    */
   driftSide?: number;
 }
@@ -25,10 +27,15 @@ export interface KartState {
   speed: number;
   /** 0 = no derrapa, -1 / 1 = derrapando hacia la derecha / izquierda. */
   driftDir: number;
-  /** Carga acumulada del derrape (s ponderados). */
+  /** Carga acumulada del mini-turbo (unidades: ver tuning). */
   driftCharge: number;
-  /** Turbo restante (s). */
+  /** Tiempo de salto restante (s). Al aterrizar empieza el derrape si se sigue pidiendo. */
+  hopTime: number;
+  /** Si el derrape estaba pulsado el paso anterior (para detectar la pulsación). */
+  driftHeld: boolean;
+  /** Turbo restante (s) y su fuerza (multiplicador de velocidad punta). */
   boostTime: number;
+  boostMult: number;
   /** Trompo restante (s): sin control y frenando. */
   spinTime: number;
   /** Escudo restante (s). */
@@ -38,7 +45,20 @@ export interface KartState {
 export const NO_INPUT: KartInput = { steer: 0, throttle: false, brake: false, drift: false };
 
 export function createKart(x = 0, z = 0, heading = 0): KartState {
-  return { x, z, heading, speed: 0, driftDir: 0, driftCharge: 0, boostTime: 0, spinTime: 0, shieldTime: 0 };
+  return {
+    x,
+    z,
+    heading,
+    speed: 0,
+    driftDir: 0,
+    driftCharge: 0,
+    hopTime: 0,
+    driftHeld: false,
+    boostTime: 0,
+    boostMult: 1,
+    spinTime: 0,
+    shieldTime: 0,
+  };
 }
 
 /** Nivel de chispas (0–3) según la carga del derrape. */
@@ -50,6 +70,20 @@ export function driftLevel(s: KartState, t: KartTuning = KART): number {
   return 0;
 }
 
+/** Altura del salto (m) para dibujarlo. */
+export function hopHeight(s: KartState, t: KartTuning = KART): number {
+  if (s.hopTime <= 0) return 0;
+  const u = 1 - s.hopTime / t.hopTime; // 0..1
+  return 4 * t.hopHeight * u * (1 - u);
+}
+
+/** Da un turbo: dura al menos `time` s y se queda con la fuerza mayor. */
+export function giveBoost(s: KartState, time: number, mult: number): void {
+  if (time <= 0) return;
+  s.boostMult = s.boostTime > 0 ? Math.max(s.boostMult, mult) : mult;
+  s.boostTime = Math.max(s.boostTime, time);
+}
+
 function boostForLevel(level: number, t: KartTuning): number {
   return level === 3 ? t.boostTime3 : level === 2 ? t.boostTime2 : level === 1 ? t.boostTime1 : 0;
 }
@@ -59,15 +93,24 @@ function approach(value: number, target: number, maxDelta: number): number {
   return Math.max(value - maxDelta, target);
 }
 
+function endDrift(s: KartState, t: KartTuning, withBoost: boolean) {
+  if (withBoost) giveBoost(s, boostForLevel(driftLevel(s, t), t), t.boostSpeedMult);
+  s.driftDir = 0;
+  s.driftCharge = 0;
+}
+
 /** Avanza la simulación un paso de `dt` segundos. Modifica `s`. */
 export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuning = KART): void {
   s.shieldTime = Math.max(0, s.shieldTime - dt);
+  const pressed = input.drift && !s.driftHeld;
+  s.driftHeld = input.drift;
 
   // --- Trompo: sin control, frenando ---
   if (s.spinTime > 0) {
     s.spinTime = Math.max(0, s.spinTime - dt);
     s.driftDir = 0;
     s.driftCharge = 0;
+    s.hopTime = 0;
     s.boostTime = 0;
     s.speed = approach(s.speed, 0, ITEMS.spinDecel * dt);
     s.x += Math.sin(s.heading) * s.speed * dt;
@@ -77,34 +120,44 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
 
   const steer = Math.max(-1, Math.min(1, input.steer));
 
-  // --- Derrape: empezar, mantener, soltar ---
+  // --- Salto y derrape ---
+  // Pulsar derrape = saltito. Al aterrizar, si se sigue pulsando y hay dirección, empieza el derrape.
   if (s.driftDir === 0) {
-    const side = input.driftSide || (Math.abs(steer) > 0.3 ? steer : 0);
-    if (input.drift && side !== 0 && s.speed >= t.driftMinSpeed) {
-      // Girar a la izquierda (steer < 0) es rumbo positivo.
-      s.driftDir = side < 0 ? 1 : -1;
-      s.driftCharge = 0;
+    if (pressed && s.hopTime === 0 && s.speed > 0) s.hopTime = t.hopTime;
+    if (s.hopTime > 0) {
+      s.hopTime = Math.max(0, s.hopTime - dt);
+      if (s.hopTime === 0) {
+        const side = input.driftSide || (Math.abs(steer) > 0.3 ? steer : 0);
+        if (input.drift && side !== 0 && s.speed >= t.driftMinSpeed) {
+          // Girar a la izquierda (steer < 0) es rumbo positivo.
+          s.driftDir = side < 0 ? 1 : -1;
+          s.driftCharge = 0;
+        }
+      }
     }
   } else if (!input.drift || s.speed < t.driftMinSpeed * 0.6) {
-    const boost = s.speed >= t.driftMinSpeed * 0.6 ? boostForLevel(driftLevel(s, t), t) : 0;
-    s.boostTime = Math.max(s.boostTime, boost);
-    s.driftDir = 0;
-    s.driftCharge = 0;
+    endDrift(s, t, s.speed >= t.driftMinSpeed * 0.6);
   }
 
   // --- Velocidad ---
   const boosting = s.boostTime > 0;
-  const topSpeed = boosting ? t.maxSpeed * t.boostSpeedMult : t.maxSpeed * (s.driftDir !== 0 ? 1 - t.driftSpeedLoss : 1);
+  const normalTop = t.maxSpeed * (s.driftDir !== 0 ? 1 - t.driftSpeedLoss : 1);
+  const topSpeed = boosting ? t.maxSpeed * s.boostMult : normalTop;
 
   if (boosting) {
     s.speed = approach(s.speed, topSpeed, t.boostAccel * dt);
     s.boostTime = Math.max(0, s.boostTime - dt);
+    if (s.boostTime === 0) s.boostMult = 1;
   } else if (input.brake) {
     if (s.speed > 0.5) s.speed = Math.max(0, s.speed - t.brake * dt);
     else s.speed = approach(s.speed, -t.maxReverse, t.reverseAccel * dt);
   } else if (input.throttle) {
     if (s.speed < 0) s.speed = Math.min(0, s.speed + t.brake * dt);
-    else s.speed = approach(s.speed, topSpeed, t.accel * dt);
+    else if (s.speed < topSpeed) {
+      // Dos fases: tope absoluto al arrancar; proporcional a lo que falta cerca de la punta.
+      const gain = Math.min(t.accelLimit, t.accelRelative * (topSpeed - s.speed));
+      s.speed = Math.min(topSpeed, s.speed + gain * dt);
+    }
   } else {
     s.speed = approach(s.speed, 0, t.coastDrag * dt);
   }
@@ -115,9 +168,10 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   let turn: number;
   if (s.driftDir !== 0) {
     // steer a favor del derrape lo cierra; en contra lo abre.
-    const tight = -steer * s.driftDir; // -1..1
-    turn = s.driftDir * (t.driftTurnBase + t.driftTurnRange * tight);
-    s.driftCharge += dt * (1 + t.driftChargeTightBonus * Math.max(0, tight));
+    const inside = -steer * s.driftDir; // -1..1
+    turn = s.driftDir * (t.driftTurnBase + t.driftTurnRange * inside);
+    const rate = inside >= t.driftInsideThreshold ? t.driftChargeFast : t.driftChargeSlow;
+    if (s.hopTime === 0) s.driftCharge += rate * t.driftChargeMult * dt;
   } else {
     const abs = Math.abs(s.speed);
     const low = Math.min(1, abs / t.turnFullSpeed);
@@ -158,9 +212,6 @@ export function bounceKart(s: KartState, nx: number, nz: number, push: number, t
     s.heading = Math.atan2(rvx * dir, rvz * dir);
   }
   s.speed = newSpeed * (Math.sign(s.speed) || 1);
-  // Chocar corta el derrape sin dar turbo.
-  if (frontal > 0.5) {
-    s.driftDir = 0;
-    s.driftCharge = 0;
-  }
+  // Chocar de frente corta el derrape sin dar turbo.
+  if (frontal > 0.5) endDrift(s, t, false);
 }

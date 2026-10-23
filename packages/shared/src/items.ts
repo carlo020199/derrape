@@ -1,7 +1,7 @@
 // Objetos: cajas, reparto según posición, Nitro, Aceite, Cohete y Escudo.
 // Lógica pura: hoy la ejecuta el cliente en solitario; en multijugador la ejecutará el servidor.
 
-import type { KartState } from "./kart";
+import { giveBoost, type KartState } from "./kart";
 import { closestPoint, pointAt, type Track } from "./track";
 import { ITEM_ODDS, ITEMS } from "./tuning";
 
@@ -129,7 +129,7 @@ export function useItem(world: ItemWorld, kart: RaceKart, action: ItemAction, ev
 
   switch (item) {
     case "nitro":
-      s.boostTime = Math.max(s.boostTime, ITEMS.nitroTime);
+      giveBoost(s, ITEMS.nitroTime, ITEMS.nitroSpeedMult);
       break;
     case "shield":
       s.shieldTime = ITEMS.shieldTime;
