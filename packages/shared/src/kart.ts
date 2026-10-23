@@ -225,3 +225,36 @@ export function bounceKart(s: KartState, nx: number, nz: number, push: number, t
   // Chocar de frente corta el derrape sin dar turbo.
   if (frontal > 0.5) endDrift(s, t, false);
 }
+
+/**
+ * Choque entre dos karts (esferas). Los separa y frena un poco al que embiste.
+ * Con `moveB = false` solo se mueve `a` (en red, cada cliente corrige solo su propio kart).
+ * Devuelve true si han chocado.
+ */
+export function collideKarts(a: KartState, b: KartState, moveB = true, t: KartTuning = KART): boolean {
+  const dx = a.x - b.x;
+  const dz = a.z - b.z;
+  const dist = Math.hypot(dx, dz);
+  const min = t.radius * 2;
+  if (dist >= min) return false;
+  // Normal de b hacia a (si están en el mismo punto, hacia la izquierda de a).
+  const nx = dist > 1e-6 ? dx / dist : Math.cos(a.heading);
+  const nz = dist > 1e-6 ? dz / dist : -Math.sin(a.heading);
+  const overlap = min - dist + t.bumpPush;
+  const share = moveB ? 0.5 : 1;
+  a.x += nx * overlap * share;
+  a.z += nz * overlap * share;
+  if (moveB) {
+    b.x -= nx * overlap * share;
+    b.z -= nz * overlap * share;
+  }
+  // Frena al que va hacia el otro, según lo de frente que sea el golpe.
+  const slow = (k: KartState, sx: number, sz: number) => {
+    const into = (Math.sin(k.heading) * sx + Math.cos(k.heading) * sz) * Math.sign(k.speed);
+    if (into <= 0) return;
+    k.speed *= 1 - (1 - t.bumpSpeedKeep) * Math.min(1, into);
+  };
+  slow(a, -nx, -nz);
+  if (moveB) slow(b, nx, nz);
+  return true;
+}

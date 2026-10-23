@@ -1,21 +1,21 @@
-import http from "node:http";
-import express from "express";
-import { Server } from "colyseus";
-import { WebSocketTransport } from "@colyseus/ws-transport";
-import { PHYSICS_HZ, ROOM_RACE } from "@derrape/shared";
-import { RaceRoom } from "./rooms/RaceRoom";
+import { SERVER_PORT } from "@derrape/shared";
+import { startServer } from "./server";
 
-const PORT = Number(process.env.PORT ?? 2567);
+const PORT = Number(process.env.PORT ?? SERVER_PORT);
 
-const app = express();
-app.get("/health", (_req, res) => {
-  res.json({ ok: true, physicsHz: PHYSICS_HZ });
-});
+// Al recargar en desarrollo (Windows), el proceso anterior puede tardar un momento en soltar el
+// puerto: se reintenta unas cuantas veces antes de rendirse.
+async function main() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await startServer(PORT);
+      console.log(`Servidor Derrape en http://localhost:${PORT} (salud: /health)`);
+      return;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EADDRINUSE" || attempt >= 20) throw e;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+}
 
-const httpServer = http.createServer(app);
-const gameServer = new Server({ transport: new WebSocketTransport({ server: httpServer }) });
-gameServer.define(ROOM_RACE, RaceRoom);
-
-gameServer.listen(PORT).then(() => {
-  console.log(`Servidor Derrape en http://localhost:${PORT} (salud: /health)`);
-});
+void main();

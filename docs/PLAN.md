@@ -108,7 +108,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
 - [ ] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
   (Paseo del Puerto); checkpoints, vueltas, cuenta atrás, tiempos, pantalla final.
   *Hecho cuando:* puedes completar una carrera de 3 vueltas tú solo.
-- [ ] **Fase 4 — Multijugador.** Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
+- [ ] **Fase 4 — Multijugador.** (Hecho y probado en local; falta la prueba con móviles en redes distintas, tras la Fase 6.) Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
   *Hecho cuando:* 2+ móviles en redes distintas corren juntos sin tirones.
 - [ ] **Fase 5 — Objetos.** (Ya hay versión local en solitario para probar: `packages/shared/src/items.ts`.) Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
   *Hecho cuando:* los objetos funcionan igual en todos los móviles.

@@ -47,8 +47,42 @@
       </div>
     </div>
 
-    <div id="loading" class="overlay">
+    <div id="loading" class="overlay" hidden>
       <div class="card"><h2>Cargando circuito…</h2></div>
+    </div>
+
+    <div id="home" class="screen" hidden>
+      <div class="card home-card">
+        <h1 class="logo">Derrape</h1>
+        <label class="field">Tu nombre <input id="home-name" maxlength="12" autocomplete="off" enterkeyhint="done" /></label>
+        <button id="home-create" class="primary">Crear sala</button>
+        <div class="join-row">
+          <input id="home-code" placeholder="CÓDIGO" maxlength="4" autocomplete="off" autocapitalize="characters" enterkeyhint="go" />
+          <button id="home-join">Unirse</button>
+        </div>
+        <button id="home-solo">Practicar solo</button>
+        <p id="home-error" class="note"></p>
+      </div>
+    </div>
+
+    <div id="lobby" class="screen" hidden>
+      <div class="card lobby-card">
+        <p class="dim">Código de sala</p>
+        <div id="lobby-code" class="code">····</div>
+        <button id="lobby-invite">Invitar amigos</button>
+        <ul id="lobby-players"></ul>
+        <p class="dim">Tu color</p>
+        <div id="lobby-colors" class="colors"></div>
+        <label class="field">Circuito <select id="lobby-track"></select></label>
+        <button id="lobby-start" class="primary">EMPEZAR</button>
+        <p id="lobby-wait" class="dim"></p>
+        <p id="lobby-error" class="note"></p>
+        <button id="lobby-leave" class="ghost">Salir de la sala</button>
+      </div>
+    </div>
+
+    <div id="reconnecting" class="overlay" hidden>
+      <div class="card"><h2>Reconectando…</h2><p>Se ha cortado la conexión. Intentando volver a la sala.</p></div>
     </div>
 
     <div id="help">Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning</div>
@@ -57,12 +91,13 @@
     <div id="menu" class="overlay" hidden>
       <div class="card">
         <h2>Ajustes</h2>
-        <label class="select">Circuito <select id="track-select"></select></label>
-        <button id="menu-restart">Reiniciar carrera</button>
+        <label class="select solo-only">Circuito <select id="track-select"></select></label>
+        <button id="menu-restart" class="solo-only">Reiniciar carrera</button>
         <label><input type="checkbox" data-setting="gyro" /> Girar inclinando el móvil</label>
         <p id="gyro-note" class="note"></p>
         <button id="gyro-calibrate" hidden>Centrar giroscopio</button>
         <label><input type="checkbox" data-setting="showFps" /> Mostrar fps</label>
+        <button id="menu-home">Salir al menú</button>
         <button id="menu-close" class="primary">Seguir</button>
       </div>
     </div>

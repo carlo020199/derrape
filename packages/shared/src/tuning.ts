@@ -83,6 +83,10 @@ export const KART = {
   wallBounceKeep: 0.45,
   /** Velocidad que se conserva rozando un borde en paralelo (0–1). */
   wallScrapeKeep: 0.97,
+  /** Choque entre karts: velocidad que conserva el que embiste de frente (0–1). */
+  bumpSpeedKeep: 0.75,
+  /** Empujón lateral extra al chocar (m), para que se note el golpe. */
+  bumpPush: 0.25,
 };
 
 export type KartTuning = typeof KART;

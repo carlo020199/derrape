@@ -59,9 +59,9 @@ export function setupMenu(onPauseChange: (paused: boolean) => void) {
   document.querySelector("#btn-menu")!.addEventListener("click", open);
   document.querySelector("#menu-close")!.addEventListener("click", close);
 
-  // Pausa al cambiar de app; se sigue con un toque.
+  // Pausa al cambiar de app; se sigue con un toque. Online no hay pausa: los demás siguen corriendo.
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && menu.hidden) {
+    if (document.hidden && menu.hidden && !document.body.classList.contains("online")) {
       pause.hidden = false;
       onPauseChange(true);
     }

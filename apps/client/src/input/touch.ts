@@ -78,7 +78,14 @@ export function setupTouchControls(zone: HTMLElement) {
   zone.addEventListener("pointercancel", (e) => end(e, true));
 
   // Evitar zoom, scroll, selección y menú contextual.
-  document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      // En las pantallas de menú sí se puede desplazar.
+      if (!(e.target instanceof Element && e.target.closest(".screen"))) e.preventDefault();
+    },
+    { passive: false },
+  );
   document.addEventListener("gesturestart", (e) => e.preventDefault());
   document.addEventListener("dblclick", (e) => e.preventDefault());
   document.addEventListener("contextmenu", (e) => e.preventDefault());

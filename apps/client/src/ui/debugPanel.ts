@@ -2,7 +2,11 @@
 
 type Tunable = Record<string, number>;
 
-export function createDebugPanel(sections: Record<string, Tunable>) {
+/**
+ * `maxima`: tope del deslizador para valores que empiezan en 0 ("sección.clave" → máximo).
+ * Para el resto, el tope es 3 veces el valor por defecto.
+ */
+export function createDebugPanel(sections: Record<string, Tunable>, maxima: Record<string, number> = {}) {
   const defaults = Object.fromEntries(Object.entries(sections).map(([k, v]) => [k, { ...v }]));
   const panel = document.createElement("div");
   panel.id = "debug";
@@ -36,8 +40,9 @@ export function createDebugPanel(sections: Record<string, Tunable>) {
         const input = document.createElement("input");
         input.type = "range";
         input.min = "0";
-        input.max = String(def === 0 ? 1 : def * 3);
-        input.step = String(def === 0 ? 0.01 : def / 100);
+        const max = maxima[`${name}.${key}`] ?? (def === 0 ? 1 : def * 3);
+        input.max = String(max);
+        input.step = String(max / 300);
         input.value = String(obj[key]);
         const out = document.createElement("output");
         out.textContent = obj[key]!.toFixed(2);

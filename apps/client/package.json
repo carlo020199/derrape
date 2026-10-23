@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@derrape/shared": "*",
+    "colyseus.js": "^0.16.22",
     "three": "^0.170.0"
   },
   "devDependencies": {

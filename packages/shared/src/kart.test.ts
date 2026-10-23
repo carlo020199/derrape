@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bounceKart, createKart, driftLevel, giveBoost, hopHeight, stepKart, type KartInput } from "./kart";
+import { bounceKart, collideKarts, createKart, driftLevel, giveBoost, hopHeight, stepKart, type KartInput } from "./kart";
 import { closestPoint, collideKartWithTrack, createOvalTrack } from "./track";
 import { KART, PHYSICS_DT } from "./tuning";
 
@@ -145,5 +145,32 @@ describe("pista", () => {
     bounceKart(scrape, 0, -1, 0.1);
     expect(frontal.speed).toBeLessThan(scrape.speed);
     expect(frontal.speed).toBeGreaterThan(0);
+  });
+});
+
+describe("choques entre karts", () => {
+  it("separa a los dos y frena al que embiste por detrás", () => {
+    const front = createKart(0, 1, 0);
+    const back = createKart(0, 0, 0);
+    front.speed = 15;
+    back.speed = 25;
+    expect(collideKarts(back, front)).toBe(true);
+    expect(Math.hypot(front.x - back.x, front.z - back.z)).toBeGreaterThanOrEqual(KART.radius * 2);
+    expect(back.speed).toBeLessThan(25);
+    expect(front.speed).toBe(15); // al de delante no se le frena
+  });
+
+  it("si no se tocan no pasa nada", () => {
+    const a = createKart(0, 0, 0);
+    const b = createKart(5, 0, 0);
+    expect(collideKarts(a, b)).toBe(false);
+  });
+
+  it("en red solo se mueve el propio kart", () => {
+    const me = createKart(0.5, 0, 0);
+    const other = createKart(0, 0, 0);
+    collideKarts(me, other, false);
+    expect(other.x).toBe(0);
+    expect(me.x).toBeGreaterThan(0.5);
   });
 });
