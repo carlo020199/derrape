@@ -10,20 +10,22 @@ import {
   stepKart,
   type KartState,
 } from "@derrape/shared";
-import { readKeyboard } from "./input/keyboard";
+import { readInput } from "./input";
+import { releaseTouch, setupTouchControls } from "./input/touch";
 import { CAMERA, ChaseCamera } from "./render/chaseCamera";
 import { createKartModel } from "./render/kartModel";
-import { MAX_PIXEL_RATIO } from "./render/quality";
+import { AutoQuality } from "./render/quality";
 import { Sparks } from "./render/sparks";
 import { createTrackMesh } from "./render/trackMesh";
 import { createDebugPanel } from "./ui/debugPanel";
+import { updateHud } from "./ui/hud";
+import { setupMenu } from "./ui/menu";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const fpsLabel = document.querySelector<HTMLDivElement>("#fps")!;
-const speedLabel = document.querySelector<HTMLDivElement>("#speed")!;
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+const quality = new AutoQuality((ratio) => renderer.setPixelRatio(ratio));
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8fd3ff);
@@ -57,9 +59,20 @@ const sparks = new Sparks();
 scene.add(sparks.points);
 
 createDebugPanel({ kart: KART, camera: CAMERA });
+setupTouchControls(document.body);
+
+let paused = false;
+/** Mismo criterio que el aviso "gira el móvil" del CSS: en vertical el juego se detiene. */
+const portrait = matchMedia("(orientation: portrait) and (pointer: coarse)");
+setupMenu((p) => {
+  paused = p;
+  releaseTouch();
+  quality.reset();
+});
 
 function resize() {
   const { clientWidth: w, clientHeight: h } = canvas;
+  if (w === 0 || h === 0) return;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
@@ -86,8 +99,15 @@ renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
 
+  if (paused || portrait.matches) {
+    accumulator = 0;
+    fpsStart = now;
+    frames = 0;
+    return;
+  }
+
   accumulator += dt;
-  const input = readKeyboard();
+  const input = readInput();
   while (accumulator >= PHYSICS_DT) {
     Object.assign(prev, kart);
     stepKart(kart, input, PHYSICS_DT);
@@ -126,12 +146,13 @@ renderer.setAnimationLoop((now) => {
   chase.update(x, z, heading, kart.speed / KART.maxSpeed, dt);
   renderer.render(scene, camera);
 
-  speedLabel.textContent = `${Math.round(Math.abs(kart.speed) * 3.6)} km/h${kart.boostTime > 0 ? " · TURBO" : ""}`;
-  speedLabel.dataset.level = String(level);
+  updateHud(Math.abs(kart.speed) * 3.6, level, kart.boostTime > 0);
 
   frames++;
   if (now - fpsStart >= 500) {
-    fpsLabel.textContent = `${Math.round((frames * 1000) / (now - fpsStart))} fps`;
+    const fps = (frames * 1000) / (now - fpsStart);
+    quality.report(fps, (now - fpsStart) / 1000);
+    fpsLabel.textContent = `${Math.round(fps)} fps · x${quality.pixelRatio}`;
     frames = 0;
     fpsStart = now;
   }

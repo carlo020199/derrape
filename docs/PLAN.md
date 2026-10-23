@@ -80,14 +80,14 @@ Resumen (detalle en `CLAUDE.md`):
 - Personajes, coches y circuitos son **datos** en `packages/shared` (no código suelto por todas partes).
 
 ## 5. Particularidades de móvil (checklist)
-- [ ] iOS no permite bloquear la orientación en el navegador → mostrar aviso "gira el móvil".
-- [ ] Pantalla completa real en iPhone solo como PWA (añadida a inicio) → manifest + iconos.
+- [x] iOS no permite bloquear la orientación en el navegador → mostrar aviso "gira el móvil".
+- [x] Pantalla completa real en iPhone solo como PWA (añadida a inicio) → manifest + iconos.
 - [ ] Audio: se desbloquea en el primer toque del usuario.
-- [ ] Giroscopio en iOS: pedir permiso tras un toque y solo con HTTPS.
+- [x] Giroscopio en iOS: pedir permiso tras un toque y solo con HTTPS.
 - [ ] Vibración: funciona en Android, no en iPhone (no depender de ella).
-- [ ] Muesca / isla dinámica: respetar `safe-area-inset` en el HUD.
-- [ ] Evitar zoom por doble toque, selección de texto y scroll accidental.
-- [ ] Limitar resolución interna (pixel ratio máx. 2) y bajar calidad si los fps caen.
+- [x] Muesca / isla dinámica: respetar `safe-area-inset` en el HUD.
+- [x] Evitar zoom por doble toque, selección de texto y scroll accidental.
+- [x] Limitar resolución interna (pixel ratio máx. 2) y bajar calidad si los fps caen.
 - [ ] Pausar al cambiar de app y reconectar al volver.
 - [ ] Cargar solo el circuito que se juega y los karts presentes; la primera carga, por debajo de 10 s con 4G.
 

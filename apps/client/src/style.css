@@ -1,56 +1,219 @@
+:root {
+  --safe-t: env(safe-area-inset-top);
+  --safe-r: env(safe-area-inset-right);
+  --safe-b: env(safe-area-inset-bottom);
+  --safe-l: env(safe-area-inset-left);
+  --ink: #fff;
+  --panel: rgb(10 12 30 / 0.85);
+  --accent: #ff6b35;
+}
+
 html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: #1b1f3a;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--ink);
 }
+
+button { font: inherit; color: inherit; touch-action: manipulation; }
 
 #game {
   display: block;
+  position: fixed;
+  inset: 0;
   width: 100vw;
   height: 100dvh;
 }
 
 #fps {
   position: fixed;
-  top: calc(8px + env(safe-area-inset-top));
-  left: calc(8px + env(safe-area-inset-left));
+  top: calc(8px + var(--safe-t));
+  left: calc(8px + var(--safe-l));
   padding: 2px 6px;
   font: 600 12px/1.4 system-ui, sans-serif;
-  color: #fff;
   background: rgb(0 0 0 / 0.45);
   border-radius: 4px;
   pointer-events: none;
 }
 
-#speed {
+#btn-menu {
   position: fixed;
-  right: calc(16px + env(safe-area-inset-right));
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  font: 800 28px/1 system-ui, sans-serif;
-  color: #fff;
+  top: calc(8px + var(--safe-t));
+  right: calc(8px + var(--safe-r));
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.4);
+  z-index: 5;
+}
+
+/* --- HUD --- */
+#hud {
+  position: fixed;
+  top: calc(10px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   text-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
   pointer-events: none;
 }
-#speed[data-level="1"] { color: #4cc9f0; }
-#speed[data-level="2"] { color: #ff9f1c; }
-#speed[data-level="3"] { color: #b15cff; }
+#hud-speed { font: 800 30px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+#hud small { margin-left: 4px; font-weight: 600; opacity: 0.8; }
+#hud-turbo { display: flex; gap: 4px; }
+#hud-turbo span {
+  width: 26px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.25);
+  transition: background-color 120ms ease-out;
+}
+#hud[data-level="1"] #hud-turbo span.on { background: #4cc9f0; }
+#hud[data-level="2"] #hud-turbo span.on { background: #ff9f1c; }
+#hud[data-level="3"] #hud-turbo span.on { background: #b15cff; }
+#hud.boost #hud-speed { color: #ffd23f; }
 
 #help {
   position: fixed;
   left: 50%;
-  bottom: calc(10px + env(safe-area-inset-bottom));
+  bottom: calc(10px + var(--safe-b));
   transform: translateX(-50%);
-  font: 500 12px system-ui, sans-serif;
-  color: #fff;
+  font-size: 12px;
   opacity: 0.8;
+  white-space: nowrap;
   pointer-events: none;
 }
+body.touch #help { display: none; }
 
+/* --- Controles táctiles (solo tras el primer toque) --- */
+#controls { display: none; }
+body.touch #controls { display: block; }
+
+#steer-zone {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 50vw;
+}
+#stick {
+  position: fixed;
+  left: -60px;
+  top: -60px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  pointer-events: none;
+}
+#stick[hidden] { display: none; }
+#stick-knob {
+  position: absolute;
+  left: 35px;
+  top: 35px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.45);
+}
+
+.pad {
+  position: fixed;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.3);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transition: transform 80ms ease-out, background-color 80ms ease-out;
+}
+.pad.pressed { transform: scale(0.93); background: rgb(255 255 255 / 0.3); }
+
+#btn-drift {
+  right: calc(20px + var(--safe-r));
+  bottom: calc(24px + var(--safe-b));
+  width: 120px;
+  height: 120px;
+  font-size: 15px;
+  border-color: var(--accent);
+  background: rgb(255 107 53 / 0.35);
+}
+#btn-item {
+  right: calc(150px + var(--safe-r));
+  bottom: calc(110px + var(--safe-b));
+  width: 76px;
+  height: 76px;
+  font-size: 11px;
+}
+#btn-brake {
+  right: calc(150px + var(--safe-r));
+  bottom: calc(20px + var(--safe-b));
+  width: 64px;
+  height: 64px;
+  font-size: 11px;
+}
+#btn-gas {
+  right: calc(30px + var(--safe-r));
+  bottom: calc(160px + var(--safe-b));
+  width: 84px;
+  height: 84px;
+  font-size: 13px;
+  display: none;
+}
+body.manual #btn-gas { display: block; }
+
+/* --- Pantallas superpuestas --- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(5 6 20 / 0.6);
+  z-index: 10;
+}
+.overlay[hidden] { display: none; }
+.card {
+  min-width: 260px;
+  max-width: min(90vw, 360px);
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--panel);
+  text-align: center;
+}
+.card h2 { margin: 0 0 12px; }
+.card p { margin: 6px 0; opacity: 0.85; }
+#menu .card { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+#menu label { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+#menu input { width: 22px; height: 22px; accent-color: var(--accent); }
+#menu button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.15);
+}
+#menu button.primary { background: var(--accent); font-weight: 700; }
+#menu button[hidden] { display: none; }
+.note { font-size: 13px; color: #ffd23f; margin: 0; }
+.note:empty { display: none; }
+
+#rotate { display: none; z-index: 20; background: #1b1f3a; }
+.rotate-icon { font-size: 44px; margin-bottom: 8px; }
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate { display: grid; }
+}
+
+/* --- Panel de tuning (F1) --- */
 #debug {
   position: fixed;
   top: 8px;
@@ -60,10 +223,10 @@ html, body {
   width: 320px;
   padding: 8px 10px;
   font: 12px system-ui, sans-serif;
-  color: #fff;
-  background: rgb(10 12 30 / 0.85);
+  background: var(--panel);
   border-radius: 8px;
   user-select: auto;
+  z-index: 15;
 }
 #debug .debug-title { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; }
 #debug .debug-section { margin: 8px 0 4px; font-weight: 700; color: #ff9f1c; }

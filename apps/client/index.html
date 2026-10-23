@@ -4,14 +4,58 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#1b1f3a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Derrape" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Derrape</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <canvas id="game"></canvas>
+
     <div id="fps">-- fps</div>
-    <div id="speed">0 km/h</div>
-    <div id="help">Flechas/WASD · Espacio = derrape · F1 = tuning</div>
+    <button id="btn-menu" aria-label="Ajustes">⚙</button>
+
+    <div id="hud" data-level="0">
+      <div><span id="hud-speed">0</span><small>km/h</small></div>
+      <div id="hud-turbo"><span></span><span></span><span></span></div>
+    </div>
+
+    <div id="help">Flechas/WASD · Espacio = derrape · Esc = ajustes · F1 = tuning</div>
+
+    <div id="controls">
+      <div id="steer-zone"></div>
+      <div id="stick" hidden><div id="stick-knob"></div></div>
+      <button id="btn-item" class="pad">OBJETO</button>
+      <button id="btn-brake" class="pad">FRENO</button>
+      <button id="btn-gas" class="pad">GAS</button>
+      <button id="btn-drift" class="pad">DERRAPE</button>
+    </div>
+
+    <div id="menu" class="overlay" hidden>
+      <div class="card">
+        <h2>Ajustes</h2>
+        <label><input type="checkbox" data-setting="autoAccel" /> Acelerar automático</label>
+        <label><input type="checkbox" data-setting="gyro" /> Girar inclinando el móvil</label>
+        <p id="gyro-note" class="note"></p>
+        <button id="gyro-calibrate" hidden>Centrar giroscopio</button>
+        <label><input type="checkbox" data-setting="showFps" /> Mostrar fps</label>
+        <button id="menu-close" class="primary">Seguir</button>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay" hidden>
+      <div class="card"><h2>Pausa</h2><p>Toca para seguir</p></div>
+    </div>
+
+    <div id="rotate" class="overlay">
+      <div class="card"><div class="rotate-icon">📱↻</div><h2>Gira el móvil</h2><p>Derrape se juega en horizontal.</p></div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

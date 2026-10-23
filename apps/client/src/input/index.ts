@@ -1,0 +1,20 @@
+import type { KartInput } from "@derrape/shared";
+import { settings } from "../ui/settings";
+import { readGyroSteer } from "./gyro";
+import { readKeyboard } from "./keyboard";
+import { touch } from "./touch";
+
+/** Combina teclado, táctil y giroscopio en una sola entrada para el kart. */
+export function readInput(): KartInput {
+  const kb = readKeyboard();
+  if (!touch.active) return kb;
+
+  const steer = settings.gyro ? readGyroSteer() : touch.steer;
+  const brake = touch.brake || kb.brake;
+  return {
+    steer: Math.max(-1, Math.min(1, steer + kb.steer)),
+    throttle: settings.autoAccel ? !brake : touch.throttle || kb.throttle,
+    brake,
+    drift: touch.drift || kb.drift,
+  };
+}
