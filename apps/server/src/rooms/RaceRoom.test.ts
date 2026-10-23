@@ -53,9 +53,18 @@ const state = (x: number): NetKartState => ({
 });
 
 describe("sala de carrera por red", () => {
-  it("/health responde", async () => {
-    const res = await fetch(`http://localhost:${PORT}/health`);
+  it("/health responde y se puede llamar desde la web (otro dominio)", async () => {
+    const res = await fetch(`http://localhost:${PORT}/health`, { headers: { Origin: "https://derrape.example" } });
     expect(await res.json()).toMatchObject({ ok: true });
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+  });
+
+  it("crear sala también funciona desde otro dominio (CORS del matchmaking)", async () => {
+    const res = await fetch(`http://localhost:${PORT}/matchmake/create/${ROOM_RACE}`, {
+      method: "OPTIONS",
+      headers: { Origin: "https://derrape.example", "Access-Control-Request-Method": "POST" },
+    });
+    expect(res.headers.get("access-control-allow-origin")).toBeTruthy();
   });
 
   it("crear con código, unirse, empezar e intercambiar estados", async () => {

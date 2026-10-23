@@ -4,12 +4,40 @@ import { Client, type Room } from "colyseus.js";
 import { MSG, ROOM_RACE, SERVER_PORT, type JoinOptions, type StatesMessage } from "@derrape/shared";
 import { ServerClock } from "./interpolation";
 
-/** Dirección del servidor: la de la variable de entorno (Fase 6) o el mismo equipo que sirve la web. */
+/**
+ * Dirección del servidor de juego:
+ * - VITE_SERVER_URL: dirección completa (p. ej. `wss://mi-servidor.example.com`).
+ * - VITE_SERVER_HOST: solo el dominio; se usa `wss://` (así lo rellena Render, ver render.yaml).
+ * - Si no hay ninguna (desarrollo): el mismo equipo que sirve la web, puerto 2567.
+ */
 export function serverEndpoint(): string {
-  const env = import.meta.env.VITE_SERVER_URL as string | undefined;
-  if (env) return env;
+  const url = import.meta.env.VITE_SERVER_URL as string | undefined;
+  if (url) return url;
+  const host = import.meta.env.VITE_SERVER_HOST as string | undefined;
+  if (host) return `wss://${host}`;
   const secure = location.protocol === "https:";
   return `${secure ? "wss" : "ws"}://${location.hostname}:${SERVER_PORT}`;
+}
+
+/**
+ * Despierta al servidor (los alojamientos gratuitos lo duermen si nadie juega) y avisa del estado:
+ * "slow" si tarda más de unos segundos. Reintenta hasta que responde.
+ */
+export async function wakeServer(onStatus: (status: "checking" | "slow" | "ready") => void): Promise<void> {
+  const health = serverEndpoint().replace(/^ws/, "http") + "/health";
+  onStatus("checking");
+  const slow = setTimeout(() => onStatus("slow"), 2500);
+  for (;;) {
+    try {
+      const res = await fetch(health, { cache: "no-store" });
+      if (res.ok) break;
+    } catch {
+      // Aún arrancando: se vuelve a intentar.
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  clearTimeout(slow);
+  onStatus("ready");
 }
 
 /**

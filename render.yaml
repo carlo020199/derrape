@@ -1,0 +1,30 @@
+# Despliegue en Render (plan gratuito): servidor de juego en Frankfurt + web estática.
+# Render lee este archivo al crear un "Blueprint" desde el repositorio (ver docs/DESPLIEGUE.md).
+# Cada push a main vuelve a publicar los dos.
+
+services:
+  # Servidor de juego (Colyseus): salas, carreras y objetos. Se duerme tras 15 min sin jugar.
+  - type: web
+    name: derrape-servidor
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npm run build -w @derrape/server
+    startCommand: node apps/server/dist/index.js
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+
+  # La web del juego (lo que se abre en el móvil). Gratis, servida desde una CDN.
+  - type: web
+    name: derrape
+    runtime: static
+    buildCommand: npm ci --include=dev && npm run build -w @derrape/client
+    staticPublishPath: apps/client/dist
+    autoDeployTrigger: commit
+    envVars:
+      # El dominio del servidor de arriba; la web se conecta a wss://<dominio>.
+      - key: VITE_SERVER_HOST
+        fromService:
+          type: web
+          name: derrape-servidor
+          property: host

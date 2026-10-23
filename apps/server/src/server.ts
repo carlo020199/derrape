@@ -9,6 +9,8 @@ import { RaceRoom } from "./rooms/RaceRoom";
 export async function startServer(port: number) {
   const app = express();
   app.get("/health", (_req, res) => {
+    // La web está en otro dominio y llama aquí para despertar al servidor: hay que permitirlo.
+    res.set("Access-Control-Allow-Origin", "*");
     res.json({ ok: true, physicsHz: PHYSICS_HZ });
   });
 

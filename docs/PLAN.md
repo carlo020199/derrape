@@ -112,7 +112,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* 2+ móviles en redes distintas corren juntos sin tirones.
 - [ ] **Fase 5 — Objetos.** (Hecho: en solitario y online, decididos por el servidor. Probado en local con jugadores falsos; falta probarlo en móviles de verdad.) Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
   *Hecho cuando:* los objetos funcionan igual en todos los móviles.
-- [ ] **Fase 6 — Despliegue.** Cliente y servidor publicados, HTTPS, enlace de invitación.
+- [ ] **Fase 6 — Despliegue.** (Preparado para Render; faltan los pasos en su web: ver docs/DESPLIEGUE.md.) Cliente y servidor publicados, HTTPS, enlace de invitación.
   *Hecho cuando:* abres el enlace desde el móvil fuera de casa y funciona (aún no se invita a nadie).
 - [ ] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
   *Hecho cuando:* se nota la diferencia entre un coche ligero y uno pesado y todo va fluido con 8 karts.

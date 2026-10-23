@@ -28,6 +28,9 @@ Abre en el móvil la dirección "Network" que muestra Vite (p. ej. `http://192.1
 
 Para simular mala conexión: F1 en el PC → sección "red" (retraso, variación y pérdida de paquetes).
 
+## Publicado en internet
+Configuración para Render (gratis) en `render.yaml`. Pasos en `docs/DESPLIEGUE.md`.
+
 ## Otros comandos
 - `npm test`: tests (Vitest)
 - `npm run build`: comprobación de tipos y build de cliente y servidor

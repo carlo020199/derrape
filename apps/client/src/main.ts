@@ -17,7 +17,7 @@ import {
 } from "@derrape/shared";
 import { createRaceSession, type GameView, type RaceSession } from "./game/raceSession";
 import { releaseTouch, setupTouchControls } from "./input/touch";
-import { NET_DEBUG, Net } from "./net/net";
+import { NET_DEBUG, Net, wakeServer } from "./net/net";
 import { CAMERA, ChaseCamera } from "./render/chaseCamera";
 import { AutoQuality } from "./render/quality";
 import { createDebugPanel } from "./ui/debugPanel";
@@ -225,6 +225,16 @@ setupLobby({
 if (import.meta.env.DEV) {
   Object.assign(window, { derrape: { net: () => net, lobby: () => lobby, session: () => session } });
 }
+
+// Despertar al servidor nada más abrir la web, mientras se escribe el nombre.
+const STATUS_TEXT = {
+  checking: "",
+  slow: "Despertando el servidor… La primera vez del día puede tardar hasta un minuto.",
+  ready: "",
+} as const;
+void wakeServer((status) => {
+  $("#home-status").textContent = STATUS_TEXT[status];
+});
 
 // Al recargar en mitad de una sala, se intenta volver a ella; si no, al inicio.
 (async () => {
