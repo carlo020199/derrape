@@ -131,11 +131,22 @@ body.touch #touch-help { display: block; }
   height: 56px;
   display: grid;
   place-items: center;
-  border: 3px solid rgb(255 255 255 / 0.8);
+  border: 3px solid rgb(255 255 255 / 0.85);
   border-radius: 12px;
   background: rgb(0 0 0 / 0.35);
-  font: 800 26px system-ui, sans-serif;
-  opacity: 0.5;
+  font-size: 30px;
+  pointer-events: none;
+  transition: transform 120ms ease-out, border-color 120ms ease-out;
+}
+#item-slot.empty { opacity: 0.45; }
+#item-slot.ready { border-color: #ffd23f; transform: scale(1.06); }
+
+#position {
+  position: fixed;
+  top: calc(98px + var(--safe-t));
+  left: calc(12px + var(--safe-l));
+  font: 800 22px system-ui, sans-serif;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
   pointer-events: none;
 }
 

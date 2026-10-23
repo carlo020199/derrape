@@ -17,10 +17,17 @@ export const touch: TouchState = { steer: 0, drift: false, driftSide: 0, active:
 
 const itemQueue: ItemAction[] = [];
 
-/** Saca el siguiente gesto de objeto pendiente (lo consume el sistema de objetos, Fase 5). */
+/** Saca el siguiente gesto de objeto pendiente. */
 export function takeItemAction(): ItemAction | undefined {
   return itemQueue.shift();
 }
+
+/** Para el teclado: E / Enter = usar (adelante), Q = lanzar atrás. */
+window.addEventListener("keydown", (e) => {
+  if (e.repeat) return;
+  if (e.code === "KeyE" || e.code === "Enter") itemQueue.push("forward");
+  if (e.code === "KeyQ") itemQueue.push("back");
+});
 
 export function setupTouchControls(zone: HTMLElement) {
   const fingers = new Map<number, FingerGesture>();

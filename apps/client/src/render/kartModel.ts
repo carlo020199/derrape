@@ -7,7 +7,12 @@ export interface KartModel {
   body: THREE.Group;
   /** Posiciones locales de las ruedas traseras, para las chispas. */
   rearWheels: THREE.Vector3[];
+  /** Burbuja del escudo (oculta si no hay escudo). */
+  shield: THREE.Mesh;
 }
+
+const shieldGeo = new THREE.SphereGeometry(1.7, 16, 12);
+const shieldMat = new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.3, depthWrite: false });
 
 export function createKartModel(color = 0xff6b35): KartModel {
   const root = new THREE.Group();
@@ -30,9 +35,15 @@ export function createKartModel(color = 0xff6b35): KartModel {
     box(0.35, 0.5, 0.5, wheel, x, 0.25, z);
   }
 
+  const shield = new THREE.Mesh(shieldGeo, shieldMat);
+  shield.position.y = 0.8;
+  shield.visible = false;
+  root.add(shield);
+
   return {
     root,
     body,
+    shield,
     rearWheels: [new THREE.Vector3(-0.75, 0.1, -0.9), new THREE.Vector3(0.75, 0.1, -0.9)],
   };
 }

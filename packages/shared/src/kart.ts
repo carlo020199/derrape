@@ -1,6 +1,6 @@
 // Simulación arcade de un kart a paso fijo. Sin Three.js: se ejecuta igual en cliente, servidor y tests.
 
-import { KART, type KartTuning } from "./tuning";
+import { ITEMS, KART, type KartTuning } from "./tuning";
 
 export interface KartInput {
   /** -1 (izquierda) .. 1 (derecha). */
@@ -29,12 +29,16 @@ export interface KartState {
   driftCharge: number;
   /** Turbo restante (s). */
   boostTime: number;
+  /** Trompo restante (s): sin control y frenando. */
+  spinTime: number;
+  /** Escudo restante (s). */
+  shieldTime: number;
 }
 
 export const NO_INPUT: KartInput = { steer: 0, throttle: false, brake: false, drift: false };
 
 export function createKart(x = 0, z = 0, heading = 0): KartState {
-  return { x, z, heading, speed: 0, driftDir: 0, driftCharge: 0, boostTime: 0 };
+  return { x, z, heading, speed: 0, driftDir: 0, driftCharge: 0, boostTime: 0, spinTime: 0, shieldTime: 0 };
 }
 
 /** Nivel de chispas (0–3) según la carga del derrape. */
@@ -57,6 +61,20 @@ function approach(value: number, target: number, maxDelta: number): number {
 
 /** Avanza la simulación un paso de `dt` segundos. Modifica `s`. */
 export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuning = KART): void {
+  s.shieldTime = Math.max(0, s.shieldTime - dt);
+
+  // --- Trompo: sin control, frenando ---
+  if (s.spinTime > 0) {
+    s.spinTime = Math.max(0, s.spinTime - dt);
+    s.driftDir = 0;
+    s.driftCharge = 0;
+    s.boostTime = 0;
+    s.speed = approach(s.speed, 0, ITEMS.spinDecel * dt);
+    s.x += Math.sin(s.heading) * s.speed * dt;
+    s.z += Math.cos(s.heading) * s.speed * dt;
+    return;
+  }
+
   const steer = Math.max(-1, Math.min(1, input.steer));
 
   // --- Derrape: empezar, mantener, soltar ---

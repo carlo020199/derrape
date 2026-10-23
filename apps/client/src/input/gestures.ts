@@ -4,9 +4,9 @@
 // - arrastrar a los lados = girar; arrastrar lejos = derrapar (al soltar, mini-turbo)
 // - toque = usar objeto; deslizar arriba = lanzarlo adelante; abajo = lanzarlo atrás
 
-import { TOUCH } from "@derrape/shared";
+import { TOUCH, type ItemAction } from "@derrape/shared";
 
-export type ItemAction = "use" | "forward" | "back";
+export type { ItemAction };
 
 /** Gesto de un dedo desde que toca hasta que se levanta. */
 export class FingerGesture {

@@ -1,25 +1,37 @@
 import * as THREE from "three";
 import {
+  ITEMS,
   KART,
   PHYSICS_DT,
   TOUCH,
+  botInput,
   collideKartWithTrack,
+  createItemBoxes,
   createKart,
-  createOvalTrack,
+  createRaceKart,
   driftLevel,
-  startPose,
+  pointAt,
+  pruebasTrack,
+  racePositions,
+  stepItems,
   stepKart,
+  useItem,
+  type BotDriver,
+  type ItemEvent,
+  type ItemWorld,
   type KartState,
+  type RaceKart,
 } from "@derrape/shared";
 import { readInput } from "./input";
 import { releaseTouch, setupTouchControls, takeItemAction } from "./input/touch";
 import { CAMERA, ChaseCamera } from "./render/chaseCamera";
-import { createKartModel } from "./render/kartModel";
+import { ItemsView } from "./render/itemsView";
+import { createKartModel, type KartModel } from "./render/kartModel";
 import { AutoQuality } from "./render/quality";
 import { Sparks } from "./render/sparks";
 import { createTrackMesh } from "./render/trackMesh";
 import { createDebugPanel } from "./ui/debugPanel";
-import { updateHud } from "./ui/hud";
+import { ITEM_NAMES, updateHud, updateItemSlot, updatePosition } from "./ui/hud";
 import { setupMenu } from "./ui/menu";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
@@ -41,40 +53,94 @@ sun.position.set(30, 60, 20);
 scene.add(sun);
 
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(600, 600),
+  new THREE.PlaneGeometry(800, 800),
   new THREE.MeshLambertMaterial({ color: 0x6cbf4a }),
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// --- Pista y kart ---
-const track = createOvalTrack();
+// --- Pista ---
+const track = pruebasTrack;
 scene.add(createTrackMesh(track));
 
-const start = startPose(track);
-const kart: KartState = createKart(start.x, start.z, start.heading);
-const prev: KartState = { ...kart };
-const model = createKartModel();
-scene.add(model.root);
+// --- Karts: el jugador y tres de prueba que corren solos (dianas para los objetos) ---
+interface Racer {
+  race: RaceKart;
+  prev: KartState;
+  model: KartModel;
+  bot?: BotDriver;
+  tuning: typeof KART;
+  driftVisual: number;
+  spinVisual: number;
+}
+
+function addRacer(id: number, distance: number, lateral: number, color: number, bot?: BotDriver, speed = 1): Racer {
+  const p = pointAt(track, distance, lateral);
+  const state = createKart(p.x, p.z, p.heading);
+  const model = createKartModel(color);
+  scene.add(model.root);
+  return {
+    race: createRaceKart(id, state, track),
+    prev: { ...state },
+    model,
+    bot,
+    // Los de prueba son algo más lentos; KART se lee en vivo para el jugador (panel F1).
+    tuning: bot ? { ...KART, maxSpeed: KART.maxSpeed * speed } : KART,
+    driftVisual: 0,
+    spinVisual: 0,
+  };
+}
+
+const player = addRacer(0, 0, 0, 0xff6b35);
+const racers: Racer[] = [
+  player,
+  addRacer(1, 25, 3, 0x2e86de, { lane: 3, lookAhead: 10 }, 0.78),
+  addRacer(2, 45, -3, 0x2ecc71, { lane: -3, lookAhead: 10 }, 0.82),
+  addRacer(3, 65, 0, 0x9b5de5, { lane: 0, lookAhead: 10 }, 0.86),
+];
+
+const world: ItemWorld = {
+  track,
+  karts: racers.map((r) => r.race),
+  boxes: createItemBoxes(track, [0.12, 0.38, 0.62, 0.86], 4),
+  oils: [],
+  rockets: [],
+  random: Math.random,
+};
+const itemsView = new ItemsView(world);
+scene.add(itemsView.group);
+
 const sparks = new Sparks();
 scene.add(sparks.points);
 
-createDebugPanel({ kart: KART, camera: CAMERA, touch: TOUCH });
+createDebugPanel({ kart: KART, items: ITEMS, camera: CAMERA, touch: TOUCH });
 setupTouchControls(document.querySelector<HTMLDivElement>("#touch-zone")!);
 
 let paused = false;
 /** Mismo criterio que el aviso "pon el móvil en vertical" del CSS: en horizontal el juego se detiene. */
 const wrongOrientation = matchMedia("(orientation: landscape) and (pointer: coarse)");
 
-// Aviso provisional de los gestos de objeto hasta que existan los objetos (Fase 5).
-const itemFlash = document.querySelector<HTMLDivElement>("#item-flash")!;
-const ITEM_LABELS = { use: "Objeto", forward: "Objeto ↑ adelante", back: "Objeto ↓ atrás" } as const;
-function showItemAction(action: keyof typeof ITEM_LABELS) {
-  itemFlash.textContent = ITEM_LABELS[action];
-  itemFlash.hidden = true;
-  void itemFlash.offsetWidth; // reinicia la animación
-  itemFlash.hidden = false;
+// Mensajes cortos en el centro de la pantalla.
+const flash = document.querySelector<HTMLDivElement>("#item-flash")!;
+function showFlash(text: string) {
+  flash.textContent = text;
+  flash.hidden = true;
+  void flash.offsetWidth; // reinicia la animación
+  flash.hidden = false;
 }
+
+function onItemEvents(events: ItemEvent[]) {
+  for (const e of events) {
+    if (e.kart === player.race.id) {
+      if (e.type === "hit") showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
+      if (e.type === "blocked") showFlash("¡Escudo!");
+      if (e.type === "use") showFlash(ITEM_NAMES[e.item]);
+    } else if (e.type === "hit") {
+      showFlash("¡Tocado!");
+    }
+  }
+}
+
 setupMenu((p) => {
   paused = p;
   releaseTouch();
@@ -96,7 +162,7 @@ let accumulator = 0;
 let last = performance.now();
 let frames = 0;
 let fpsStart = last;
-let driftVisual = 0;
+let time = 0;
 const wheelWorld = new THREE.Vector3();
 
 function lerpAngle(a: number, b: number, t: number) {
@@ -104,6 +170,14 @@ function lerpAngle(a: number, b: number, t: number) {
   while (d > Math.PI) d -= Math.PI * 2;
   while (d < -Math.PI) d += Math.PI * 2;
   return a + d * t;
+}
+
+function emitFromWheels(model: KartModel, level: number, count: number) {
+  for (const w of model.rearWheels) {
+    wheelWorld.copy(w);
+    model.body.localToWorld(wheelWorld);
+    sparks.emit(wheelWorld, level, count);
+  }
 }
 
 renderer.setAnimationLoop((now) => {
@@ -116,49 +190,59 @@ renderer.setAnimationLoop((now) => {
     frames = 0;
     return;
   }
+  time += dt;
 
   accumulator += dt;
   const input = readInput();
-  for (let a = takeItemAction(); a; a = takeItemAction()) showItemAction(a);
+  for (let a = takeItemAction(); a; a = takeItemAction()) {
+    const events: ItemEvent[] = [];
+    useItem(world, player.race, a, events);
+    onItemEvents(events);
+  }
   while (accumulator >= PHYSICS_DT) {
-    Object.assign(prev, kart);
-    stepKart(kart, input, PHYSICS_DT);
-    collideKartWithTrack(kart, track);
+    for (const r of racers) {
+      const s = r.race.state;
+      Object.assign(r.prev, s);
+      stepKart(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, r.tuning);
+      collideKartWithTrack(s, track, r.tuning);
+    }
+    onItemEvents(stepItems(world, PHYSICS_DT));
     accumulator -= PHYSICS_DT;
   }
   const alpha = accumulator / PHYSICS_DT;
 
-  const x = prev.x + (kart.x - prev.x) * alpha;
-  const z = prev.z + (kart.z - prev.z) * alpha;
-  const heading = lerpAngle(prev.heading, kart.heading, alpha);
+  // --- Dibujar ---
+  for (const r of racers) {
+    const s = r.race.state;
+    const x = r.prev.x + (s.x - r.prev.x) * alpha;
+    const z = r.prev.z + (s.z - r.prev.z) * alpha;
+    const m = r.model;
+    m.root.position.set(x, 0, z);
+    m.root.rotation.y = lerpAngle(r.prev.heading, s.heading, alpha);
+    r.driftVisual += (s.driftDir * KART.driftVisualAngle - r.driftVisual) * Math.min(1, dt * 10);
+    // Trompo: dos vueltas completas mientras dura.
+    r.spinVisual = s.spinTime > 0 ? r.spinVisual + dt * Math.PI * 4 : 0;
+    m.body.rotation.y = r.driftVisual + r.spinVisual;
+    m.body.rotation.z = -r.driftVisual * 0.15;
+    m.shield.visible = s.shieldTime > 0;
+    if (s.shieldTime > 0 && s.shieldTime < 2) m.shield.visible = Math.floor(time * 8) % 2 === 0;
 
-  model.root.position.set(x, 0, z);
-  model.root.rotation.y = heading;
-  driftVisual += (kart.driftDir * KART.driftVisualAngle - driftVisual) * Math.min(1, dt * 10);
-  model.body.rotation.y = driftVisual;
-  model.body.rotation.z = -driftVisual * 0.15;
-
-  const level = driftLevel(kart);
-  if (kart.driftDir !== 0) {
-    for (const w of model.rearWheels) {
-      wheelWorld.copy(w);
-      model.body.localToWorld(wheelWorld);
-      sparks.emit(wheelWorld, Math.max(level, 0), level > 0 ? 2 : 0);
-    }
-  }
-  if (kart.boostTime > 0) {
-    for (const w of model.rearWheels) {
-      wheelWorld.copy(w);
-      model.body.localToWorld(wheelWorld);
-      sparks.emit(wheelWorld, 2, 1);
-    }
+    const level = driftLevel(s);
+    if (s.driftDir !== 0 && level > 0) emitFromWheels(m, level, 2);
+    if (s.boostTime > 0) emitFromWheels(m, 2, 1);
   }
   sparks.update(dt);
+  itemsView.update(world, dt);
 
-  chase.update(x, z, heading, kart.speed / KART.maxSpeed, dt);
+  const me = player.race.state;
+  const px = player.prev.x + (me.x - player.prev.x) * alpha;
+  const pz = player.prev.z + (me.z - player.prev.z) * alpha;
+  chase.update(px, pz, lerpAngle(player.prev.heading, me.heading, alpha), me.speed / KART.maxSpeed, dt);
   renderer.render(scene, camera);
 
-  updateHud(Math.abs(kart.speed) * 3.6, level, kart.boostTime > 0);
+  updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), me.boostTime > 0);
+  updateItemSlot(player.race.item, player.race.rollTime > 0, time);
+  updatePosition(racePositions(world.karts).get(player.race.id)!, racers.length);
 
   frames++;
   if (now - fpsStart >= 500) {

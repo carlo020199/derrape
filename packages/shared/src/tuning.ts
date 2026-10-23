@@ -71,6 +71,45 @@ export const KART = {
 
 export type KartTuning = typeof KART;
 
+/** Objetos y cajas. Tiempos en s, distancias en m. */
+export const ITEMS = {
+  /** Segundos que tarda una caja en reaparecer. */
+  boxRespawn: 3,
+  /** Distancia para recoger una caja. */
+  boxRadius: 2,
+  /** Duración de la ruleta antes de poder usar el objeto. */
+  rollTime: 1,
+  /** Nitro: duración del acelerón. */
+  nitroTime: 1.5,
+  /** Escudo: duración (bloquea un golpe). */
+  shieldTime: 8,
+  /** Trompo al pisar aceite o recibir un cohete. */
+  oilSpinTime: 1,
+  rocketSpinTime: 1.2,
+  /** Frenada durante el trompo (m/s²). */
+  spinDecel: 22,
+  /** Aceite: radio, distancia al lanzarlo adelante, distancia al soltarlo detrás y máximo en pista. */
+  oilRadius: 1.7,
+  oilThrowDistance: 22,
+  oilDropBack: 3,
+  maxOils: 12,
+  /** Cohete: velocidad, duración, radio de impacto y rapidez con la que se cambia de carril hacia el objetivo. */
+  rocketSpeed: 45,
+  rocketLife: 6,
+  rocketHitRadius: 2,
+  rocketHoming: 5,
+};
+
+/**
+ * Probabilidad de cada objeto según la posición (pesos relativos).
+ * Los de delante reciben objetos defensivos; los de detrás, de remontada.
+ */
+export const ITEM_ODDS = {
+  front: { nitro: 2, oil: 5, rocket: 1, shield: 3 },
+  middle: { nitro: 3, oil: 3, rocket: 3, shield: 2 },
+  back: { nitro: 5, oil: 1, rocket: 4, shield: 1 },
+};
+
 /** Controles táctiles (móvil en vertical). Distancias en píxeles CSS, tiempos en ms. */
 export const TOUCH = {
   /** Arrastre horizontal para girar al máximo. */
