@@ -21,7 +21,9 @@ import {
   createKart,
   createProgress,
   createRaceKart,
+  deriveTuning,
   driftLevel,
+  findKart,
   formatTime,
   giveBoost,
   gridPose,
@@ -33,6 +35,7 @@ import {
   startResult,
   stepItems,
   stepKart,
+  statsFor,
   surfaceAt,
   updateProgress,
   useItem,
@@ -43,6 +46,7 @@ import {
   type ItemType,
   type ItemWorld,
   type KartState,
+  type KartStats,
   type LapProgress,
   type LobbyPlayer,
   type NetKartState,
@@ -85,8 +89,17 @@ export interface OnlineRace {
   players: LobbyPlayer[];
 }
 
+/** Lo que eligió el jugador (en solitario; online viene de la sala). */
+export interface PlayerLook {
+  character: string;
+  kart: string;
+  color: number;
+}
+
 export interface SessionOptions {
   def: TrackDef;
+  /** En solitario: personaje, coche y color del jugador. */
+  look?: PlayerLook;
   online?: OnlineRace;
   /** Online: volver a la sala desde la pantalla final. */
   onExit?: () => void;
@@ -109,6 +122,10 @@ interface LocalRacer {
   prev: KartState;
   model: KartModel;
   bot?: BotDriver;
+  /** Estadísticas del personaje + coche y extra de carga del derrape. */
+  stats: KartStats;
+  driftMult: number;
+  /** Constantes de este kart. Las del jugador se recalculan cada paso (así el panel F1 sigue funcionando). */
   tuning: typeof KART;
   driftVisual: number;
   spinVisual: number;
@@ -129,12 +146,14 @@ interface RemoteRacer {
   y: number;
   driftVisual: number;
   spinVisual: number;
+  finished: boolean;
+  stats: KartStats;
 }
 
 const BOT_SETUP = [
-  { name: "Azul", color: 0x2e86de, lane: 3, speed: 0.9 },
-  { name: "Verde", color: 0x2ecc71, lane: -3, speed: 0.93 },
-  { name: "Morado", color: 0x9b5de5, lane: 0, speed: 0.95 },
+  { name: "Kiko", color: 0x2e86de, lane: 3, speed: 0.9, character: "kiko", kart: "pulga" },
+  { name: "Tocho", color: 0x2ecc71, lane: -3, speed: 0.93, character: "tocho", kart: "tanque" },
+  { name: "Nonna", color: 0x9b5de5, lane: 0, speed: 0.95, character: "nonna-pina", kart: "furgo" },
 ];
 
 const lerpAngle = (a: number, b: number, t: number) => {
@@ -167,11 +186,22 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   theme.decorate(scene, track, def);
 
   // --- Karts ---
-  function makeLocal(slot: number, name: string, color: number, bot?: BotDriver, speed = 1): LocalRacer {
-    const model = createKartModel(color);
+  function makeLocal(
+    slot: number,
+    name: string,
+    color: number,
+    character: string,
+    kartId: string,
+    bot?: BotDriver,
+    speed = 1,
+  ): LocalRacer {
+    const model = createKartModel(color, character, kartId);
     scene.add(model.root);
+    const stats = statsFor(character, kartId);
+    const driftMult = findKart(kartId)?.driftChargeMult ?? 1;
     const pose = gridPose(track, slot);
     const state = createKart(pose.x, pose.z, pose.heading);
+    state.mass = stats.weight;
     return {
       name,
       race: createRaceKart(slot, state, track),
@@ -179,8 +209,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       prev: { ...state },
       model,
       bot,
-      // Los de prueba son algo más lentos; KART se lee en vivo para el jugador (panel F1).
-      tuning: bot ? { ...KART, maxSpeed: KART.maxSpeed * speed } : KART,
+      stats,
+      driftMult,
+      // Los de prueba son algo más lentos. El jugador recalcula las suyas en vivo (panel F1).
+      tuning: bot ? deriveTuning({ ...KART, maxSpeed: KART.maxSpeed * speed }, stats, driftMult) : deriveTuning(KART, stats, driftMult),
       driftVisual: 0,
       spinVisual: 0,
       y: 0,
@@ -196,22 +228,36 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   if (online) {
     const me = online.players.find((p) => p.id === online.myId);
     const slot = Math.max(0, online.start.grid.indexOf(online.myId));
-    player = makeLocal(slot, me?.name ?? "Tú", KART_COLORS[me?.color ?? 0] ?? KART_COLORS[0]);
+    player = makeLocal(slot, me?.name ?? "Tú", KART_COLORS[me?.color ?? 0] ?? KART_COLORS[0], me?.character ?? "", me?.kart ?? "");
     locals = [player];
     for (const p of online.players) {
       if (p.id === online.myId || !online.start.grid.includes(p.id)) continue;
       const color = KART_COLORS[p.color] ?? KART_COLORS[0];
-      const model = createKartModel(color);
+      const model = createKartModel(color, p.character, p.kart);
       model.root.add(createNameTag(p.name, color));
       model.root.visible = false; // hasta que llegue su primer estado
       scene.add(model.root);
-      remotes.push({ id: p.id, name: p.name, model, buffer: new SnapshotBuffer(), shown: null, y: 0, driftVisual: 0, spinVisual: 0 });
+      remotes.push({
+        id: p.id,
+        name: p.name,
+        model,
+        buffer: new SnapshotBuffer(),
+        shown: null,
+        y: 0,
+        driftVisual: 0,
+        spinVisual: 0,
+        finished: false,
+        stats: statsFor(p.character, p.kart),
+      });
     }
   } else {
-    player = makeLocal(0, "Tú", KART_COLORS[0]);
+    const look = opts.look;
+    player = makeLocal(0, "Tú", look?.color ?? KART_COLORS[0], look?.character ?? "", look?.kart ?? "");
     locals = [
       player,
-      ...BOT_SETUP.map((b, i) => makeLocal(i + 1, b.name, b.color, { lane: b.lane, lookAhead: 12 }, b.speed)),
+      ...BOT_SETUP.map((b, i) =>
+        makeLocal(i + 1, b.name, b.color, b.character, b.kart, { lane: b.lane, lookAhead: 12 }, b.speed),
+      ),
     ];
   }
 
@@ -254,6 +300,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       const slot = online ? Math.max(0, online.start.grid.indexOf(online.myId)) : locals.indexOf(r);
       const pose = gridPose(track, slot);
       const s = createKart(pose.x, pose.z, pose.heading);
+      s.mass = r.stats.weight;
       r.race = createRaceKart(r.race.id, s, track);
       r.progress = createProgress();
       r.prev = { ...s };
@@ -378,7 +425,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       online.net.on<StatesMessage>(MSG.states, (m) => {
         for (const k of m.karts) {
           if (k.id === online.myId) serverMe = { lap: k.lap, position: k.position, item: k.item, rolling: k.rolling };
-          else remotes.find((r) => r.id === k.id)?.buffer.push(m.t, k.s);
+          else {
+            const rem = remotes.find((r) => r.id === k.id);
+            if (rem) {
+              rem.buffer.push(m.t, k.s);
+              rem.finished = k.finished;
+            }
+          }
         }
         if (m.items) itemsBuffer.push(m.t, m.items);
       }),
@@ -433,8 +486,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       Object.assign(r.prev, s);
       if (phase === "countdown") continue;
       r.stall = Math.max(0, r.stall - PHYSICS_DT);
-      stepKart(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, r.tuning);
-      const c = collideKartWithTrack(s, track, r.tuning);
+      const tuning = r === player ? deriveTuning(KART, r.stats, r.driftMult) : r.tuning;
+      stepKart(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, tuning);
+      const c = collideKartWithTrack(s, track, tuning);
       s.surface = surfaceAt(track, c);
       r.y = c.y;
 
@@ -492,7 +546,15 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     y: number,
     z: number,
     heading: number,
-    view: { driftDir: number; level: number; spinning: boolean; boosting: boolean; shield: boolean; shieldLeft: number },
+    view: {
+      driftDir: number;
+      level: number;
+      spinning: boolean;
+      boosting: boolean;
+      shield: boolean;
+      shieldLeft: number;
+      finished: boolean;
+    },
     dt: number,
     time: number,
   ) {
@@ -504,6 +566,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.body.rotation.y = r.driftVisual + r.spinVisual;
     m.body.rotation.z = -r.driftVisual * 0.15;
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
+    m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     if (view.driftDir !== 0 && view.level > 0) emitFromWheels(m, view.level, 2);
     if (view.boosting) emitFromWheels(m, 2, 1);
   }
@@ -516,7 +579,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       rem.model.root.visible = s !== null;
       if (!s) continue;
       rem.y = closestPoint(track, s.x, s.z).y;
-      rem.shown = { ...createKart(s.x, s.z, s.heading), speed: s.speed };
+      rem.shown = { ...createKart(s.x, s.z, s.heading), speed: s.speed, mass: rem.stats.weight };
       drawKart(
         rem.model,
         rem,
@@ -524,7 +587,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         rem.y + s.hop,
         s.z,
         s.heading,
-        { driftDir: s.driftDir, level: s.driftLevel, spinning: s.spinning, boosting: s.boosting, shield: s.shield, shieldLeft: 8 },
+        { driftDir: s.driftDir, level: s.driftLevel, spinning: s.spinning, boosting: s.boosting, shield: s.shield, shieldLeft: 8, finished: rem.finished },
         dt,
         time,
       );
@@ -627,6 +690,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           boosting: s.boostTime > 0,
           shield: s.shieldTime > 0,
           shieldLeft: s.shieldTime,
+          finished: r.progress.finishTime !== null,
         },
         dt,
         time,

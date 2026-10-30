@@ -115,6 +115,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
 - [ ] **Fase 6 — Despliegue.** (Preparado para Render; faltan los pasos en su web: ver docs/DESPLIEGUE.md.) Cliente y servidor publicados, HTTPS, enlace de invitación.
   *Hecho cuando:* abres el enlace desde el móvil fuera de casa y funciona (aún no se invita a nadie).
 - [ ] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
+  (Hecho y probado en local: datos, estadísticas en la simulación, peso en los choques, modelos con primitivas, selección con vista previa 3D y lobby. Falta medir fps con 8 karts en móviles de verdad y ajustar el equilibrio jugando.)
   *Hecho cuando:* se nota la diferencia entre un coche ligero y uno pesado y todo va fluido con 8 karts.
 - [ ] **Fase 8 — Circuitos 2 a 10.** Un circuito por sesión, en orden; luego Copas y elección de circuito en el lobby.
   *Hecho cuando:* los 10 circuitos se pueden jugar, cada uno con su mecánica, a ~60 fps en móvil.

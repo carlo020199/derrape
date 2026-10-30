@@ -94,10 +94,10 @@ un kart por delante en otro carril; pon el escudo y busca que te den.
 
 | Tema | Tour | MK7 | Derrape hoy |
 |---|---|---|---|
-| Elección | Piloto + kart + planeador | Piloto + carrocería + ruedas + planeador | ⏳ Personaje + coche + color (Fase 7) |
-| Estadísticas | Sobre todo afectan a los puntos (cada pieza tiene circuitos favoritos) | Velocidad, aceleración, peso, manejo, fuera de pista (+ ocultas: mini-turbo, agarre…) | ⏳ Velocidad, aceleración, manejo, peso |
-| Clases de peso | — | 5 (pluma a pesado) | ⏳ 3 (ligero, medio, pesado) |
-| Peso en los choques | — | La masa pasa de "parado" a "a tope" según la velocidad; el pesado empuja más | ⏳ Fase 4/7 |
+| Elección | Piloto + kart + planeador | Piloto + carrocería + ruedas + planeador | ✅ Personaje + coche + color |
+| Estadísticas | Sobre todo afectan a los puntos (cada pieza tiene circuitos favoritos) | Velocidad, aceleración, peso, manejo, fuera de pista (+ ocultas: mini-turbo, agarre…) | ✅ Velocidad, aceleración, manejo, peso |
+| Clases de peso | — | 5 (pluma a pesado) | ✅ 3 (ligero, medio, pesado) |
+| Peso en los choques | — | La masa pasa de "parado" a "a tope" según la velocidad; el pesado empuja más | ✅ Pesos 1–5: el ligero se aparta más y pierde más velocidad |
 | Progreso / desbloqueos | Niveles, tienda, pase de pago | Desbloqueo con monedas | ➖ Todo disponible desde el inicio |
 
 ## 6. Multijugador

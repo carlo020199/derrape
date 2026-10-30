@@ -3,6 +3,8 @@
 // y objetos (cajas, qué objeto toca, aceite, cohetes, impactos y escudos).
 
 import {
+  DEFAULT_CHARACTER,
+  DEFAULT_KART,
   DEFAULT_TRACK,
   KART,
   KART_COLORS,
@@ -15,6 +17,8 @@ import {
   createKart,
   createProgress,
   createRaceKart,
+  findCharacter,
+  findKart,
   findTrack,
   gridPose,
   normalizeName,
@@ -50,6 +54,9 @@ interface Player {
   id: string;
   name: string;
   color: number;
+  character: string;
+  /** Id del coche elegido (no confundir con `kart`, el de la simulación). */
+  kartId: string;
   connected: boolean;
   racing: boolean;
   state: NetKartState | null;
@@ -87,7 +94,7 @@ export class RaceLogic {
     return this.hostId;
   }
 
-  addPlayer(id: string, name: unknown, preferredColor?: number): void {
+  addPlayer(id: string, name: unknown, preferredColor?: number, character?: unknown, kart?: unknown): void {
     if (this.players.size >= MAX_PLAYERS) throw new Error("La sala está llena.");
     const taken = new Set([...this.players.values()].map((p) => p.color));
     const color =
@@ -98,6 +105,8 @@ export class RaceLogic {
       id,
       name: normalizeName(name),
       color,
+      character: findCharacter(character)?.id ?? DEFAULT_CHARACTER,
+      kartId: findKart(kart)?.id ?? DEFAULT_KART,
       connected: true,
       racing: false,
       state: null,
@@ -128,9 +137,18 @@ export class RaceLogic {
   }
 
   /** Cambia nombre y/o color. Devuelve un error legible o null. */
-  setProfile(id: string, name?: unknown, color?: unknown): string | null {
+  setProfile(id: string, name?: unknown, color?: unknown, character?: unknown, kart?: unknown): string | null {
     const p = this.players.get(id);
     if (!p) return "No estás en la sala.";
+    if (this.phase !== "lobby" && p.racing && (character !== undefined || kart !== undefined)) return "No se puede cambiar de coche en plena carrera.";
+    if (character !== undefined) {
+      if (!findCharacter(character)) return "Ese personaje no existe.";
+      p.character = character as string;
+    }
+    if (kart !== undefined) {
+      if (!findKart(kart)) return "Ese coche no existe.";
+      p.kartId = kart as string;
+    }
     if (name !== undefined) p.name = normalizeName(name);
     if (color !== undefined) {
       if (typeof color !== "number" || !(color in KART_COLORS)) return "Color no válido.";
@@ -360,6 +378,8 @@ export class RaceLogic {
         id: p.id,
         name: p.name,
         color: p.color,
+        character: p.character,
+        kart: p.kartId,
         host: p.id === this.hostId,
         connected: p.connected,
         racing: p.racing,

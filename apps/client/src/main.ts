@@ -5,6 +5,7 @@ import {
   DEFAULT_TRACK,
   ITEMS,
   KART,
+  KART_COLORS,
   MSG,
   RACE,
   SURFACE,
@@ -19,10 +20,21 @@ import { createRaceSession, type GameView, type RaceSession } from "./game/raceS
 import { releaseTouch, setupTouchControls } from "./input/touch";
 import { NET_DEBUG, Net, wakeServer } from "./net/net";
 import { CAMERA, ChaseCamera } from "./render/chaseCamera";
+import { GaragePreview } from "./render/garagePreview";
 import { AutoQuality } from "./render/quality";
 import { createDebugPanel } from "./ui/debugPanel";
+import { setupGarage } from "./ui/garage";
 import { setupMenu } from "./ui/menu";
-import { profile, renderLobby, setHomeError, setLobbyError, setupHome, setupLobby, showScreen } from "./ui/screens";
+import {
+  profile,
+  refreshLookButtons,
+  renderLobby,
+  setHomeError,
+  setLobbyError,
+  setupHome,
+  setupLobby,
+  showScreen,
+} from "./ui/screens";
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -93,7 +105,7 @@ async function startSolo(trackId: string) {
   document.body.classList.remove("online");
   const def = await loadDef(trackId);
   showScreen(null);
-  session = createRaceSession(view, { def });
+  session = createRaceSession(view, { def, look: { character: profile.character, kart: profile.kart, color: KART_COLORS[profile.color] ?? KART_COLORS[0] } });
 }
 
 const trackSelect = $<HTMLSelectElement>("#track-select");
@@ -170,12 +182,33 @@ async function goHome() {
   showScreen("home");
 }
 
+// --- Piloto y coche: la vista previa se dibuja con el mismo renderer, detrás de la pantalla ---
+let garageFrom: "home" | "lobby" = "home";
+const preview = new GaragePreview(renderer, canvas);
+const garage = setupGarage(preview, {
+  change() {
+    refreshLookButtons();
+    net?.send(MSG.profile, { color: profile.color, character: profile.character, kart: profile.kart });
+  },
+  done() {
+    preview.stop();
+    showScreen(garageFrom);
+    if (garageFrom === "lobby" && lobby && net) renderLobby(lobby, net.id);
+  },
+});
+function openGarage(from: "home" | "lobby") {
+  garageFrom = from;
+  showScreen("garage");
+  garage.render(false);
+  preview.start();
+}
+
 setupHome(
   {
     async create(name) {
       await net?.leave();
       net = connectNet();
-      await net.create({ name, color: profile.color }).catch((e) => {
+      await net.create({ name, color: profile.color, character: profile.character, kart: profile.kart }).catch((e) => {
         net = null;
         throw e;
       });
@@ -184,7 +217,7 @@ setupHome(
     async join(code, name) {
       await net?.leave();
       net = connectNet();
-      await net.join(code, { name, color: profile.color }).catch((e) => {
+      await net.join(code, { name, color: profile.color, character: profile.character, kart: profile.kart }).catch((e) => {
         net = null;
         throw e;
       });
@@ -193,6 +226,7 @@ setupHome(
     solo() {
       void startSolo(soloTrack);
     },
+    garage: () => openGarage("home"),
   },
   normalizeRoomCode(new URLSearchParams(location.search).get("sala") ?? ""),
 );
@@ -201,6 +235,7 @@ setupLobby({
   color: (i) => net?.send(MSG.profile, { color: i }),
   track: (id) => net?.send(MSG.setTrack, { trackId: id }),
   start: () => net?.send(MSG.start),
+  garage: () => openGarage("lobby"),
   async invite() {
     const code = net?.code;
     if (!code) return;

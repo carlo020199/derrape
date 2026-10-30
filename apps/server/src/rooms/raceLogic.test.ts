@@ -73,6 +73,26 @@ describe("sala", () => {
     expect(room.lobby().players[1]).toMatchObject({ name: "Bea", color: 3 });
   });
 
+  it("cada jugador elige personaje y coche; los ids inválidos se rechazan o se sustituyen", () => {
+    const room = new RaceLogic("ABCD");
+    room.addPlayer("a", "Ana", 0, "nonna-pina", "tanque");
+    room.addPlayer("b", "Beto", 1, "no-existe", 42);
+    expect(room.lobby().players[0]).toMatchObject({ character: "nonna-pina", kart: "tanque" });
+    expect(room.lobby().players[1]).toMatchObject({ character: "lia", kart: "chispa" });
+    expect(room.setProfile("b", undefined, undefined, "kiko", "pulga")).toBeNull();
+    expect(room.lobby().players[1]).toMatchObject({ character: "kiko", kart: "pulga" });
+    expect(room.setProfile("b", undefined, undefined, "nadie")).toMatch(/personaje/);
+    expect(room.setProfile("b", undefined, undefined, undefined, "nada")).toMatch(/coche/);
+    expect(room.lobby().players[1]).toMatchObject({ character: "kiko", kart: "pulga" });
+  });
+
+  it("dos jugadores pueden repetir personaje y coche", () => {
+    const room = new RaceLogic("ABCD");
+    room.addPlayer("a", "Ana", 0, "tocho", "flecha");
+    room.addPlayer("b", "Beto", 1, "tocho", "flecha");
+    expect(room.lobby().players.map((p) => p.character)).toEqual(["tocho", "tocho"]);
+  });
+
   it("los nombres se limpian y tienen un máximo", () => {
     const room = new RaceLogic("ABCD");
     room.addPlayer("a", "   ");

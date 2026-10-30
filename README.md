@@ -24,7 +24,7 @@ Abre en el móvil la dirección "Network" que muestra Vite (p. ej. `http://192.1
 
 ¿Solo tienes un móvil? Un jugador falso se une a la sala y da vueltas solo:
 
-    npx tsx scripts/jugador-falso.ts CODIGO [nombre]
+    npx tsx scripts/jugador-falso.ts CODIGO [nombre] [servidor] [personaje] [coche]
 
 Para simular mala conexión: F1 en el PC → sección "red" (retraso, variación y pérdida de paquetes).
 

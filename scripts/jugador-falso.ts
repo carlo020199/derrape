@@ -1,6 +1,6 @@
 // Jugador falso para probar el multijugador sin un segundo móvil.
 //
-//   npx tsx scripts/jugador-falso.ts CODIGO [nombre] [servidor]
+//   npx tsx scripts/jugador-falso.ts CODIGO [nombre] [servidor] [personaje] [coche]
 //
 // Se une a la sala, espera a que el anfitrión empiece y da vueltas al circuito mandando su
 // estado 20 veces por segundo, como haría un amigo de verdad (sin derrapes). Usa los objetos
@@ -35,12 +35,14 @@ import {
 const code = normalizeRoomCode(process.argv[2] ?? "");
 const name = process.argv[3] ?? "Robotín";
 const endpoint = process.argv[4] ?? `ws://localhost:${SERVER_PORT}`;
+const character = process.argv[5] ?? "tocho";
+const kartId = process.argv[6] ?? "tanque";
 if (!code) {
   console.error("Uso: npx tsx scripts/jugador-falso.ts CODIGO [nombre] [servidor]");
   process.exit(1);
 }
 
-const room = await new Client(endpoint).joinById(code, { name, color: 6 });
+const room = await new Client(endpoint).joinById(code, { name, color: 6, character, kart: kartId });
 console.log(`${name} está en la sala ${code}. Esperando a que el anfitrión empiece…`);
 
 let timer: ReturnType<typeof setInterval> | null = null;

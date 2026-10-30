@@ -36,7 +36,7 @@ export class RaceRoom extends Room {
     this.logic = new RaceLogic(code);
 
     this.onMessage(MSG.profile, (client, m: ProfileMessage) => {
-      this.reply(client, this.logic.setProfile(client.sessionId, m?.name, m?.color));
+      this.reply(client, this.logic.setProfile(client.sessionId, m?.name, m?.color, m?.character, m?.kart));
       this.sendLobby();
     });
     this.onMessage(MSG.setTrack, (client, m: { trackId: string }) => {
@@ -62,7 +62,7 @@ export class RaceRoom extends Room {
   }
 
   override onJoin(client: Client, options: JoinOptions) {
-    this.logic.addPlayer(client.sessionId, options?.name, options?.color);
+    this.logic.addPlayer(client.sessionId, options?.name, options?.color, options?.character, options?.kart);
     console.log(`[sala ${this.roomId}] entra ${client.sessionId} (${this.logic.playerCount})`);
     this.sendLobby();
   }

@@ -37,6 +37,9 @@ export interface JoinOptions {
   name: string;
   /** Índice en KART_COLORS que se prefiere (si está libre). */
   color?: number;
+  /** Ids de personaje y coche (ver characters.ts y karts.ts). */
+  character?: string;
+  kart?: string;
 }
 
 export type RoomPhase = "lobby" | "countdown" | "racing";
@@ -46,6 +49,9 @@ export interface LobbyPlayer {
   name: string;
   /** Índice en KART_COLORS. */
   color: number;
+  /** Ids del personaje y del coche elegidos. */
+  character: string;
+  kart: string;
   host: boolean;
   connected: boolean;
   /** Está corriendo la carrera actual (los que entran a mitad esperan a la siguiente). */
@@ -164,4 +170,6 @@ export const MSG = {
 export interface ProfileMessage {
   name?: string;
   color?: number;
+  character?: string;
+  kart?: string;
 }

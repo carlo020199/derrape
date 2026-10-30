@@ -7,3 +7,5 @@ export * from "./bot";
 export * from "./race";
 export * from "./tracks/types";
 export * from "./tracks/index";
+export * from "./characters";
+export * from "./karts";

@@ -61,6 +61,7 @@
           <button id="home-join">Unirse</button>
         </div>
         <button id="home-solo">Practicar solo</button>
+        <button id="home-garage" class="ghost">Piloto y coche</button>
         <p id="home-status" class="dim"></p>
         <p id="home-error" class="note"></p>
       </div>
@@ -72,6 +73,7 @@
         <div id="lobby-code" class="code">····</div>
         <button id="lobby-invite">Invitar amigos</button>
         <ul id="lobby-players"></ul>
+        <button id="lobby-garage">Piloto y coche</button>
         <p class="dim">Tu color</p>
         <div id="lobby-colors" class="colors"></div>
         <label class="field">Circuito <select id="lobby-track"></select></label>
@@ -79,6 +81,22 @@
         <p id="lobby-wait" class="dim"></p>
         <p id="lobby-error" class="note"></p>
         <button id="lobby-leave" class="ghost">Salir de la sala</button>
+      </div>
+    </div>
+
+    <div id="garage" class="screen" hidden>
+      <div id="garage-stage"></div>
+      <div id="garage-sheet">
+        <p class="dim">Personaje</p>
+        <div id="garage-chars" class="picker"></div>
+        <p id="garage-char-info" class="dim"></p>
+        <p class="dim">Coche</p>
+        <div id="garage-karts" class="picker"></div>
+        <p id="garage-kart-info" class="dim"></p>
+        <div id="garage-stats"></div>
+        <p class="dim">Color</p>
+        <div id="garage-colors" class="colors"></div>
+        <button id="garage-done" class="primary">Listo</button>
       </div>
     </div>
 

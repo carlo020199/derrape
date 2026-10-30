@@ -43,6 +43,8 @@ export interface KartState {
   shieldTime: number;
   /** Superficie bajo las ruedas (la pone quien conoce la pista antes de cada paso). */
   surface: Surface;
+  /** Peso (1–5, estadística del coche): el más pesado empuja más en los choques y pierde menos velocidad. */
+  mass: number;
 }
 
 export const NO_INPUT: KartInput = { steer: 0, throttle: false, brake: false, drift: false };
@@ -62,6 +64,7 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     spinTime: 0,
     shieldTime: 0,
     surface: "road",
+    mass: 3,
   };
 }
 
@@ -241,20 +244,24 @@ export function collideKarts(a: KartState, b: KartState, moveB = true, t: KartTu
   const nx = dist > 1e-6 ? dx / dist : Math.cos(a.heading);
   const nz = dist > 1e-6 ? dz / dist : -Math.sin(a.heading);
   const overlap = min - dist + t.bumpPush;
-  const share = moveB ? 0.5 : 1;
-  a.x += nx * overlap * share;
-  a.z += nz * overlap * share;
+  // El más ligero se aparta más. Con pesos iguales: mitad cada uno (o todo uno si solo se mueve `a`).
+  const total = a.mass + b.mass;
+  const shareA = moveB ? b.mass / total : Math.min(1.5, (2 * b.mass) / total);
+  const shareB = a.mass / total;
+  a.x += nx * overlap * shareA;
+  a.z += nz * overlap * shareA;
   if (moveB) {
-    b.x -= nx * overlap * share;
-    b.z -= nz * overlap * share;
+    b.x -= nx * overlap * shareB;
+    b.z -= nz * overlap * shareB;
   }
-  // Frena al que va hacia el otro, según lo de frente que sea el golpe.
-  const slow = (k: KartState, sx: number, sz: number) => {
+  // Frena al que va hacia el otro, según lo de frente que sea el golpe y lo ligero que sea frente al otro.
+  const slow = (k: KartState, other: KartState, sx: number, sz: number) => {
     const into = (Math.sin(k.heading) * sx + Math.cos(k.heading) * sz) * Math.sign(k.speed);
     if (into <= 0) return;
-    k.speed *= 1 - (1 - t.bumpSpeedKeep) * Math.min(1, into);
+    const ratio = Math.max(0.5, Math.min(2, other.mass / k.mass));
+    k.speed *= 1 - Math.min(1, (1 - t.bumpSpeedKeep) * Math.min(1, into) * ratio);
   };
-  slow(a, -nx, -nz);
-  if (moveB) slow(b, nx, nz);
+  slow(a, b, -nx, -nz);
+  if (moveB) slow(b, a, nx, nz);
   return true;
 }
