@@ -103,8 +103,8 @@ export function statsFor(characterId: unknown, kartId: unknown): KartStats {
 
 /** Cuánto cambia cada estadística la simulación (por punto sobre o bajo el 3, el valor neutro). */
 export const STAT_EFFECT = {
-  /** Velocidad punta: ±3,5 % por punto. */
-  speed: 0.035,
+  /** Velocidad punta: ±2,5 % por punto (era 3,5 %: la velocidad decidía casi sola el tiempo de vuelta). */
+  speed: 0.025,
   /** Aceleración (tope y proporcional): ±10 % por punto. */
   accel: 0.1,
   /** Giro normal y derrapando: ±7 % por punto. */
