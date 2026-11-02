@@ -18,7 +18,7 @@ Precios consultados en octubre de 2026 (cambian a menudo; ver fuentes al final).
 
 ### Recomendación: Render para todo
 - **0 €**, una sola cuenta, y el archivo `render.yaml` del repositorio lo configura todo:
-  crea los dos servicios y le pasa a la web la dirección del servidor automáticamente.
+  crea los dos servicios y le pasa a la web la dirección del servidor.
 - El servidor está en **Frankfurt** (buena latencia desde España).
 - Los WebSockets cuentan como actividad: mientras jugáis, el servidor no se duerme.
 - **Lo del minuto de espera**: la web despierta al servidor nada más abrirse, mientras escribís el
@@ -32,7 +32,10 @@ Dímelo y lo preparo (necesita un Dockerfile, que probaría antes).
 - `render.yaml`: servidor (`derrape-servidor`, gratis, Frankfurt, comprobación de salud en `/health`)
   y web (`derrape`, estática). Se vuelven a publicar solos con cada cambio que se sube a GitHub.
 - `.node-version`: Node 22.
-- La web lee la dirección del servidor de `VITE_SERVER_HOST` (o `VITE_SERVER_URL`).
+- La web lee la dirección del servidor de `VITE_SERVER_HOST` (o `VITE_SERVER_URL`). En `render.yaml`
+  va escrita a mano (`derrape-servidor.onrender.com`): lo que Render da con `fromService` es el nombre
+  interno del servidor, que desde fuera no funciona. Si algún día cambia el nombre del servidor, hay que
+  cambiarla ahí también.
 - **No hace falta ninguna contraseña ni clave secreta** en la configuración.
 
 Probado en local imitando la publicación: instalación limpia con los mismos comandos que usará Render,

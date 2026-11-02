@@ -22,9 +22,8 @@ services:
     staticPublishPath: apps/client/dist
     autoDeployTrigger: commit
     envVars:
-      # El dominio del servidor de arriba; la web se conecta a wss://<dominio>.
+      # El dominio público del servidor de arriba; la web se conecta a wss://<dominio>.
+      # Va escrito a mano: `fromService` con `property: host` da el nombre interno
+      # ("derrape-servidor"), que desde el móvil no existe.
       - key: VITE_SERVER_HOST
-        fromService:
-          type: web
-          name: derrape-servidor
-          property: host
+        value: derrape-servidor.onrender.com
