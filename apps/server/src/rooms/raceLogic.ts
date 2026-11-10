@@ -3,6 +3,7 @@
 // y objetos (cajas, qué objeto toca, aceite, cohetes, impactos y escudos).
 
 import {
+  CUP,
   DEFAULT_CHARACTER,
   DEFAULT_KART,
   DEFAULT_TRACK,
@@ -11,6 +12,7 @@ import {
   MAX_PLAYERS,
   MIN_PLAYERS,
   RACE,
+  TRACK_CHOICE,
   buildTrackFromDef,
   closestPoint,
   createItemBoxes,
@@ -22,17 +24,21 @@ import {
   findTrack,
   gridPose,
   normalizeName,
+  pickRandomTrack,
   standings,
   stepItems,
+  tracksInCup,
   updateProgress,
   useItem,
   type CountdownMessage,
+  type CupStatus,
   type ItemAction,
   type ItemEvent,
   type ItemWorld,
   type ItemsSnapshot,
   type LapProgress,
   type LobbyMessage,
+  type LobbyMode,
   type NetItemEvent,
   type NetKartState,
   type RaceKart,
@@ -71,6 +77,7 @@ interface Player {
 export class RaceLogic {
   phase: RoomPhase = "lobby";
   trackId = DEFAULT_TRACK;
+  mode: LobbyMode = "single";
   laps = RACE.laps;
   private players = new Map<string, Player>();
   private hostId: string | null = null;
@@ -80,6 +87,11 @@ export class RaceLogic {
   private firstFinishAt: number | null = null;
   private items: ItemWorld | null = null;
   private lastTick: number | null = null;
+  /** Circuito elegido en el selector (puede ser cup-sol / random / id real). */
+  private choiceId: string = DEFAULT_TRACK;
+  private cupTracks: string[] = [];
+  private cupIndex = 0;
+  private cupScores = new Map<string, number>();
 
   constructor(
     readonly code: string,
@@ -161,7 +173,38 @@ export class RaceLogic {
   setTrack(id: string, trackId: unknown): string | null {
     if (id !== this.hostId) return "Solo el anfitrión elige el circuito.";
     if (this.phase !== "lobby") return "La carrera ya ha empezado.";
-    if (typeof trackId !== "string" || !findTrack(trackId)) return "Ese circuito no existe.";
+    if (typeof trackId !== "string") return "Ese circuito no existe.";
+    // En mitad de una copa el circuito lo marca el servidor.
+    if (this.mode.startsWith("cup") && this.cupTracks.length > 0 && this.cupIndex > 0 && this.cupIndex < this.cupTracks.length) {
+      return "Termina la copa o elige otra cosa al acabar.";
+    }
+    if (trackId === TRACK_CHOICE.random) {
+      this.mode = "random";
+      this.choiceId = trackId;
+      this.cupTracks = [];
+      this.cupIndex = 0;
+      this.cupScores.clear();
+      this.trackId = pickRandomTrack(this.random);
+      return null;
+    }
+    if (trackId === TRACK_CHOICE.cupSol || trackId === TRACK_CHOICE.cupLuna) {
+      const cup = trackId === TRACK_CHOICE.cupSol ? "sol" : "luna";
+      const list = tracksInCup(cup);
+      if (list.length === 0) return "Esa copa no tiene circuitos.";
+      this.mode = trackId as LobbyMode;
+      this.choiceId = trackId;
+      this.cupTracks = list.map((t) => t.id);
+      this.cupIndex = 0;
+      this.cupScores.clear();
+      this.trackId = this.cupTracks[0]!;
+      return null;
+    }
+    if (!findTrack(trackId)) return "Ese circuito no existe.";
+    this.mode = "single";
+    this.choiceId = trackId;
+    this.cupTracks = [];
+    this.cupIndex = 0;
+    this.cupScores.clear();
     this.trackId = trackId;
     return null;
   }
@@ -172,6 +215,11 @@ export class RaceLogic {
     if (this.phase !== "lobby") return "La carrera ya ha empezado.";
     const ready = [...this.players.values()].filter((p) => p.connected);
     if (ready.length < MIN_PLAYERS) return `Hacen falta al menos ${MIN_PLAYERS} jugadores.`;
+
+    if (this.mode === "random") this.trackId = pickRandomTrack(this.random);
+    if (this.mode.startsWith("cup") && this.cupTracks.length > 0) {
+      this.trackId = this.cupTracks[Math.min(this.cupIndex, this.cupTracks.length - 1)]!;
+    }
 
     const def = await findTrack(this.trackId)!.load();
     this.track = buildTrackFromDef(def);
@@ -301,7 +349,39 @@ export class RaceLogic {
     }
     this.track = null;
     this.items = null;
-    return { results: { results }, events };
+
+    let cup: (CupStatus & { finished: boolean }) | undefined;
+    if (this.mode.startsWith("cup") && this.cupTracks.length > 0) {
+      for (const r of results) {
+        const pts = CUP.points[r.position - 1] ?? 0;
+        this.cupScores.set(r.id, (this.cupScores.get(r.id) ?? 0) + pts);
+      }
+      this.cupIndex += 1;
+      const finished = this.cupIndex >= this.cupTracks.length;
+      cup = { ...this.cupStatus()!, finished };
+      if (!finished) this.trackId = this.cupTracks[this.cupIndex]!;
+      else {
+        this.mode = "single";
+        this.choiceId = this.trackId;
+        this.cupTracks = [];
+        this.cupIndex = 0;
+      }
+    }
+    return { results: { results, cup }, events };
+  }
+
+  private cupStatus(): CupStatus | null {
+    if (!this.mode.startsWith("cup") || this.cupTracks.length === 0) return null;
+    const name = this.mode === "cup-sol" ? "Copa Sol" : "Copa Luna";
+    const scores = [...this.players.values()]
+      .map((p) => ({ id: p.id, name: p.name, color: p.color, points: this.cupScores.get(p.id) ?? 0 }))
+      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+    return {
+      name,
+      race: Math.min(this.cupIndex + 1, this.cupTracks.length),
+      total: this.cupTracks.length,
+      scores,
+    };
   }
 
   private stepItems(now: number): NetItemEvent[] {
@@ -373,7 +453,9 @@ export class RaceLogic {
     return {
       code: this.code,
       phase: this.phase,
-      trackId: this.trackId,
+      trackId: this.mode.startsWith("cup") && this.cupTracks.length > 0 ? this.choiceId : this.mode === "random" ? this.choiceId : this.trackId,
+      mode: this.mode,
+      cup: this.cupStatus(),
       players: [...this.players.values()].map((p) => ({
         id: p.id,
         name: p.name,

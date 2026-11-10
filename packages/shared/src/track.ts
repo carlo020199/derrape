@@ -14,7 +14,7 @@ export interface TrackPoint {
 }
 
 /** Tipos de zona especial reutilizables por cualquier circuito. */
-export type ZoneType = "slow" | "lowGrip" | "boostPad" | "fall";
+export type ZoneType = "slow" | "lowGrip" | "boostPad" | "fall" | "ramp";
 
 export interface TrackZone {
   type: ZoneType;
@@ -24,6 +24,21 @@ export interface TrackZone {
   /** Franja lateral (m a la izquierda del centro). Por defecto, todo el ancho. */
   lateralMin: number;
   lateralMax: number;
+}
+
+/**
+ * Obstáculo periódico (p. ej. tren en un paso a nivel).
+ * Activo durante `active` segundos de cada `period` (con desfase `phase`).
+ */
+export interface TrackHazard {
+  type: "gate";
+  from: number;
+  to: number;
+  lateralMin: number;
+  lateralMax: number;
+  period: number;
+  active: number;
+  phase: number;
 }
 
 export interface Track {
@@ -38,6 +53,7 @@ export interface Track {
   /** Arcén a cada lado del asfalto antes del muro (m). En el arcén se va lento. */
   verge: number;
   zones: TrackZone[];
+  hazards: TrackHazard[];
 }
 
 export type Surface = "road" | "offroad" | ZoneType;
@@ -56,7 +72,13 @@ export interface ClosestPoint {
   distance: number;
 }
 
-export function buildTrack(points: TrackPoint[], width: number, verge = 0, zones: TrackZone[] = []): Track {
+export function buildTrack(
+  points: TrackPoint[],
+  width: number,
+  verge = 0,
+  zones: TrackZone[] = [],
+  hazards: TrackHazard[] = [],
+): Track {
   const full = points.map((p) => ({ x: p.x, z: p.z, y: p.y ?? 0, w: p.w ?? width }));
   const lengths: number[] = [0];
   for (let i = 1; i <= full.length; i++) {
@@ -65,7 +87,7 @@ export function buildTrack(points: TrackPoint[], width: number, verge = 0, zones
     lengths.push(lengths[i - 1]! + Math.hypot(b.x - a.x, b.z - a.z));
   }
   const length = lengths.pop()!;
-  return { points: full, lengths, length, width, verge, zones };
+  return { points: full, lengths, length, width, verge, zones, hazards };
 }
 
 /** Óvalo de prueba: dos rectas unidas por semicírculos. */
@@ -198,17 +220,30 @@ export function closestPoint(track: Track, x: number, z: number): ClosestPoint {
   };
 }
 
+function inSpan(from: number, to: number, distance: number): boolean {
+  return from <= to ? distance >= from && distance <= to : distance >= from || distance <= to;
+}
+
 function inZone(zone: TrackZone, c: ClosestPoint): boolean {
   if (c.lateral < zone.lateralMin || c.lateral > zone.lateralMax) return false;
-  return zone.from <= zone.to
-    ? c.distance >= zone.from && c.distance <= zone.to
-    : c.distance >= zone.from || c.distance <= zone.to;
+  return inSpan(zone.from, zone.to, c.distance);
 }
 
 /** Superficie bajo el kart: las zonas especiales mandan; si no, asfalto o arcén. */
 export function surfaceAt(track: Track, c: ClosestPoint): Surface {
   for (const z of track.zones) if (inZone(z, c)) return z.type;
   return Math.abs(c.lateral) <= c.width / 2 ? "road" : "offroad";
+}
+
+/** ¿Hay un obstáculo (tren, barrera) activo en este punto a este tiempo de carrera? */
+export function hazardActiveAt(track: Track, c: ClosestPoint, raceTime: number): TrackHazard | null {
+  for (const h of track.hazards) {
+    if (c.lateral < h.lateralMin || c.lateral > h.lateralMax) continue;
+    if (!inSpan(h.from, h.to, c.distance)) continue;
+    const t = ((raceTime + h.phase) % h.period + h.period) % h.period;
+    if (t < h.active) return h;
+  }
+  return null;
 }
 
 /**

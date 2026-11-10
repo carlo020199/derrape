@@ -32,6 +32,8 @@ export interface KartState {
   driftCharge: number;
   /** Tiempo de salto restante (s). Al aterrizar empieza el derrape si se sigue pidiendo. */
   hopTime: number;
+  /** Duración total del salto en curso (para la curva de altura: derrape o rampa). */
+  hopTotal: number;
   /** Si el derrape estaba pulsado el paso anterior (para detectar la pulsación). */
   driftHeld: boolean;
   /** Turbo restante (s) y su fuerza (multiplicador de velocidad punta). */
@@ -58,6 +60,7 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     driftDir: 0,
     driftCharge: 0,
     hopTime: 0,
+    hopTotal: 0,
     driftHeld: false,
     boostTime: 0,
     boostMult: 1,
@@ -80,8 +83,15 @@ export function driftLevel(s: KartState, t: KartTuning = KART): number {
 /** Altura del salto (m) para dibujarlo. */
 export function hopHeight(s: KartState, t: KartTuning = KART): number {
   if (s.hopTime <= 0) return 0;
-  const u = 1 - s.hopTime / t.hopTime; // 0..1
-  return 4 * t.hopHeight * u * (1 - u);
+  const total = s.hopTotal > 0 ? s.hopTotal : t.hopTime;
+  const height = total > t.hopTime + 0.05 ? SURFACE.rampHopHeight : t.hopHeight;
+  const u = 1 - s.hopTime / total; // 0..1
+  return 4 * height * Math.max(0, u) * (1 - Math.max(0, Math.min(1, u)));
+}
+
+function startHop(s: KartState, duration: number) {
+  s.hopTime = duration;
+  s.hopTotal = duration;
 }
 
 /** Da un turbo: dura al menos `time` s y se queda con la fuerza mayor. */
@@ -118,6 +128,7 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
     s.driftDir = 0;
     s.driftCharge = 0;
     s.hopTime = 0;
+    s.hopTotal = 0;
     s.boostTime = 0;
     s.speed = approach(s.speed, 0, ITEMS.spinDecel * dt);
     s.x += Math.sin(s.heading) * s.speed * dt;
@@ -128,11 +139,15 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   const steer = Math.max(-1, Math.min(1, input.steer));
   const icy = s.surface === "lowGrip";
   if (s.surface === "boostPad") giveBoost(s, SURFACE.boostPadTime, SURFACE.boostPadMult);
+  // Rampa: un salto más alto si llegas con velocidad (no interfiere con el saltito de derrape).
+  if (s.surface === "ramp" && s.hopTime === 0 && s.speed >= SURFACE.rampMinSpeed && s.driftDir === 0) {
+    startHop(s, SURFACE.rampHopTime);
+  }
 
   // --- Salto y derrape ---
   // Pulsar derrape = saltito. Al aterrizar, si se sigue pulsando y hay dirección, empieza el derrape.
   if (s.driftDir === 0) {
-    if (pressed && s.hopTime === 0 && s.speed > 0) s.hopTime = t.hopTime;
+    if (pressed && s.hopTime === 0 && s.speed > 0) startHop(s, t.hopTime);
     if (s.hopTime > 0) {
       s.hopTime = Math.max(0, s.hopTime - dt);
       if (s.hopTime === 0) {

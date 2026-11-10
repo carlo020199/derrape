@@ -16,6 +16,7 @@ import {
   type CountdownMessage,
   type LobbyMessage,
 } from "@derrape/shared";
+import { unlockAudio } from "./audio/sfx";
 import { createRaceSession, type GameView, type RaceSession } from "./game/raceSession";
 import { releaseTouch, setupTouchControls } from "./input/touch";
 import { NET_DEBUG, Net, wakeServer } from "./net/net";
@@ -37,6 +38,13 @@ import {
 } from "./ui/screens";
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+
+// Audio: se desbloquea con el primer toque/clic (requisito de móviles).
+const unlockOnce = () => {
+  void unlockAudio();
+  window.removeEventListener("pointerdown", unlockOnce);
+};
+window.addEventListener("pointerdown", unlockOnce);
 
 // --- Lo común a todas las carreras ---
 const canvas = $<HTMLCanvasElement>("#game");

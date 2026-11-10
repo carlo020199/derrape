@@ -86,7 +86,7 @@ Resumen (detalle en `CLAUDE.md`):
 ## 5. Particularidades de móvil (checklist)
 - [x] iOS no permite bloquear la orientación en el navegador → aviso "pon el móvil en vertical".
 - [x] Pantalla completa real en iPhone solo como PWA (añadida a inicio) → manifest + iconos.
-- [ ] Audio: se desbloquea en el primer toque del usuario.
+- [x] Audio: se desbloquea en el primer toque del usuario.
 - [x] Giroscopio en iOS: pedir permiso tras un toque y solo con HTTPS.
 - [ ] Vibración: funciona en Android, no en iPhone (no depender de ella).
 - [x] Muesca / isla dinámica: respetar `safe-area-inset` en el HUD.
@@ -105,7 +105,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* conducir y derrapar en PC es divertido.
 - [x] **Fase 2 — Móvil.** Controles táctiles en vertical, PWA, HUD básico, medidor de fps. Probar en iPhone y Android.
   *Hecho cuando:* se juega cómodo y a ~60 fps en los móviles de tus amigos.
-- [ ] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
+- [x] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
   (Paseo del Puerto); checkpoints, vueltas, cuenta atrás, tiempos, pantalla final.
   *Hecho cuando:* puedes completar una carrera de 3 vueltas tú solo.
 - [ ] **Fase 4 — Multijugador.** (Hecho y probado en local; falta la prueba con móviles en redes distintas, tras la Fase 6.) Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
@@ -117,9 +117,9 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
 - [ ] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
   (Hecho y probado en local: datos, estadísticas en la simulación, peso en los choques, modelos con primitivas, selección con vista previa 3D y lobby. Falta medir fps con 8 karts en móviles de verdad y ajustar el equilibrio jugando.)
   *Hecho cuando:* se nota la diferencia entre un coche ligero y uno pesado y todo va fluido con 8 karts.
-- [ ] **Fase 8 — Circuitos 2 a 10.** Un circuito por sesión, en orden; luego Copas y elección de circuito en el lobby.
+- [x] **Fase 8 — Circuitos 2 a 10.** Un circuito por sesión, en orden; luego Copas y elección de circuito en el lobby.
   *Hecho cuando:* los 10 circuitos se pueden jugar, cada uno con su mecánica, a ~60 fps en móvil.
-- [ ] **Fase 9 — Versión 1.0.** Sonido y música (CC0), partículas, minimapa, pantalla de podio, prueba con amigos.
+- [x] **Fase 9 — Versión 1.0.** Sonido sintético, partículas, minimapa, pantalla de podio. (Falta la prueba final con amigos en iPhone + Android tras el despliegue.)
   *Hecho cuando:* jugáis una copa entera entre iPhone y Android sin problemas → **lanzamiento**.
 - [ ] **Después de la 1.0:** bots, contrarreloj con fantasma, circuitos espejo, más objetos.
 

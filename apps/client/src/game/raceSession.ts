@@ -36,6 +36,8 @@ import {
   stepItems,
   stepKart,
   statsFor,
+  SURFACE,
+  hazardActiveAt,
   surfaceAt,
   updateProgress,
   useItem,
@@ -56,6 +58,7 @@ import {
   type StatesMessage,
   type TrackDef,
 } from "@derrape/shared";
+import { sfx } from "../audio/sfx";
 import { readInput } from "../input";
 import { readKeyboard } from "../input/keyboard";
 import { takeItemAction, touch } from "../input/touch";
@@ -64,6 +67,7 @@ import type { Net } from "../net/net";
 import type { ChaseCamera } from "../render/chaseCamera";
 import { ItemsView } from "../render/itemsView";
 import { createKartModel, type KartModel } from "../render/kartModel";
+import { Minimap } from "../render/minimap";
 import { createNameTag } from "../render/nameTag";
 import type { AutoQuality } from "../render/quality";
 import { Sparks } from "../render/sparks";
@@ -184,6 +188,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   scene.add(ground);
   scene.add(createTrackMesh(track, theme.track));
   theme.decorate(scene, track, def);
+
+  const minimap = new Minimap($<HTMLCanvasElement>("#minimap"));
+  minimap.setTrack(track);
+  $("#minimap").hidden = false;
 
   // --- Karts ---
   function makeLocal(
@@ -347,11 +355,23 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     standings(locals.map((r) => ({ r, progress: r.progress, raceDistance: r.race.raceDistance }))).map((x) => x.r);
 
   function onItemEvents(events: ItemEvent[]) {
+    const at = new THREE.Vector3(player.race.state.x, player.y + 0.5, player.race.state.z);
     for (const e of events) {
       if (e.kart === player.race.id) {
-        if (e.type === "hit") showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
+        if (e.type === "hit") {
+          showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
+          sfx.hit();
+          sparks.emitHit(at);
+        }
         if (e.type === "blocked") showFlash("¡Escudo!");
-        if (e.type === "use") showFlash(ITEM_NAMES[e.item]);
+        if (e.type === "pickup") sfx.pickup();
+        if (e.type === "use") {
+          showFlash(ITEM_NAMES[e.item]);
+          if (e.item === "nitro") {
+            sfx.boost();
+            sparks.emitNitro(at);
+          }
+        }
       } else if (e.type === "hit" && e.owner === player.race.id) {
         showFlash("¡Tocado!");
       }
@@ -369,6 +389,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       if (e.kart === online.myId) {
         if (e.type === "hit") {
           s.spinTime = e.by === "oil" ? ITEMS.oilSpinTime : ITEMS.rocketSpinTime;
+          sfx.hit();
+          sparks.emitHit(new THREE.Vector3(s.x, player.y + 0.5, s.z));
           showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
         }
         if (e.type === "blocked") {
@@ -376,10 +398,15 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           showFlash("¡Escudo!");
         }
         if (e.type === "use" && e.item) {
-          if (e.item === "nitro") giveBoost(s, ITEMS.nitroTime, ITEMS.nitroSpeedMult);
+          if (e.item === "nitro") {
+            giveBoost(s, ITEMS.nitroTime, ITEMS.nitroSpeedMult);
+            sfx.boost();
+            sparks.emitNitro(new THREE.Vector3(s.x, player.y + 0.5, s.z));
+          }
           if (e.item === "shield") s.shieldTime = ITEMS.shieldTime;
           showFlash(ITEM_NAMES[e.item]);
         }
+        if (e.type === "pickup") sfx.pickup();
       } else if (e.type === "hit" && e.owner === online.myId) {
         const victim = online.players.find((p) => p.id === e.kart)?.name;
         showFlash(victim ? `¡Le has dado a ${victim}!` : "¡Tocado!");
@@ -390,17 +417,23 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   // --- Pantalla final ---
   const resultsEl = $("#results");
   const resultsButton = $<HTMLButtonElement>("#results-again");
-  function renderResults(rows: { name: string; me: boolean; time: number | null }[]) {
+  function renderResults(
+    rows: { name: string; me: boolean; time: number | null; points?: number }[],
+    cup?: ResultsMessage["cup"],
+  ) {
     resultsShown = true;
+    sfx.finish();
     const list = $<HTMLOListElement>("#results-list");
     list.replaceChildren();
     rows.forEach((row, i) => {
       const li = document.createElement("li");
       if (row.me) li.className = "me";
+      const timeOrPts =
+        row.points !== undefined ? `${row.points} pts` : row.time === null ? "sin terminar" : formatTime(row.time);
       li.append(
         Object.assign(document.createElement("span"), { textContent: `${i + 1}º` }),
         Object.assign(document.createElement("span"), { textContent: row.name }),
-        Object.assign(document.createElement("span"), { textContent: row.time === null ? "sin terminar" : formatTime(row.time) }),
+        Object.assign(document.createElement("span"), { textContent: timeOrPts }),
       );
       list.append(li);
     });
@@ -408,7 +441,39 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     $("#results-laps").textContent = times.length
       ? `Tus vueltas: ${times.map(formatTime).join(" · ")} — mejor ${formatTime(Math.min(...times))}`
       : "";
-    resultsButton.textContent = online ? "Volver a la sala" : "Otra carrera";
+
+    const podium = $("#podium");
+    const cupEl = $("#results-cup");
+    const title = $("#results-title");
+    if (cup?.finished) {
+      title.textContent = `Podio · ${cup.name}`;
+      podium.hidden = false;
+      const spots = [
+        { el: podium.querySelector(".second")!, row: cup.scores[1] },
+        { el: podium.querySelector(".first")!, row: cup.scores[0] },
+        { el: podium.querySelector(".third")!, row: cup.scores[2] },
+      ];
+      for (const s of spots) {
+        const name = s.el.querySelector(".podium-name")!;
+        const pts = s.el.querySelector(".podium-pts")!;
+        name.textContent = s.row?.name ?? "—";
+        pts.textContent = s.row ? `${s.row.points} pts` : "";
+        s.el.classList.toggle("empty", !s.row);
+      }
+      cupEl.hidden = true;
+      resultsButton.textContent = online ? "Volver a la sala" : "Otra carrera";
+    } else {
+      title.textContent = cup ? `${cup.name} · Carrera ${cup.race - 1}/${cup.total}` : "Resultados";
+      podium.hidden = true;
+      if (cup) {
+        cupEl.hidden = false;
+        cupEl.textContent = cup.scores.map((s) => `${s.name} ${s.points}`).join(" · ");
+        resultsButton.textContent = online ? "Seguir copa" : "Otra carrera";
+      } else {
+        cupEl.hidden = true;
+        resultsButton.textContent = online ? "Volver a la sala" : "Otra carrera";
+      }
+    }
     resultsEl.hidden = false;
   }
   const onResultsButton = () => {
@@ -437,7 +502,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       }),
       online.net.on<ItemEventsMessage>(MSG.itemEvents, onNetItemEvents),
       online.net.on<ResultsMessage>(MSG.results, (m) => {
-        renderResults(m.results.map((r: RaceResult) => ({ name: r.name, me: r.id === online.myId, time: r.time })));
+        renderResults(
+          m.results.map((r: RaceResult) => ({ name: r.name, me: r.id === online.myId, time: r.time })),
+          m.cup,
+        );
       }),
     );
   }
@@ -490,6 +558,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       stepKart(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, tuning);
       const c = collideKartWithTrack(s, track, tuning);
       s.surface = surfaceAt(track, c);
+      if (hazardActiveAt(track, c, raceTime) && s.spinTime <= 0) {
+        s.spinTime = SURFACE.hazardSpinTime;
+        if (r === player) {
+          sfx.hit();
+          showFlash("¡Tren!");
+        }
+      }
       r.y = c.y;
 
       const event = updateProgress(r.progress, track, c.distance, raceTime, laps);
@@ -568,7 +643,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     if (view.driftDir !== 0 && view.level > 0) emitFromWheels(m, view.level, 2);
-    if (view.boosting) emitFromWheels(m, 2, 1);
+    if (view.boosting) {
+      emitFromWheels(m, 2, 1);
+      sparks.emitBoost(m.root.position);
+    }
   }
 
   function drawRemotes(dt: number, time: number) {
@@ -621,6 +699,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         countdownEl.classList.remove("pop");
         void countdownEl.offsetWidth;
         countdownEl.classList.add("pop");
+        sfx.countdown(n);
       }
     } else if (lastCount !== 0) {
       lastCount = 0;
@@ -628,6 +707,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       countdownEl.classList.remove("pop");
       void countdownEl.offsetWidth;
       countdownEl.classList.add("pop");
+      sfx.countdown(0);
     }
     wrongWayEl.hidden = player.wrongWay < 1;
   }
@@ -706,6 +786,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     chase.update(root.position.x, player.y, root.position.z, root.rotation.y, me.speed / KART.maxSpeed, dt);
     renderer.render(scene, camera);
 
+    const dots = [
+      { x: me.x, z: me.z, me: true, color: "#ffffff" },
+      ...locals.filter((r) => r !== player).map((r, i) => ({ x: r.race.state.x, z: r.race.state.z, color: `#${KART_COLORS[(i + 1) % KART_COLORS.length]!.toString(16).padStart(6, "0")}` })),
+      ...remotes.filter((r) => r.shown).map((r) => ({ x: r.shown!.x, z: r.shown!.z, color: "#9b5de5" })),
+    ];
+    minimap.draw(dots, 0, track);
+
     updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), me.boostTime > 0);
     if (online) updateItemSlot(serverMe?.item ?? null, serverMe?.rolling ?? false, time);
     else updateItemSlot(player.race.item, player.race.rollTime > 0, time);
@@ -741,6 +828,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       resultsEl.hidden = true;
       countdownEl.hidden = true;
       wrongWayEl.hidden = true;
+      $("#minimap").hidden = true;
       // Liberar la memoria de la GPU (geometrías, materiales y texturas de este circuito).
       scene.traverse((o) => {
         const mesh = o as THREE.Mesh;

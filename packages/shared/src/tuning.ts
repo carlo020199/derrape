@@ -132,6 +132,19 @@ export const SURFACE = {
   /** Panel de turbo: duración y fuerza. */
   boostPadTime: 1,
   boostPadMult: 1.3,
+  /** Rampa: salto largo si llegas con velocidad. */
+  rampMinSpeed: 12,
+  rampHopTime: 0.55,
+  rampHopHeight: 1.4,
+  /** Choque con un obstáculo periódico (tren): trompo corto. */
+  hazardSpinTime: 0.9,
+};
+
+/** Puntos de copa por posición (1º…8º). */
+export const CUP = {
+  points: [10, 8, 6, 5, 4, 3, 2, 1] as const,
+  /** Segundos de pausa entre carreras de una copa antes de poder empezar la siguiente. */
+  betweenRaces: 4,
 };
 
 /** Objetos y cajas. Tiempos en s, distancias en m. */

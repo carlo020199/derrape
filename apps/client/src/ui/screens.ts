@@ -6,6 +6,7 @@ import {
   DEFAULT_KART,
   KART_COLORS,
   MIN_PLAYERS,
+  TRACK_CHOICE,
   TRACKS,
   normalizeName,
   findCharacter,
@@ -152,6 +153,16 @@ export function setupLobby(actions: LobbyActions) {
     colors.append(b);
   });
   const track = $<HTMLSelectElement>("#lobby-track");
+  const addDisabled = (label: string) => {
+    const o = new Option(label, "");
+    o.disabled = true;
+    track.add(o);
+  };
+  addDisabled("— Copas —");
+  track.add(new Option("Copa Sol (1–5)", TRACK_CHOICE.cupSol));
+  track.add(new Option("Copa Luna (6–10)", TRACK_CHOICE.cupLuna));
+  track.add(new Option("Aleatorio", TRACK_CHOICE.random));
+  addDisabled("— Circuitos —");
   for (const t of TRACKS) track.add(new Option(t.number ? `${t.number}. ${t.name}` : t.name, t.id));
   track.addEventListener("change", () => actions.track(track.value));
   $("#lobby-start").addEventListener("click", actions.start);
@@ -195,13 +206,30 @@ export function renderLobby(m: LobbyMessage, myId: string | null) {
   });
 
   const track = $<HTMLSelectElement>("#lobby-track");
+  const cupLocked = !!(m.cup && m.mode.startsWith("cup") && m.cup.race > 1);
   track.value = m.trackId;
-  track.disabled = !amHost;
+  track.disabled = !amHost || cupLocked;
+
+  const cupInfo = $("#lobby-cup");
+  if (m.cup) {
+    const cupKey = m.mode === "cup-sol" ? "sol" : m.mode === "cup-luna" ? "luna" : null;
+    const nextName = cupKey ? (TRACKS.filter((t) => t.cup === cupKey)[m.cup.race - 1]?.name ?? "") : "";
+    const scores = m.cup.scores
+      .slice(0, 3)
+      .map((s) => `${s.name} ${s.points}`)
+      .join(" · ");
+    cupInfo.textContent = `${m.cup.name}: carrera ${m.cup.race}/${m.cup.total}${nextName ? ` → ${nextName}` : ""}${scores ? ` · ${scores}` : ""}`;
+    cupInfo.hidden = false;
+  } else {
+    cupInfo.textContent = "";
+    cupInfo.hidden = true;
+  }
 
   const connected = m.players.filter((p) => p.connected).length;
   const start = $<HTMLButtonElement>("#lobby-start");
   start.hidden = !amHost;
   start.disabled = connected < MIN_PLAYERS || m.phase !== "lobby";
+  start.textContent = m.cup && m.cup.race > 1 ? `EMPEZAR (${m.cup.race}/${m.cup.total})` : "EMPEZAR";
   $("#lobby-wait").textContent =
     m.phase !== "lobby"
       ? "Hay una carrera en marcha: entrarás en la siguiente."
@@ -209,7 +237,9 @@ export function renderLobby(m: LobbyMessage, myId: string | null) {
         ? "Esperando a que el anfitrión empiece…"
         : connected < MIN_PLAYERS
           ? "Invita al menos a un amigo para empezar."
-          : "";
+          : m.cup
+            ? `${m.cup.name}: pulsa EMPEZAR para la carrera ${m.cup.race}.`
+            : "";
 }
 
 export function setLobbyError(message: string) {

@@ -1,9 +1,20 @@
 // Formato de un circuito como DATOS. Añadir un circuito = un archivo nuevo con un TrackDef.
 
-import { smoothTrack, type Track, type TrackPoint, type TrackZone, type ZoneType } from "../track";
+import { smoothTrack, type Track, type TrackHazard, type TrackPoint, type TrackZone, type ZoneType } from "../track";
 
 /** Kits de tema disponibles (decoración, colores). El cliente sabe dibujar cada uno. */
-export type ThemeId = "pruebas" | "puerto";
+export type ThemeId =
+  | "pruebas"
+  | "puerto"
+  | "playa"
+  | "mercado"
+  | "vinedos"
+  | "feria"
+  | "estacion"
+  | "nieve"
+  | "canon"
+  | "volcan"
+  | "neon";
 
 export interface ZoneDef {
   type: ZoneType;
@@ -13,6 +24,21 @@ export interface ZoneDef {
   /** Franja lateral en metros (por defecto todo el ancho, arcén incluido). */
   lateralMin?: number;
   lateralMax?: number;
+}
+
+/** Obstáculo periódico (paso a nivel, etc.), en fracciones de vuelta. */
+export interface HazardDef {
+  type: "gate";
+  from: number;
+  to: number;
+  lateralMin?: number;
+  lateralMax?: number;
+  /** Periodo completo (s). */
+  period: number;
+  /** Segundos activo dentro del periodo. */
+  active: number;
+  /** Desfase inicial (s). */
+  phase?: number;
 }
 
 /** Elementos únicos del circuito (faro, puerto…). El kit de tema sabe dibujarlos. */
@@ -29,16 +55,13 @@ export interface TrackDef {
   name: string;
   theme: ThemeId;
   laps: number;
-  /** Ancho del asfalto por defecto y arcén a cada lado (m). */
   width: number;
   verge: number;
-  /** Puntos de control de la línea central (la curva pasa por ellos). El primero es la meta. */
   control: TrackPoint[];
-  /** Filas de cajas de objetos, en fracciones de vuelta. */
   itemRows: number[];
   zones?: ZoneDef[];
+  hazards?: HazardDef[];
   landmarks?: Landmark[];
-  /** Semilla para colocar la decoración siempre igual. */
   seed: number;
 }
 
@@ -52,6 +75,18 @@ export function buildTrackFromDef(def: TrackDef): Track {
       to: z.to * track.length,
       lateralMin: z.lateralMin ?? -outer,
       lateralMax: z.lateralMax ?? outer,
+    }),
+  );
+  track.hazards = (def.hazards ?? []).map(
+    (h): TrackHazard => ({
+      type: h.type,
+      from: h.from * track.length,
+      to: h.to * track.length,
+      lateralMin: h.lateralMin ?? -outer,
+      lateralMax: h.lateralMax ?? outer,
+      period: h.period,
+      active: h.active,
+      phase: h.phase ?? 0,
     }),
   );
   return track;
