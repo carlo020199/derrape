@@ -35,6 +35,28 @@ export function createGradientSky(zenith: number, horizon: number, radius = 230)
   return mesh;
 }
 
+/** Luna de hueso con halo. Un sprite, sin bloom. */
+export function createMoon(): THREE.Sprite {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d")!;
+  const grd = g.createRadialGradient(32, 32, 4, 32, 32, 30);
+  grd.addColorStop(0, "rgba(243,231,211,1)");
+  grd.addColorStop(0.45, "rgba(243,231,211,0.85)");
+  grd.addColorStop(1, "rgba(243,231,211,0)");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }),
+  );
+  sprite.scale.set(22, 22, 1);
+  sprite.position.set(-70, 48, -120);
+  sprite.name = "luna";
+  return sprite;
+}
+
 /** Aclara un color hacia el blanco (la luz de hemisferio no puede ser el cielo crudo: es de noche). */
 export function lighten(color: number, t: number): THREE.Color {
   return new THREE.Color(color).lerp(new THREE.Color(0xffffff), t);

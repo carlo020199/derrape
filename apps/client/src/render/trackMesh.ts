@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Track } from "@derrape/shared";
-import { sharedVertexToonDouble } from "./materials";
+import { PALETTE, sharedVertexToonDouble } from "./materials";
 
 // Malla de la pista generada a partir de la línea central: asfalto, bordillos, arcén,
 // muros y talud hasta el suelo (para los tramos elevados).
@@ -87,9 +87,11 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     strip((w) => w / 2, (w) => w / 2 + v, colors.verge);
     strip((w) => -w / 2 - v, (w) => -w / 2, colors.verge);
   }
-  // Muros bajos en el borde exterior del arcén.
+  // Muros bajos en el borde exterior del arcén, con tapa de hueso.
   strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, lift(0.9), lift(0));
   strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, lift(0.9), lift(0));
+  strip((w) => w / 2 + v - 0.16, (w) => w / 2 + v + 0.16, PALETTE.hueso, PALETTE.hueso, lift(0.96), lift(0.96));
+  strip((w) => -w / 2 - v - 0.16, (w) => -w / 2 - v + 0.16, PALETTE.hueso, PALETTE.hueso, lift(0.96), lift(0.96));
   // Talud desde el muro hasta el suelo (solo se nota donde la pista está elevada).
   strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, (y) => y, ground);
   strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, ground, (y) => y);

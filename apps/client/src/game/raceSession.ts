@@ -70,7 +70,7 @@ import { ItemsView } from "../render/itemsView";
 import { createKartModel, type KartModel } from "../render/kartModel";
 import { PALETTE, toonMaterial } from "../render/materials";
 import { Minimap } from "../render/minimap";
-import { createGradientSky, lighten } from "../render/sky";
+import { createGradientSky, createMoon, lighten } from "../render/sky";
 import { createNameTag } from "../render/nameTag";
 import { showDriverOutline, type AutoQuality } from "../render/quality";
 import { Fire, TURBO_COLORS, paintExhaust } from "../render/flames";
@@ -192,6 +192,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   moon.position.set(-50, 80, 30);
   scene.add(moon);
   const sky = createGradientSky(theme.sky, theme.horizon, 230);
+  sky.add(createMoon());
   scene.add(sky);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), toonMaterial({ color: theme.ground }));
   ground.rotation.x = -Math.PI / 2;
