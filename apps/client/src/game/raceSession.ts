@@ -626,16 +626,16 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   // --- Dibujo ---
   const wheelWorld = new THREE.Vector3();
   const flameDir = new THREE.Vector3();
-  const localFlame = new THREE.Vector3(0, 0.42, -1).normalize();
+  const localFlame = new THREE.Vector3(0, 0.28, -1).normalize();
   function paintKartFire(
     m: KartModel,
     view: { driftDir: number; level: number; spinning: boolean; boosting: boolean },
     time: number,
     dt: number,
   ) {
-    const grow = m.mood === "celebrate" ? 1.25 : 1;
+    const grow = 1;
     const mode = view.boosting ? "boost" : view.driftDir !== 0 && view.level > 0 ? "drift" : "idle";
-    const reach = (mode === "boost" ? 1.2 : mode === "drift" ? 0.9 : 0.6) * (m.detail ? 1 : 0.45);
+    const reach = (mode === "boost" ? 1.2 : mode === "drift" ? 0.45 : 0.35) * (m.detail ? 1 : 0.4);
     for (const a of m.exhausts) {
       a.updateWorldMatrix(true, false);
       flameDir.copy(localFlame).transformDirection(a.matrixWorld);
@@ -824,9 +824,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     if (online) syncNetItems();
     itemsView.update(world, dt);
     for (const tail of itemsView.flamePoints()) {
-      fire.flame(tail, PALETTE.llama, 0.22);
-      fire.flame(tail, PALETTE.brasa, 0.4);
+      fire.flame(tail, PALETTE.llama, 0.14);
+      fire.flame(tail, PALETTE.brasa, 0.22);
     }
+    const seen: THREE.Vector3[] = [];
+    for (const r of locals) seen.push(r.model.root.position);
+    for (const r of remotes) if (r.model.root.visible) seen.push(r.model.root.position);
+    fire.setView(camera.position, seen);
     fire.end(dt);
 
     const me = player.race.state;

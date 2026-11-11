@@ -14,7 +14,7 @@ export const CAMERA = {
    * Más cerca y más baja que antes; el campo de visión apenas crece.
    */
   portraitExtraFov: 4,
-  portraitHeight: 2.05,
+  portraitHeight: 2.45,
   portraitDistance: 4.2,
 };
 
@@ -38,7 +38,7 @@ export class ChaseCamera {
     const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * (portrait ? 0.35 : 1.2);
     const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
     const targetPos = new THREE.Vector3(x - fx * dist, y + height, z - fz * dist);
-    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, y + (portrait ? 0.5 : 0.8), z + fz * CAMERA.lookAhead);
+    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, y + (portrait ? 0.28 : 0.8), z + fz * CAMERA.lookAhead);
 
     if (!this.initialized) {
       this.pos.copy(targetPos);

@@ -33,7 +33,7 @@ describe("fuego aditivo", () => {
     fire.spark(at, 0xffb423, 4);
     fire.end(0.016);
     expect(scene.children.filter((o) => (o as THREE.InstancedMesh).isInstancedMesh)).toHaveLength(1);
-    expect(fire.mesh.count).toBe(12);
+    expect(fire.mesh.count).toBe(10);
     const mat = fire.mesh.material as THREE.MeshBasicMaterial;
     expect(mat.blending).toBe(THREE.AdditiveBlending);
     expect(mat.depthWrite).toBe(false);
@@ -42,7 +42,7 @@ describe("fuego aditivo", () => {
     paintExhaust(fire, at, dir, 2.4, "boost", 0.2);
     fire.end(0.5);
     // El turbo sigue siendo la misma malla; las chispas de antes ya se apagaron.
-    expect(fire.mesh.count).toBe(10);
+    expect(fire.mesh.count).toBe(8);
     expect(scene.children).toHaveLength(1);
   });
 });

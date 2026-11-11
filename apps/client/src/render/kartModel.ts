@@ -319,11 +319,20 @@ function skull(p: Parts, r: number, scale: Vec3 = [1, 1, 1]) {
   p.ball(r * 0.07, SOMBRA, [-r * 0.065 * sx, ny + r * 0.045, nz], undefined, [4, 3]);
   p.ball(r * 0.07, SOMBRA, [r * 0.065 * sx, ny + r * 0.045, nz], undefined, [4, 3]);
   p.cone(r * 0.07, r * 0.13, SOMBRA, [0, ny - r * 0.04, nz], [Math.PI, 0, 0]);
-  // Boca oscura y dientes de hueso.
-  p.torus(r * 0.26, r * 0.05, SOMBRA, [0, -r * 0.34 * sy, r * 0.72 * sz], [0.25, 0, Math.PI], Math.PI);
+  // Sonrisa en arco: el centro baja y las comisuras suben, sobre la curva de la cara.
+  const mouthY = -r * 0.3 * sy;
+  const mouthZ = r * 0.8 * sz;
+  p.torus(r * 0.2, r * 0.03, SOMBRA, [0, mouthY, mouthZ], [0.2, 0, Math.PI], Math.PI * 0.85);
   for (let i = 0; i < 4; i++) {
-    const a = -0.55 + (i / 3) * 1.1;
-    p.ball(r * 0.04, HUESO, [Math.sin(a) * r * 0.2, -r * 0.38 * sy, r * 0.9 * sz], [0.7, 1.15, 0.55], [4, 3]);
+    const a = -0.95 + (i / 3) * 1.9;
+    const bow = Math.cos(a);
+    p.ball(
+      r * 0.035,
+      HUESO,
+      [Math.sin(a) * r * 0.18 * sx, mouthY - bow * r * 0.08 * sy, mouthZ + bow * r * 0.05 * sz],
+      [0.7, 1.25, 0.5],
+      [4, 3],
+    );
   }
 }
 

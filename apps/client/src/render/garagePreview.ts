@@ -99,12 +99,12 @@ export class GaragePreview {
       this.cheer = Math.max(0, this.cheer - dt);
       this.model.setMood(this.cheer > 0 ? "celebrate" : "idle", this.time);
       const dir = this.flameAt;
-      const local = new THREE.Vector3(0, 0.42, -1).normalize();
+      const local = new THREE.Vector3(0, 0.28, -1).normalize();
       for (const a of this.model.exhausts) {
         a.updateWorldMatrix(true, false);
         const at = a.getWorldPosition(new THREE.Vector3());
         dir.copy(local).transformDirection(a.matrixWorld);
-        paintExhaust(this.fire, at, dir, this.model.flameLength * 0.55, "idle", this.time, dt);
+        paintExhaust(this.fire, at, dir, this.model.flameLength * 0.35, "idle", this.time, dt);
       }
       for (const a of this.model.ornaments) paintHair(this.fire, a.getWorldPosition(new THREE.Vector3()), this.model.ornamentSpectral, this.time, 1.2);
     }
