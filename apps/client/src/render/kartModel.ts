@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { driverOutlineMaterial, sharedVertexToon } from "./materials";
 import {
   DEFAULT_CHARACTER,
   DEFAULT_KART,
@@ -29,8 +30,11 @@ export interface KartModel {
 }
 
 const shieldGeo = new THREE.SphereGeometry(1.7, 16, 12);
+shieldGeo.userData.shared = true;
 const shieldMat = new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.3, depthWrite: false });
-const partsMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+shieldMat.userData.shared = true;
+const partsMat = sharedVertexToon();
+const outlineMat = driverOutlineMaterial();
 
 const DARK = 0x222831;
 const TYRE = 0x1b1b1b;
@@ -276,13 +280,21 @@ const driverCache = new Map<string, THREE.BufferGeometry>();
 function kartParts(def: KartDef, color: number) {
   const key = `${def.id}:${color}`;
   let v = kartCache.get(key);
-  if (!v) kartCache.set(key, (v = buildKartGeometry(def.look, color)));
+  if (!v) {
+    v = buildKartGeometry(def.look, color);
+    v.geo.userData.shared = true;
+    kartCache.set(key, v);
+  }
   return v;
 }
 
 function driverGeometry(def: CharacterDef) {
   let g = driverCache.get(def.id);
-  if (!g) driverCache.set(def.id, (g = buildDriverGeometry(def)));
+  if (!g) {
+    g = buildDriverGeometry(def);
+    g.userData.shared = true;
+    driverCache.set(def.id, g);
+  }
   return g;
 }
 
@@ -302,7 +314,14 @@ export function createKartModel(color = 0xff6b35, characterId: string = DEFAULT_
   const driver = new THREE.Group();
   driver.position.copy(parts.seat);
   driver.scale.setScalar(DRIVER_SCALE[character.id] ?? 1);
-  driver.add(new THREE.Mesh(driverGeometry(character), partsMat));
+  const driverGeo = driverGeometry(character);
+  // Casco invertido solo en el piloto. Escalar 1,04 (en vez de empujar por la normal)
+  // porque el piloto actual está hecho de cajas: empujar las caras abre grietas.
+  const shell = new THREE.Mesh(driverGeo, outlineMat);
+  shell.scale.setScalar(1.04);
+  shell.name = "contorno";
+  driver.add(shell);
+  driver.add(new THREE.Mesh(driverGeo, partsMat));
   body.add(driver);
   const baseY = driver.position.y;
   const baseScale = driver.scale.x;

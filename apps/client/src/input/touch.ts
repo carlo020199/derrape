@@ -32,6 +32,11 @@ window.addEventListener("keydown", (e) => {
 });
 
 export function setupTouchControls(zone: HTMLElement) {
+  // En un móvil la ayuda de teclado no debe asomar ni antes del primer toque.
+  if (window.matchMedia("(pointer: coarse)").matches) {
+    touch.active = true;
+    document.body.classList.add("touch");
+  }
   const fingers = new Map<number, FingerGesture>();
   let steering: number | null = null;
 

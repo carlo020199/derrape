@@ -39,16 +39,26 @@ export function updateHud(speedKmh: number, driftLevel: number, boosting: boolea
 /** Cuadro del objeto: vacío, ruleta girando o el objeto listo. */
 export function updateItemSlot(item: ItemType | null, rolling: boolean, time: number) {
   const icon = item === null ? "" : rolling ? ROULETTE[Math.floor(time * 12) % ROULETTE.length]! : ITEM_ICONS[item];
-  if (icon === lastIcon) return;
+  const isRolling = item !== null && rolling;
+  if (icon === lastIcon && slot.classList.contains("rolling") === isRolling) return;
   slotIcon.textContent = icon;
   slot.classList.toggle("ready", item !== null && !rolling);
+  slot.classList.toggle("rolling", isRolling);
   slot.classList.toggle("empty", item === null);
   lastIcon = icon;
 }
 
 export function updatePosition(position: number, total: number) {
-  const text = `${position}º/${total}`;
+  const text = `${position}/${total}`;
   if (text === lastPosition) return;
-  positionEl.textContent = text;
+  const place = positionEl.querySelector("#position-place");
+  const totalEl = positionEl.querySelector("#position-total");
+  if (place && totalEl) {
+    place.textContent = `${position}º`;
+    totalEl.textContent = `/${total}`;
+  } else {
+    positionEl.textContent = `${position}º/${total}`;
+  }
+  positionEl.classList.toggle("lead", position === 1);
   lastPosition = text;
 }

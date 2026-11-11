@@ -1,12 +1,17 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, type ThemeId, type Track, type TrackDef } from "@derrape/shared";
+import { toonMaterial } from "./materials";
 import { leftNormals, type TrackColors } from "./trackMesh";
 
 // Kits de tema: colores del entorno y decoración reutilizable. Todo con primitivas low-poly
 // (original, sin assets externos) e InstancedMesh para que 8 karts + decorado vayan a 60 fps en móvil.
 
 export interface ThemeKit {
+  /** Color del cenit. */
   sky: number;
+  /** Horizonte y color de la niebla. */
+  horizon: number;
+  /** Distancias de la niebla (cerca, lejos), en metros. */
   fog: [number, number];
   ground: number;
   track: TrackColors;
@@ -75,7 +80,21 @@ function pointInPolygon(x: number, z: number, poly: { x: number; z: number }[]) 
   return inside;
 }
 
-const lambert = (color = 0xffffff) => new THREE.MeshLambertMaterial({ color });
+const toon = (color = 0xffffff) => toonMaterial({ color });
+
+const HUESO = 0xf3e7d3;
+const ASCUA = 0xd9362b;
+const SOMBRA = 0x2e2547;
+const NIEBLA: [number, number] = [45, 190];
+
+/**
+ * Giro de la barra del arco. La caja es ancha en X y, con `rotation.y = heading`,
+ * ese eje queda en (cos h, 0, −sin h): la normal lateral de la pista, de poste a poste.
+ * Sumar π/2 la ponía a lo largo del trazado y se veía como una cuña negra en el cielo.
+ */
+export function archBarYaw(heading: number): number {
+  return heading;
+}
 
 // --- Arco de salida (común a todos los temas) ---
 function startArch(scene: THREE.Object3D, track: Track, color: number) {
@@ -83,15 +102,15 @@ function startArch(scene: THREE.Object3D, track: Track, color: number) {
   const half = p.width / 2 + track.verge * 0.5;
   const nx = Math.cos(p.heading);
   const nz = -Math.sin(p.heading);
-  const mat = lambert(color);
+  const mat = toon(color);
   for (const side of [-1, 1]) {
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.6, 6, 0.6), mat);
     post.position.set(p.x + nx * half * side, p.y + 3, p.z + nz * half * side);
     scene.add(post);
   }
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 0.6, 1.2, 0.5), lambert(0x1b1f3a));
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 0.6, 1.2, 0.5), toon(HUESO));
   bar.position.set(p.x, p.y + 6, p.z);
-  bar.rotation.y = p.heading + Math.PI / 2;
+  bar.rotation.y = archBarYaw(p.heading);
   scene.add(bar);
 }
 
@@ -99,7 +118,7 @@ function startArch(scene: THREE.Object3D, track: Track, color: number) {
 function boostPadMarkers(scene: THREE.Object3D, track: Track, color = 0xffe066) {
   const pad = new THREE.BoxGeometry(1, 1, 1);
   pad.translate(0, 0.5, 0);
-  const batch = new Batch(pad, lambert());
+  const batch = new Batch(pad, toon());
   for (const z of track.zones) {
     if (z.type !== "boostPad") continue;
     const end = z.to < z.from ? z.to + track.length : z.to;
@@ -113,12 +132,13 @@ function boostPadMarkers(scene: THREE.Object3D, track: Track, color = 0xffe066) 
 
 // --- Tema de pruebas ---
 const pruebas: ThemeKit = {
-  sky: 0x8fd3ff,
-  fog: [80, 260],
-  ground: 0x6cbf4a,
-  track: { road: 0x4a4e5a, curbA: 0xe8e8e8, curbB: 0xd6402f, verge: 0x5fae3f, wall: 0x2e86de, groundY: -0.2 },
+  sky: 0x2b2547,
+  horizon: 0x3a3160,
+  fog: NIEBLA,
+  ground: 0x3b3552,
+  track: { road: 0x2a2633, curbA: HUESO, curbB: 0x3ff2c8, verge: 0x322c48, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track) {
-    startArch(scene, track, 0xff6b35);
+    startArch(scene, track, 0x3ff2c8);
   },
 };
 
@@ -128,10 +148,11 @@ const ROOFS = [0xc8553d, 0xb5462f, 0xd06b4a];
 const BOATS = [0xffffff, 0x2e86de, 0xe63946, 0xffd23f, 0x2a9d8f];
 
 const puerto: ThemeKit = {
-  sky: 0x9ad7ff,
-  fog: [90, 300],
-  ground: 0xe6d3a3,
-  track: { road: 0x55585f, curbA: 0xf4f1e8, curbB: 0xc8553d, verge: 0xd9c38f, wall: 0xf2efe6, groundY: -0.2 },
+  sky: 0x1f3550,
+  horizon: 0x2d4a6b,
+  fog: NIEBLA,
+  ground: 0x3a3a4e,
+  track: { road: 0x2b2d3a, curbA: HUESO, curbB: 0xffb423, verge: 0x2e2e40, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const inner = interiorSide(track);
@@ -150,13 +171,13 @@ const puerto: ThemeKit = {
     const sail = new THREE.ConeGeometry(0.9, 3, 3);
     sail.translate(0, 1.5, 0);
 
-    const houses = new Batch(box, lambert());
-    const roofs = new Batch(roof, lambert());
-    const trunks = new Batch(trunk, lambert(0x8b5e3c));
-    const palms = new Batch(leaves, lambert(0x3f8f3a));
-    const lamps = new Batch(box, lambert(0x2b2d42));
-    const hulls = new Batch(hull, lambert());
-    const sails = new Batch(sail, lambert(0xfdfdfd));
+    const houses = new Batch(box, toon());
+    const roofs = new Batch(roof, toon());
+    const trunks = new Batch(trunk, toon(0x8b5e3c));
+    const palms = new Batch(leaves, toon(0x3f8f3a));
+    const lamps = new Batch(box, toon(0x2b2d42));
+    const hulls = new Batch(hull, toon());
+    const sails = new Batch(sail, toon(0xfdfdfd));
 
     // Recorrer la pista colocando decoración a los lados.
     const pts = track.points;
@@ -213,7 +234,7 @@ const puerto: ThemeKit = {
           return { x: p.x + l.x * off, z: p.z + l.z * off };
         });
       const shape = new THREE.Shape(poly.map((q) => new THREE.Vector2(q.x, -q.z)));
-      const water = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshLambertMaterial({ color: 0x2a8fbd }));
+      const water = new THREE.Mesh(new THREE.ShapeGeometry(shape), toonMaterial({ color: 0x2a8fbd }));
       water.rotation.x = -Math.PI / 2;
       water.position.y = -0.1;
       scene.add(water);
@@ -239,7 +260,7 @@ const puerto: ThemeKit = {
     const zs = pts.map((p) => p.z);
     const maxX = Math.max(...xs) + track.width / 2 + track.verge + 8;
     const maxZ = Math.max(...zs) + track.width / 2 + track.verge + 8;
-    const seaMat = new THREE.MeshLambertMaterial({ color: 0x1f7fb5 });
+    const seaMat = toonMaterial({ color: 0x1f7fb5 });
     const north = new THREE.Mesh(new THREE.PlaneGeometry(1600, 800), seaMat);
     north.rotation.x = -Math.PI / 2;
     north.position.set(0, -0.1, maxZ + 400);
@@ -251,21 +272,21 @@ const puerto: ThemeKit = {
     // Faro sobre una roca.
     for (const m of def.landmarks ?? []) {
       if (m.kind !== "faro") continue;
-      const rock = new THREE.Mesh(new THREE.CylinderGeometry(9, 12, 2, 8), lambert(0x8d8a80));
+      const rock = new THREE.Mesh(new THREE.CylinderGeometry(9, 12, 2, 8), toon(0x8d8a80));
       rock.position.set(m.x, 0.6, m.z);
       const tower = new THREE.Group();
       const stripes = 5;
       for (let s = 0; s < stripes; s++) {
         const seg = new THREE.Mesh(
           new THREE.CylinderGeometry(2.2 - s * 0.2, 2.4 - s * 0.2, 3.2, 10),
-          lambert(s % 2 === 0 ? 0xffffff : 0xd62828),
+          toon(s % 2 === 0 ? 0xffffff : 0xd62828),
         );
         seg.position.y = 1.6 + s * 3.2;
         tower.add(seg);
       }
       const lamp = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 1.6, 8), new THREE.MeshBasicMaterial({ color: 0xfff2a8 }));
       lamp.position.y = stripes * 3.2 + 0.8;
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.6, 8), lambert(0x1b1f3a));
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.6, 8), toon(0x1b1f3a));
       cap.position.y = stripes * 3.2 + 2.4;
       tower.add(lamp, cap);
       tower.position.set(m.x, 1.6, m.z);
@@ -273,7 +294,7 @@ const puerto: ThemeKit = {
     }
 
     for (const b of [houses, roofs, trunks, palms, lamps, hulls, sails]) b.build(scene);
-    startArch(scene, track, 0x2a9d8f);
+    startArch(scene, track, 0xffb423);
   },
 };
 
@@ -281,10 +302,11 @@ const puerto: ThemeKit = {
 const UMBRELLA = [0xe63946, 0xffd23f, 0x2e86de, 0xffffff, 0xff6b35];
 
 const playa: ThemeKit = {
-  sky: 0xb8e4ff,
-  fog: [100, 340],
-  ground: 0xe8d29a,
-  track: { road: 0x6a6e78, curbA: 0xfff6e0, curbB: 0x2e86de, verge: 0xdcc68a, wall: 0xc9b67a, groundY: -0.2 },
+  sky: 0x4a2f5c,
+  horizon: 0x6b4370,
+  fog: NIEBLA,
+  ground: 0xc9a06b,
+  track: { road: 0x3a3040, curbA: HUESO, curbB: 0xff7a4d, verge: 0xa88858, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -298,11 +320,11 @@ const playa: ThemeKit = {
     cone.translate(0, 0.5, 0);
     const bush = new THREE.IcosahedronGeometry(1, 0);
 
-    const dunes = new Batch(cone, lambert());
-    const poles = new Batch(pole, lambert(0x8b5e3c));
-    const tops = new Batch(cone, lambert());
-    const shrubs = new Batch(bush, lambert(0x6a9a3e));
-    const rocks = new Batch(box, lambert(0xa89f8c));
+    const dunes = new Batch(cone, toon());
+    const poles = new Batch(pole, toon(0x8b5e3c));
+    const tops = new Batch(cone, toon());
+    const shrubs = new Batch(bush, toon(0x6a9a3e));
+    const rocks = new Batch(box, toon(0xa89f8c));
 
     for (let i = 0; i < pts.length; i += 3) {
       const p = pts[i]!;
@@ -350,13 +372,13 @@ const playa: ThemeKit = {
     // Franja de mar al sur.
     const zs = pts.map((p) => p.z);
     const minZ = Math.min(...zs) - track.width / 2 - track.verge - 10;
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 600), lambert(0x2aa8c9));
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 600), toon(0x2aa8c9));
     sea.rotation.x = -Math.PI / 2;
     sea.position.set(0, -0.15, minZ - 280);
     scene.add(sea);
 
     for (const b of [dunes, poles, tops, shrubs, rocks]) b.build(scene);
-    startArch(scene, track, 0xffd23f);
+    startArch(scene, track, 0xff7a4d);
   },
 };
 
@@ -365,10 +387,11 @@ const AWNINGS = [0xe63946, 0xffb703, 0x2a9d8f, 0x457b9d, 0xf4a261];
 const STALL = [0xf5ebe0, 0xe8d5b7, 0xd6ccc2];
 
 const mercado: ThemeKit = {
-  sky: 0xffd8a8,
-  fog: [70, 240],
-  ground: 0xc4a574,
-  track: { road: 0x4e5158, curbA: 0xf1e6d0, curbB: 0xc1121f, verge: 0xb8945f, wall: 0xd9c3a0, groundY: -0.2 },
+  sky: 0x3a2342,
+  horizon: 0x553060,
+  fog: NIEBLA,
+  ground: 0x4a3a44,
+  track: { road: 0x2e2834, curbA: HUESO, curbB: 0xff5a7a, verge: 0x3a2e36, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -379,9 +402,9 @@ const mercado: ThemeKit = {
     const roof = new THREE.BoxGeometry(1, 0.15, 1);
     roof.translate(0, 0.5, 0);
 
-    const stalls = new Batch(box, lambert());
-    const awnings = new Batch(roof, lambert());
-    const crates = new Batch(box, lambert());
+    const stalls = new Batch(box, toon());
+    const awnings = new Batch(roof, toon());
+    const crates = new Batch(box, toon());
 
     for (let i = 0; i < pts.length; i += 3) {
       const p = pts[i]!;
@@ -417,22 +440,23 @@ const mercado: ThemeKit = {
         stalls.add(x, 0, z, a, 3.5, 2.4, 3, STALL[k % STALL.length]!);
         awnings.add(x, 2.4, z, a, 4.2, 1, 3.4, AWNINGS[k % AWNINGS.length]!);
       }
-      const fountain = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.8, 1.2, 10), lambert(0xb0bec5));
+      const fountain = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.8, 1.2, 10), toon(0xb0bec5));
       fountain.position.set(m.x, 0.4, m.z);
       scene.add(fountain);
     }
 
     for (const b of [stalls, awnings, crates]) b.build(scene);
-    startArch(scene, track, 0xc1121f);
+    startArch(scene, track, 0xff5a7a);
   },
 };
 
 // --- Tema viñedos ---
 const vinedos: ThemeKit = {
-  sky: 0xc5e0f5,
-  fog: [90, 280],
-  ground: 0x6b8f3a,
-  track: { road: 0x555248, curbA: 0xe8e0d0, curbB: 0x722f37, verge: 0x5f7f34, wall: 0x8a6f4a, groundY: -0.2 },
+  sky: 0x3b1f3a,
+  horizon: 0x57304f,
+  fog: NIEBLA,
+  ground: 0x3e4a2b,
+  track: { road: 0x2e2a30, curbA: HUESO, curbB: 0xe04e8a, verge: 0x323c22, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -447,11 +471,11 @@ const vinedos: ThemeKit = {
     roof.rotateY(Math.PI / 4);
     roof.translate(0, 0.5, 0);
 
-    const vines = new Batch(leaf, lambert(0x3d6b2f));
-    const posts = new Batch(post, lambert(0x6b4f2a));
-    const walls = new Batch(box, lambert());
-    const roofs = new Batch(roof, lambert(0x722f37));
-    const cypress = new Batch(leaf, lambert(0x1f4d2c));
+    const vines = new Batch(leaf, toon(0x3d6b2f));
+    const posts = new Batch(post, toon(0x6b4f2a));
+    const walls = new Batch(box, toon());
+    const roofs = new Batch(roof, toon(0x722f37));
+    const cypress = new Batch(leaf, toon(0x1f4d2c));
 
     for (let i = 0; i < pts.length; i += 2) {
       const p = pts[i]!;
@@ -489,7 +513,7 @@ const vinedos: ThemeKit = {
     }
 
     for (const b of [posts, vines, walls, roofs, cypress]) b.build(scene);
-    startArch(scene, track, 0x722f37);
+    startArch(scene, track, 0xe04e8a);
   },
 };
 
@@ -497,10 +521,11 @@ const vinedos: ThemeKit = {
 const TENTS = [0xff4d6d, 0xffd60a, 0x4cc9f0, 0xb5179e, 0x80ed99];
 
 const feria: ThemeKit = {
-  sky: 0xffc2d4,
-  fog: [80, 260],
-  ground: 0x8f7a5e,
-  track: { road: 0x3d3f48, curbA: 0xfff1a8, curbB: 0xff2e63, verge: 0x7a6850, wall: 0xff8fab, groundY: -0.2 },
+  sky: 0x2a1e4f,
+  horizon: 0x3e2d6e,
+  fog: NIEBLA,
+  ground: 0x33284a,
+  track: { road: 0x272236, curbA: HUESO, curbB: 0xff5fa2, verge: 0x281e3c, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -513,10 +538,10 @@ const feria: ThemeKit = {
     const cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
     cyl.translate(0, 0.5, 0);
 
-    const booths = new Batch(box, lambert());
-    const roofs = new Batch(cone, lambert());
-    const poles = new Batch(cyl, lambert(0xf8f7f4));
-    const lights = new Batch(box, lambert());
+    const booths = new Batch(box, toon());
+    const roofs = new Batch(cone, toon());
+    const poles = new Batch(cyl, toon(0xf8f7f4));
+    const lights = new Batch(box, toon());
 
     for (let i = 0; i < pts.length; i += 4) {
       const p = pts[i]!;
@@ -548,15 +573,15 @@ const feria: ThemeKit = {
     for (const m of def.landmarks ?? []) {
       if (m.kind === "noria") {
         // Noria: aro + cabinas.
-        const rim = new THREE.Mesh(new THREE.TorusGeometry(12, 0.6, 6, 24), lambert(0xffd60a));
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(12, 0.6, 6, 24), toon(0xffd60a));
         rim.position.set(m.x, 14, m.z);
         rim.rotation.y = Math.PI / 2;
         scene.add(rim);
-        const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2, 8), lambert(0xffffff));
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2, 8), toon(0xffffff));
         hub.position.set(m.x, 14, m.z);
         hub.rotation.z = Math.PI / 2;
         scene.add(hub);
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(1, 16, 1), lambert(0xdee2e6));
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(1, 16, 1), toon(0xdee2e6));
         legL.position.set(m.x - 4, 8, m.z);
         legL.rotation.z = 0.35;
         const legR = legL.clone();
@@ -579,16 +604,17 @@ const feria: ThemeKit = {
 
     boostPadMarkers(scene, track, 0x80ffdb);
     for (const b of [booths, roofs, poles, lights]) b.build(scene);
-    startArch(scene, track, 0xff2e63);
+    startArch(scene, track, 0xff5fa2);
   },
 };
 
 // --- Tema estación ---
 const estacion: ThemeKit = {
-  sky: 0xb7c4d4,
-  fog: [75, 250],
-  ground: 0x6d6a62,
-  track: { road: 0x3f4248, curbA: 0xd9d4c8, curbB: 0x8b4513, verge: 0x5c5952, wall: 0x8a8580, groundY: -0.2 },
+  sky: 0x26303d,
+  horizon: 0x3a4757,
+  fog: NIEBLA,
+  ground: 0x3a3b44,
+  track: { road: 0x2a2c33, curbA: HUESO, curbB: 0x9ef0ff, verge: 0x2e2f36, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -599,12 +625,12 @@ const estacion: ThemeKit = {
     const cyl = new THREE.CylinderGeometry(0.15, 0.15, 1, 6);
     cyl.translate(0, 0.5, 0);
 
-    const buildings = new Batch(box, lambert());
-    const roofs = new Batch(box, lambert(0x3d3d3d));
-    const rails = new Batch(box, lambert(0x2b2b2b));
-    const sleepers = new Batch(box, lambert(0x6b4f2a));
-    const cars = new Batch(box, lambert());
-    const lamps = new Batch(cyl, lambert(0x444444));
+    const buildings = new Batch(box, toon());
+    const roofs = new Batch(box, toon(0x3d3d3d));
+    const rails = new Batch(box, toon(0x2b2b2b));
+    const sleepers = new Batch(box, toon(0x6b4f2a));
+    const cars = new Batch(box, toon());
+    const lamps = new Batch(cyl, toon(0x444444));
 
     for (let i = 0; i < pts.length; i += 4) {
       const p = pts[i]!;
@@ -677,16 +703,17 @@ const estacion: ThemeKit = {
     }
 
     for (const b of [buildings, roofs, rails, sleepers, cars, lamps]) b.build(scene);
-    startArch(scene, track, 0x8b4513);
+    startArch(scene, track, 0x9ef0ff);
   },
 };
 
 // --- Tema nieve ---
 const nieve: ThemeKit = {
-  sky: 0xd7e8f7,
-  fog: [60, 200],
-  ground: 0xeef4fa,
-  track: { road: 0x5a6270, curbA: 0xffffff, curbB: 0x4a90c8, verge: 0xdde6f0, wall: 0xc5d3e0, groundY: -0.2 },
+  sky: 0x33406a,
+  horizon: 0x56659a,
+  fog: NIEBLA,
+  ground: 0xdde6f5,
+  track: { road: 0x3a3f55, curbA: HUESO, curbB: ASCUA, verge: 0xc5d0e4, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -702,12 +729,12 @@ const nieve: ThemeKit = {
     roof.rotateY(Math.PI / 4);
     roof.translate(0, 0.5, 0);
 
-    const trunks = new Batch(trunk, lambert(0x5c4030));
-    const pines = new Batch(pine, lambert(0x1f4d3a));
-    const snowcaps = new Batch(pine, lambert(0xf5fbff));
-    const cabins = new Batch(box, lambert(0x8b5a2b));
-    const roofs = new Batch(roof, lambert(0xffffff));
-    const rocks = new Batch(box, lambert(0x9aa4b0));
+    const trunks = new Batch(trunk, toon(0x5c4030));
+    const pines = new Batch(pine, toon(0x1f4d3a));
+    const snowcaps = new Batch(pine, toon(0xf5fbff));
+    const cabins = new Batch(box, toon(0x8b5a2b));
+    const roofs = new Batch(roof, toon(0xffffff));
+    const rocks = new Batch(box, toon(0x9aa4b0));
 
     for (let i = 0; i < pts.length; i += 3) {
       const p = pts[i]!;
@@ -747,7 +774,7 @@ const nieve: ThemeKit = {
     }
 
     for (const b of [trunks, pines, snowcaps, cabins, roofs, rocks]) b.build(scene);
-    startArch(scene, track, 0x4a90c8);
+    startArch(scene, track, 0x7fe7ff);
   },
 };
 
@@ -755,10 +782,11 @@ const nieve: ThemeKit = {
 const ROCK = [0xc45c26, 0xa3471c, 0xd9793a, 0x8d3b16];
 
 const canon: ThemeKit = {
-  sky: 0xf0c27a,
-  fog: [100, 320],
-  ground: 0xc9844a,
-  track: { road: 0x5a4a3a, curbA: 0xf2e2c4, curbB: 0xb5451b, verge: 0xb8733d, wall: 0xa0522d, groundY: -0.4 },
+  sky: 0x5a2a2e,
+  horizon: 0x7a3b37,
+  fog: NIEBLA,
+  ground: 0xb4553a,
+  track: { road: 0x3a2a2a, curbA: HUESO, curbB: 0xff9a3d, verge: 0x8e4030, wall: SOMBRA, groundY: -0.4 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -769,8 +797,8 @@ const canon: ThemeKit = {
     const cyl = new THREE.CylinderGeometry(0.5, 0.7, 1, 6);
     cyl.translate(0, 0.5, 0);
 
-    const mesas = new Batch(cyl, lambert());
-    const cactus = new Batch(box, lambert(0x3a7d44));
+    const mesas = new Batch(cyl, toon());
+    const cactus = new Batch(box, toon(0x3a7d44));
 
     for (let i = 0; i < pts.length; i += 3) {
       const p = pts[i]!;
@@ -802,26 +830,27 @@ const canon: ThemeKit = {
       if (m.kind !== "arco") continue;
       const s = m.scale ?? 1;
       // Arco natural: dos pilares + dintel.
-      const leftP = new THREE.Mesh(new THREE.CylinderGeometry(3 * s, 4 * s, 16 * s, 7), lambert(0xb5451b));
+      const leftP = new THREE.Mesh(new THREE.CylinderGeometry(3 * s, 4 * s, 16 * s, 7), toon(0xb5451b));
       leftP.position.set(m.x - 7 * s, 8 * s, m.z);
-      const rightP = new THREE.Mesh(new THREE.CylinderGeometry(3 * s, 4 * s, 16 * s, 7), lambert(0xc45c26));
+      const rightP = new THREE.Mesh(new THREE.CylinderGeometry(3 * s, 4 * s, 16 * s, 7), toon(0xc45c26));
       rightP.position.set(m.x + 7 * s, 8 * s, m.z);
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(18 * s, 4 * s, 6 * s), lambert(0xd9793a));
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(18 * s, 4 * s, 6 * s), toon(0xd9793a));
       lintel.position.set(m.x, 17 * s, m.z);
       scene.add(leftP, rightP, lintel);
     }
 
     for (const b of [mesas, cactus]) b.build(scene);
-    startArch(scene, track, 0xb5451b);
+    startArch(scene, track, 0xff9a3d);
   },
 };
 
 // --- Tema volcán ---
 const volcan: ThemeKit = {
-  sky: 0xff9a5a,
-  fog: [70, 220],
-  ground: 0x3d4f2f,
-  track: { road: 0x3a3532, curbA: 0xe8e0d0, curbB: 0xff5722, verge: 0x2f3d24, wall: 0x5c4033, groundY: -0.2 },
+  sky: 0x2a0f12,
+  horizon: 0x4a1a17,
+  fog: NIEBLA,
+  ground: 0x3a2a2a,
+  track: { road: 0x2a2020, curbA: HUESO, curbB: 0xff5a1f, verge: 0x2a1e1e, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -835,10 +864,10 @@ const volcan: ThemeKit = {
     const rock = new THREE.ConeGeometry(1, 1.5, 5);
     rock.translate(0, 0.75, 0);
 
-    const trunks = new Batch(trunk, lambert(0x4a3728));
-    const leaves = new Batch(canopy, lambert(0x1b5e20));
-    const rocks = new Batch(rock, lambert(0x4a4038));
-    const lava = new Batch(box, lambert(0xff5722));
+    const trunks = new Batch(trunk, toon(0x4a3728));
+    const leaves = new Batch(canopy, toon(0x1b5e20));
+    const rocks = new Batch(rock, toon(0x4a4038));
+    const lava = new Batch(box, toon(0xff5722));
 
     for (let i = 0; i < pts.length; i += 3) {
       const p = pts[i]!;
@@ -877,9 +906,9 @@ const volcan: ThemeKit = {
     for (const m of def.landmarks ?? []) {
       if (m.kind !== "volcan") continue;
       const s = m.scale ?? 1;
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(28 * s, 40 * s, 8), lambert(0x3e2723));
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(28 * s, 40 * s, 8), toon(0x3e2723));
       cone.position.set(m.x, 20 * s, m.z);
-      const crater = new THREE.Mesh(new THREE.CylinderGeometry(6 * s, 8 * s, 3 * s, 8), lambert(0xff3d00));
+      const crater = new THREE.Mesh(new THREE.CylinderGeometry(6 * s, 8 * s, 3 * s, 8), toon(0xff3d00));
       crater.position.set(m.x, 38 * s, m.z);
       const glow = new THREE.Mesh(new THREE.CylinderGeometry(4 * s, 4 * s, 1 * s, 8), new THREE.MeshBasicMaterial({ color: 0xffab40 }));
       glow.position.set(m.x, 39.5 * s, m.z);
@@ -887,7 +916,7 @@ const volcan: ThemeKit = {
     }
 
     for (const b of [trunks, leaves, rocks, lava]) b.build(scene);
-    startArch(scene, track, 0xff5722);
+    startArch(scene, track, 0xff5a1f);
   },
 };
 
@@ -896,10 +925,11 @@ const NEON = [0xff2d95, 0x00f5d4, 0xfee440, 0x9b5de5, 0x00bbf9];
 const TOWER = [0x1a1d29, 0x222636, 0x2a2f42, 0x161821];
 
 const neon: ThemeKit = {
-  sky: 0x0b1020,
-  fog: [50, 180],
-  ground: 0x12141c,
-  track: { road: 0x2a2d38, curbA: 0xff2d95, curbB: 0x00f5d4, verge: 0x1a1d26, wall: 0x3a3f55, groundY: -0.2 },
+  sky: 0x0e0b1f,
+  horizon: 0x1c1638,
+  fog: NIEBLA,
+  ground: 0x1a1628,
+  track: { road: 0x1e1a2a, curbA: HUESO, curbB: 0xff2d95, verge: 0x14111e, wall: SOMBRA, groundY: -0.2 },
   decorate(scene, track, def) {
     const rand = seeded(def.seed);
     const left = leftNormals(track);
@@ -908,9 +938,9 @@ const neon: ThemeKit = {
     const box = new THREE.BoxGeometry(1, 1, 1);
     box.translate(0, 0.5, 0);
 
-    const towers = new Batch(box, lambert());
-    const accents = new Batch(box, lambert());
-    const lamps = new Batch(box, lambert());
+    const towers = new Batch(box, toon());
+    const accents = new Batch(box, toon());
+    const lamps = new Batch(box, toon());
 
     for (let i = 0; i < pts.length; i += 3) {
       const p = pts[i]!;
