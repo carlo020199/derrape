@@ -68,12 +68,13 @@ import { BlobShadows } from "../render/blobShadow";
 import type { ChaseCamera } from "../render/chaseCamera";
 import { ItemsView } from "../render/itemsView";
 import { createKartModel, type KartModel } from "../render/kartModel";
-import { toonMaterial } from "../render/materials";
+import { PALETTE, toonMaterial } from "../render/materials";
 import { Minimap } from "../render/minimap";
 import { createGradientSky, lighten } from "../render/sky";
 import { createNameTag } from "../render/nameTag";
-import type { AutoQuality } from "../render/quality";
-import { Sparks } from "../render/sparks";
+import { showDriverOutline, type AutoQuality } from "../render/quality";
+import { Fire, TURBO_COLORS, paintExhaust } from "../render/flames";
+import { HIT_SPARK, NITRO_SPARK } from "../render/sparks";
 import { THEMES } from "../render/themes";
 import { createTrackMesh } from "../render/trackMesh";
 import { ITEM_NAMES, updateHud, updateItemSlot, updatePosition } from "../ui/hud";
@@ -298,8 +299,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   };
   const itemsView = new ItemsView(world);
   scene.add(itemsView.group);
-  const sparks = new Sparks();
-  scene.add(sparks.points);
+  const fire = new Fire(scene);
+  const flameAt = new THREE.Vector3();
 
   // --- Estado de la carrera ---
   let phase: "countdown" | "racing" | "finished" = "countdown";
@@ -378,7 +379,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         if (e.type === "hit") {
           showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
           sfx.hit();
-          sparks.emitHit(at);
+          fire.spark(at, HIT_SPARK, 8, 8);
         }
         if (e.type === "blocked") showFlash("¡Escudo!");
         if (e.type === "pickup") sfx.pickup();
@@ -386,7 +387,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           showFlash(ITEM_NAMES[e.item]);
           if (e.item === "nitro") {
             sfx.boost();
-            sparks.emitNitro(at);
+            fire.spark(at, NITRO_SPARK, 10, 7);
           }
         }
       } else if (e.type === "hit" && e.owner === player.race.id) {
@@ -407,7 +408,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         if (e.type === "hit") {
           s.spinTime = e.by === "oil" ? ITEMS.oilSpinTime : ITEMS.rocketSpinTime;
           sfx.hit();
-          sparks.emitHit(new THREE.Vector3(s.x, player.y + 0.5, s.z));
+          fire.spark(new THREE.Vector3(s.x, player.y + 0.5, s.z), HIT_SPARK, 8, 8);
           showFlash(e.by === "oil" ? "¡Aceite!" : "¡Cohete!");
         }
         if (e.type === "blocked") {
@@ -418,7 +419,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           if (e.item === "nitro") {
             giveBoost(s, ITEMS.nitroTime, ITEMS.nitroSpeedMult);
             sfx.boost();
-            sparks.emitNitro(new THREE.Vector3(s.x, player.y + 0.5, s.z));
+            fire.spark(new THREE.Vector3(s.x, player.y + 0.5, s.z), NITRO_SPARK, 10, 7);
           }
           if (e.item === "shield") s.shieldTime = ITEMS.shieldTime;
           showFlash(ITEM_NAMES[e.item]);
@@ -623,12 +624,34 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
   // --- Dibujo ---
   const wheelWorld = new THREE.Vector3();
-  function emitFromWheels(model: KartModel, level: number, count: number) {
-    for (const w of model.rearWheels) {
-      wheelWorld.copy(w);
-      model.body.localToWorld(wheelWorld);
-      sparks.emit(wheelWorld, level, count);
+  function paintKartFire(
+    m: KartModel,
+    view: { driftDir: number; level: number; spinning: boolean; boosting: boolean },
+    time: number,
+    dt: number,
+  ) {
+    const grow = m.mood === "celebrate" ? 1.35 : 1;
+    const mode = view.boosting ? "boost" : view.driftDir !== 0 && view.level > 0 ? "drift" : "idle";
+    for (const a of m.exhausts) paintExhaust(fire, a.getWorldPosition(flameAt), mode, time, grow);
+    for (const a of m.ornaments) {
+      const p = a.getWorldPosition(flameAt);
+      const pulse = (0.9 + Math.sin(time * 16) * 0.1) * grow;
+      fire.flame(p, m.ornamentSpectral ? PALETTE.espectro : PALETTE.llama, 0.22 * pulse);
+      fire.flame(p, m.ornamentSpectral ? PALETTE.anima : PALETTE.brasa, 0.4 * pulse);
     }
+    if (view.driftDir !== 0 && view.level > 0) {
+      const col = TURBO_COLORS[Math.min(2, view.level - 1)] ?? PALETTE.llama;
+      const n = quality.pixelRatio >= 1.5 ? 2 : 1;
+      for (const w of m.rearWheels) {
+        wheelWorld.copy(w);
+        m.body.localToWorld(wheelWorld);
+        fire.spark(wheelWorld, col, n, 4);
+      }
+    }
+    if (view.spinning && Math.floor(time * 2) !== Math.floor((time - dt) * 2)) {
+      fire.spark(m.head.getWorldPosition(flameAt), PALETTE.ascua, 3, 5);
+    }
+    m.setOutline(showDriverOutline(quality.pixelRatio));
   }
 
   function drawKart(
@@ -659,11 +682,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.body.rotation.z = -r.driftVisual * 0.15;
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
-    if (view.driftDir !== 0 && view.level > 0) emitFromWheels(m, view.level, 2);
-    if (view.boosting) {
-      emitFromWheels(m, 2, 1);
-      sparks.emitBoost(m.root.position);
-    }
+    paintKartFire(m, view, time, dt);
   }
 
   function drawRemotes(dt: number, time: number) {
@@ -772,6 +791,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     }
     const alpha = accumulator / PHYSICS_DT;
 
+    fire.begin();
     for (const r of locals) {
       const s = r.race.state;
       drawKart(
@@ -795,9 +815,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       );
     }
     drawRemotes(dt, time);
-    sparks.update(dt);
     if (online) syncNetItems();
     itemsView.update(world, dt);
+    for (const tail of itemsView.flamePoints()) {
+      fire.flame(tail, PALETTE.llama, 0.22);
+      fire.flame(tail, PALETTE.brasa, 0.4);
+    }
+    fire.end(dt);
 
     const me = player.race.state;
     const root = player.model.root;

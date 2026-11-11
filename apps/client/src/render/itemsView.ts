@@ -67,17 +67,17 @@ export class ItemsView {
     const bodyGeo = new THREE.ConeGeometry(0.35, 1.4, 8);
     bodyGeo.rotateX(Math.PI / 2);
     const bodyMat = toonMaterial({ color: 0xd9362b });
-    const flameGeo = new THREE.ConeGeometry(0.25, 0.7, 6);
-    flameGeo.rotateX(-Math.PI / 2);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb423 });
     this.rockets = new Pool(this.group, () => {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(bodyGeo, bodyMat));
-      const flame = new THREE.Mesh(flameGeo, flameMat);
-      flame.position.z = -1;
-      g.add(flame);
       return g;
     });
+  }
+
+  private tails: THREE.Vector3[] = [];
+  /** Cola de cada cohete, para la llama aditiva compartida. */
+  flamePoints(): THREE.Vector3[] {
+    return this.tails;
   }
 
   update(world: ItemWorld, dt: number) {
@@ -93,12 +93,15 @@ export class ItemsView {
     world.oils.forEach((o, i) => oils[i]!.position.set(o.x, 0.04, o.z));
 
     const rockets = this.rockets.show(world.rockets.length);
+    this.tails = [];
     world.rockets.forEach((r, i) => {
       const g = rockets[i]!;
       const dx = r.x - g.position.x;
       const dz = r.z - g.position.z;
       if (dx * dx + dz * dz > 1e-4) g.rotation.y = Math.atan2(dx, dz);
       g.position.set(r.x, 0.8, r.z);
+      g.updateMatrixWorld();
+      this.tails.push(new THREE.Vector3(0, 0.05, -0.95).applyMatrix4(g.matrixWorld));
     });
   }
 }

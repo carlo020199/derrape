@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { KART_COLORS } from "@derrape/shared";
 import { createKartModel, type KartModel } from "./kartModel";
-import { toonMaterial } from "./materials";
+import { Fire, paintExhaust } from "./flames";
+import { PALETTE, toonMaterial } from "./materials";
 import { createGradientSky } from "./sky";
 
 /**
@@ -12,6 +13,8 @@ export class GaragePreview {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
   private model: KartModel | null = null;
+  private fire: Fire;
+  private flameAt = new THREE.Vector3();
   private cheer = 0;
   private time = 0;
   private last = 0;
@@ -38,6 +41,7 @@ export class GaragePreview {
     this.scene.add(pedestal);
     this.camera.position.set(3.4, 2.4, 5.2);
     this.camera.lookAt(0, 0.7, 0);
+    this.fire = new Fire(this.scene);
   }
 
   /** Cambia lo que se ve. `cheer` hace que el piloto celebre un momento. */
@@ -82,11 +86,20 @@ export class GaragePreview {
     this.camera.setViewOffset(w, h, 0, h * 0.3, w, h);
     this.camera.updateProjectionMatrix();
 
+    this.fire.begin();
     if (this.model) {
       this.model.root.rotation.y += dt * 0.7;
       this.cheer = Math.max(0, this.cheer - dt);
       this.model.setMood(this.cheer > 0 ? "celebrate" : "idle", this.time);
+      const grow = this.cheer > 0 ? 1.35 : 1;
+      for (const a of this.model.exhausts) paintExhaust(this.fire, a.getWorldPosition(this.flameAt), "idle", this.time, grow);
+      for (const a of this.model.ornaments) {
+        const p = a.getWorldPosition(this.flameAt);
+        this.fire.flame(p, this.model.ornamentSpectral ? PALETTE.espectro : PALETTE.llama, 0.24 * grow);
+        this.fire.flame(p, this.model.ornamentSpectral ? PALETTE.anima : PALETTE.brasa, 0.42 * grow);
+      }
     }
+    this.fire.end(dt);
     this.renderer.render(this.scene, this.camera);
   }
 }
