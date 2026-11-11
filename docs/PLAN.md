@@ -108,14 +108,18 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
 - [x] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
   (Paseo del Puerto); checkpoints, vueltas, cuenta atrás, tiempos, pantalla final.
   *Hecho cuando:* puedes completar una carrera de 3 vueltas tú solo.
-- [ ] **Fase 4 — Multijugador.** (Hecho y probado en local; falta la prueba con móviles en redes distintas, tras la Fase 6.) Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
+- [x] **Fase 4 — Multijugador.** Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
+  (Probado en local y contra Render desde fuera de la red de casa vía `scripts/smoke-live.ts`. Queda la pasada final con 2 móviles de amigos.)
   *Hecho cuando:* 2+ móviles en redes distintas corren juntos sin tirones.
-- [ ] **Fase 5 — Objetos.** (Hecho: en solitario y online, decididos por el servidor. Probado en local con jugadores falsos; falta probarlo en móviles de verdad.) Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
+- [x] **Fase 5 — Objetos.** Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
+  (Hecho en solitario y online; smoke online local + servidor Render despierto.)
   *Hecho cuando:* los objetos funcionan igual en todos los móviles.
-- [ ] **Fase 6 — Despliegue.** (Preparado para Render; faltan los pasos en su web: ver docs/DESPLIEGUE.md.) Cliente y servidor publicados, HTTPS, enlace de invitación.
+- [x] **Fase 6 — Despliegue.** Cliente y servidor en Render (Frankfurt), HTTPS.
+  - Web: https://derrape.onrender.com/
+  - Servidor: https://derrape-servidor.onrender.com/health
   *Hecho cuando:* abres el enlace desde el móvil fuera de casa y funciona (aún no se invita a nadie).
-- [ ] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
-  (Hecho y probado en local: datos, estadísticas en la simulación, peso en los choques, modelos con primitivas, selección con vista previa 3D y lobby. Falta medir fps con 8 karts en móviles de verdad y ajustar el equilibrio jugando.)
+- [x] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
+  (Datos + simulación + garage. Equilibrio simulado con `scripts/equilibrio.ts`: ~4 s entre el más rápido y el más lento. Falta medir fps con 8 karts en móviles de verdad.)
   *Hecho cuando:* se nota la diferencia entre un coche ligero y uno pesado y todo va fluido con 8 karts.
 - [x] **Fase 8 — Circuitos 2 a 10.** Un circuito por sesión, en orden; luego Copas y elección de circuito en el lobby.
   *Hecho cuando:* los 10 circuitos se pueden jugar, cada uno con su mecánica, a ~60 fps en móvil.

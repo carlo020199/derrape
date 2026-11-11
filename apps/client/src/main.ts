@@ -183,11 +183,17 @@ function backToLobby() {
 
 async function goHome() {
   endSession();
-  await net?.leave();
+  const n = net;
   net = null;
   lobby = null;
   document.body.classList.remove("online");
+  // Volver al menú al momento; la desconexión puede tardar o colgarse al despertar Render.
   showScreen("home");
+  try {
+    await Promise.race([n?.leave() ?? Promise.resolve(), new Promise<void>((r) => setTimeout(r, 2000))]);
+  } catch {
+    // Salir de la sala no debe bloquear el menú.
+  }
 }
 
 // --- Piloto y coche: la vista previa se dibuja con el mismo renderer, detrás de la pantalla ---
