@@ -292,6 +292,45 @@ body.touch #touch-help { display: block; }
 }
 .note-dim { font-size: 13px; opacity: 0.75; }
 
+#minimap {
+  position: fixed;
+  left: calc(10px + var(--safe-l));
+  bottom: calc(90px + var(--safe-b));
+  width: 112px;
+  height: 112px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 4;
+}
+#minimap[hidden] { display: none; }
+
+#podium {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  align-items: end;
+  gap: 8px;
+  margin: 0 0 14px;
+  min-height: 120px;
+}
+#podium[hidden] { display: none; }
+.podium-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: 12px 12px 4px 4px;
+  background: rgb(255 255 255 / 0.1);
+  text-align: center;
+}
+.podium-spot.first { min-height: 110px; background: linear-gradient(180deg, #ffd23f 0%, rgb(255 210 63 / 0.25) 40%, rgb(255 255 255 / 0.08)); color: #1b1f3a; }
+.podium-spot.second { min-height: 88px; }
+.podium-spot.third { min-height: 72px; }
+.podium-spot.empty { opacity: 0.35; }
+.podium-place { font: 800 22px/1 system-ui, sans-serif; }
+.podium-name { font: 700 13px/1.2 system-ui, sans-serif; }
+.podium-pts { font-size: 12px; opacity: 0.85; }
+
 #menu label.select { justify-content: space-between; }
 #menu select {
   min-height: 36px;

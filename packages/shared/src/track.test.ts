@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closestPoint, createOvalTrack, pointAt, type Track } from "./track";
+import { closestPoint, createOvalTrack, pointAt, surfaceAt, type Track } from "./track";
 import { KART } from "./tuning";
 import { TRACKS } from "./tracks/index";
 import { buildTrackFromDef } from "./tracks/types";
@@ -47,6 +47,24 @@ describe("pista", () => {
     const lap = track.length / (KART.maxSpeed * 0.85);
     expect(lap).toBeGreaterThan(60);
     expect(lap).toBeLessThan(75);
+  });
+
+  for (const entry of TRACKS.filter((t) => t.number >= 2)) {
+    it(`${entry.name}: vuelta de 50–75 s a un ritmo realista`, async () => {
+      const track = buildTrackFromDef(await entry.load());
+      const lap = track.length / (KART.maxSpeed * 0.85);
+      expect(lap).toBeGreaterThan(50);
+      expect(lap).toBeLessThan(75);
+    });
+  }
+
+  it("zonas de Playa Dorada: arena y rampas", async () => {
+    const track = buildTrackFromDef(await TRACKS.find((t) => t.id === "playa-dorada")!.load());
+    const mid = pointAt(track, track.length * 0.3, 12);
+    const c = closestPoint(track, mid.x, mid.z);
+    expect(surfaceAt(track, c)).toBe("slow");
+    const ramp = pointAt(track, track.length * 0.6, 0);
+    expect(surfaceAt(track, closestPoint(track, ramp.x, ramp.z))).toBe("ramp");
   });
 
   it("pointAt y closestPoint están de acuerdo en distancia y lado", async () => {

@@ -41,11 +41,19 @@
     <div id="results" class="overlay" hidden>
       <div class="card">
         <h2 id="results-title">Resultados</h2>
+        <div id="podium" hidden>
+          <div class="podium-spot second"><span class="podium-place">2</span><span class="podium-name"></span><span class="podium-pts"></span></div>
+          <div class="podium-spot first"><span class="podium-place">1</span><span class="podium-name"></span><span class="podium-pts"></span></div>
+          <div class="podium-spot third"><span class="podium-place">3</span><span class="podium-name"></span><span class="podium-pts"></span></div>
+        </div>
         <ol id="results-list"></ol>
         <p id="results-laps" class="note-dim"></p>
+        <p id="results-cup" class="note-dim" hidden></p>
         <button id="results-again" class="primary">Otra carrera</button>
       </div>
     </div>
+
+    <canvas id="minimap" width="120" height="120" aria-hidden="true" hidden></canvas>
 
     <div id="loading" class="overlay" hidden>
       <div class="card"><h2>Cargando circuito…</h2></div>
@@ -77,6 +85,7 @@
         <p class="dim">Tu color</p>
         <div id="lobby-colors" class="colors"></div>
         <label class="field">Circuito <select id="lobby-track"></select></label>
+        <p id="lobby-cup" class="dim" hidden></p>
         <button id="lobby-start" class="primary">EMPEZAR</button>
         <p id="lobby-wait" class="dim"></p>
         <p id="lobby-error" class="note"></p>

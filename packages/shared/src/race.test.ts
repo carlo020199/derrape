@@ -161,6 +161,15 @@ describe("superficies", () => {
     expect(s.boostMult).toBe(SURFACE.boostPadMult);
   });
 
+  it("una rampa salta si hay velocidad", () => {
+    const s = createKart();
+    s.speed = SURFACE.rampMinSpeed + 1;
+    s.surface = "ramp";
+    stepKart(s, GAS, PHYSICS_DT);
+    expect(s.hopTime).toBeGreaterThan(KART.hopTime);
+    expect(s.hopTotal).toBe(SURFACE.rampHopTime);
+  });
+
   it("el arcén está fuera del asfalto pero dentro de los muros", () => {
     const pose = gridPose(track, 0);
     const s = createKart(pose.x, pose.z, pose.heading);

@@ -95,6 +95,22 @@ function startArch(scene: THREE.Object3D, track: Track, color: number) {
   scene.add(bar);
 }
 
+/** Marcas planas de turbo sobre la pista (sin tocar trackMesh). */
+function boostPadMarkers(scene: THREE.Object3D, track: Track, color = 0xffe066) {
+  const pad = new THREE.BoxGeometry(1, 1, 1);
+  pad.translate(0, 0.5, 0);
+  const batch = new Batch(pad, lambert());
+  for (const z of track.zones) {
+    if (z.type !== "boostPad") continue;
+    const end = z.to < z.from ? z.to + track.length : z.to;
+    for (let d = z.from; d < end; d += 2.5) {
+      const p = pointAt(track, d % track.length);
+      batch.add(p.x, p.y + 0.02, p.z, p.heading, p.width * 0.55, 0.04, 2.2, color);
+    }
+  }
+  batch.build(scene);
+}
+
 // --- Tema de pruebas ---
 const pruebas: ThemeKit = {
   sky: 0x8fd3ff,
@@ -261,4 +277,702 @@ const puerto: ThemeKit = {
   },
 };
 
-export const THEMES: Record<ThemeId, ThemeKit> = { pruebas, puerto };
+// --- Tema playa ---
+const UMBRELLA = [0xe63946, 0xffd23f, 0x2e86de, 0xffffff, 0xff6b35];
+
+const playa: ThemeKit = {
+  sky: 0xb8e4ff,
+  fog: [100, 340],
+  ground: 0xe8d29a,
+  track: { road: 0x6a6e78, curbA: 0xfff6e0, curbB: 0x2e86de, verge: 0xdcc68a, wall: 0xc9b67a, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const pole = new THREE.CylinderGeometry(0.08, 0.1, 1, 6);
+    pole.translate(0, 0.5, 0);
+    const cone = new THREE.ConeGeometry(1, 1, 8);
+    cone.translate(0, 0.5, 0);
+    const bush = new THREE.IcosahedronGeometry(1, 0);
+
+    const dunes = new Batch(cone, lambert());
+    const poles = new Batch(pole, lambert(0x8b5e3c));
+    const tops = new Batch(cone, lambert());
+    const shrubs = new Batch(bush, lambert(0x6a9a3e));
+    const rocks = new Batch(box, lambert(0xa89f8c));
+
+    for (let i = 0; i < pts.length; i += 3) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.55) {
+          const off = edge + 4 + rand() * 8;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 2)) continue;
+          const s = 2.5 + rand() * 4;
+          dunes.add(x, p.y - 0.3, z, rand() * 6, s, 1.2 + rand() * 1.5, s, 0xe2c98a);
+        }
+        if (i % 9 === 0 && rand() < 0.7) {
+          const off = edge + 2 + rand() * 3;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 1)) shrubs.add(x, p.y, z, 0, 1.2, 0.8, 1.2);
+        }
+        if (i % 15 === 0 && rand() < 0.4) {
+          const off = edge + 1.5;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 0.6)) rocks.add(x, p.y - 0.1, z, rand(), 1.2, 0.6, 0.9);
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "sombrilla") continue;
+      const scale = m.scale ?? 1;
+      for (let k = 0; k < 5; k++) {
+        const ox = (rand() - 0.5) * 14 * scale;
+        const oz = (rand() - 0.5) * 14 * scale;
+        const x = m.x + ox;
+        const z = m.z + oz;
+        if (!clearOfTrack(track, x, z, 2)) continue;
+        const h = 3.2 * scale;
+        poles.add(x, 0, z, 0, 1, h, 1);
+        tops.add(x, h * 0.85, z, rand() * 3, 2.2 * scale, 1.1 * scale, 2.2 * scale, UMBRELLA[k % UMBRELLA.length]!);
+      }
+    }
+
+    // Franja de mar al sur.
+    const zs = pts.map((p) => p.z);
+    const minZ = Math.min(...zs) - track.width / 2 - track.verge - 10;
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, 600), lambert(0x2aa8c9));
+    sea.rotation.x = -Math.PI / 2;
+    sea.position.set(0, -0.15, minZ - 280);
+    scene.add(sea);
+
+    for (const b of [dunes, poles, tops, shrubs, rocks]) b.build(scene);
+    startArch(scene, track, 0xffd23f);
+  },
+};
+
+// --- Tema mercado ---
+const AWNINGS = [0xe63946, 0xffb703, 0x2a9d8f, 0x457b9d, 0xf4a261];
+const STALL = [0xf5ebe0, 0xe8d5b7, 0xd6ccc2];
+
+const mercado: ThemeKit = {
+  sky: 0xffd8a8,
+  fog: [70, 240],
+  ground: 0xc4a574,
+  track: { road: 0x4e5158, curbA: 0xf1e6d0, curbB: 0xc1121f, verge: 0xb8945f, wall: 0xd9c3a0, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const roof = new THREE.BoxGeometry(1, 0.15, 1);
+    roof.translate(0, 0.5, 0);
+
+    const stalls = new Batch(box, lambert());
+    const awnings = new Batch(roof, lambert());
+    const crates = new Batch(box, lambert());
+
+    for (let i = 0; i < pts.length; i += 3) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const heading = Math.atan2(-l.z, l.x) + Math.PI / 2;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() > 0.7) continue;
+        const w = 2.5 + rand() * 2;
+        const d = 2 + rand() * 2;
+        const h = 2.2 + rand() * 1.2;
+        const off = edge + 1.8 + d / 2;
+        const x = p.x + l.x * off * side;
+        const z = p.z + l.z * off * side;
+        if (!clearOfTrack(track, x, z, 1.5)) continue;
+        stalls.add(x, p.y - 0.15, z, heading, w, h, d, STALL[Math.floor(rand() * STALL.length)]!);
+        awnings.add(x, p.y - 0.15 + h, z, heading, w * 1.15, 1, d * 1.1, AWNINGS[Math.floor(rand() * AWNINGS.length)]!);
+        if (rand() < 0.45) {
+          crates.add(x + Math.cos(heading) * 1.4, p.y - 0.1, z + Math.sin(heading) * 1.4, heading, 0.7, 0.7, 0.7, 0x8d6e4c);
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "plaza") continue;
+      // Plaza: toldos en círculo alrededor del centro.
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * Math.PI * 2;
+        const r = 10 + (k % 3);
+        const x = m.x + Math.cos(a) * r;
+        const z = m.z + Math.sin(a) * r;
+        if (!clearOfTrack(track, x, z, 2)) continue;
+        stalls.add(x, 0, z, a, 3.5, 2.4, 3, STALL[k % STALL.length]!);
+        awnings.add(x, 2.4, z, a, 4.2, 1, 3.4, AWNINGS[k % AWNINGS.length]!);
+      }
+      const fountain = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.8, 1.2, 10), lambert(0xb0bec5));
+      fountain.position.set(m.x, 0.4, m.z);
+      scene.add(fountain);
+    }
+
+    for (const b of [stalls, awnings, crates]) b.build(scene);
+    startArch(scene, track, 0xc1121f);
+  },
+};
+
+// --- Tema viñedos ---
+const vinedos: ThemeKit = {
+  sky: 0xc5e0f5,
+  fog: [90, 280],
+  ground: 0x6b8f3a,
+  track: { road: 0x555248, curbA: 0xe8e0d0, curbB: 0x722f37, verge: 0x5f7f34, wall: 0x8a6f4a, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const post = new THREE.CylinderGeometry(0.06, 0.08, 1, 5);
+    post.translate(0, 0.5, 0);
+    const leaf = new THREE.IcosahedronGeometry(1, 0);
+    const roof = new THREE.ConeGeometry(0.75, 1, 4);
+    roof.rotateY(Math.PI / 4);
+    roof.translate(0, 0.5, 0);
+
+    const vines = new Batch(leaf, lambert(0x3d6b2f));
+    const posts = new Batch(post, lambert(0x6b4f2a));
+    const walls = new Batch(box, lambert());
+    const roofs = new Batch(roof, lambert(0x722f37));
+    const cypress = new Batch(leaf, lambert(0x1f4d2c));
+
+    for (let i = 0; i < pts.length; i += 2) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const heading = Math.atan2(-l.z, l.x) + Math.PI / 2;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        // Hileras de viña.
+        for (let row = 0; row < 3; row++) {
+          const off = edge + 2.5 + row * 2.2;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 0.8)) continue;
+          posts.add(x, p.y - 0.15, z, 0, 1, 1.6, 1);
+          vines.add(x, p.y + 1.1, z, heading, 1.4, 0.7, 0.5);
+        }
+        if (i % 14 === 0 && rand() < 0.5) {
+          const off = edge + 12;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 1.5)) cypress.add(x, p.y, z, 0, 1.2, 5 + rand() * 3, 1.2);
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "bodega") continue;
+      const s = m.scale ?? 1;
+      const rot = m.rotation ?? 0;
+      walls.add(m.x, 0, m.z, rot, 14 * s, 5 * s, 9 * s, 0xe8dcc8);
+      roofs.add(m.x, 5 * s, m.z, rot, 15 * s, 3 * s, 10 * s);
+      // Torre lateral.
+      walls.add(m.x + 8 * s, 0, m.z - 3 * s, rot, 4 * s, 9 * s, 4 * s, 0xddd0b8);
+      roofs.add(m.x + 8 * s, 9 * s, m.z - 3 * s, rot, 5 * s, 2.5 * s, 5 * s);
+    }
+
+    for (const b of [posts, vines, walls, roofs, cypress]) b.build(scene);
+    startArch(scene, track, 0x722f37);
+  },
+};
+
+// --- Tema feria ---
+const TENTS = [0xff4d6d, 0xffd60a, 0x4cc9f0, 0xb5179e, 0x80ed99];
+
+const feria: ThemeKit = {
+  sky: 0xffc2d4,
+  fog: [80, 260],
+  ground: 0x8f7a5e,
+  track: { road: 0x3d3f48, curbA: 0xfff1a8, curbB: 0xff2e63, verge: 0x7a6850, wall: 0xff8fab, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const cone = new THREE.ConeGeometry(0.75, 1, 4);
+    cone.translate(0, 0.5, 0);
+    const cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
+    cyl.translate(0, 0.5, 0);
+
+    const booths = new Batch(box, lambert());
+    const roofs = new Batch(cone, lambert());
+    const poles = new Batch(cyl, lambert(0xf8f7f4));
+    const lights = new Batch(box, lambert());
+
+    for (let i = 0; i < pts.length; i += 4) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const heading = Math.atan2(-l.z, l.x) + Math.PI / 2;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.65) {
+          const off = edge + 3 + rand() * 2;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 1.5)) continue;
+          const color = TENTS[Math.floor(rand() * TENTS.length)]!;
+          booths.add(x, p.y - 0.15, z, heading, 3, 2.5, 3, color);
+          roofs.add(x, p.y + 2.3, z, heading, 3.4, 1.8, 3.4, color);
+        }
+        if (i % 8 === 0) {
+          const off = edge + 1.1;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 0.4)) {
+            poles.add(x, p.y - 0.2, z, 0, 0.25, 4.5, 0.25);
+            lights.add(x, p.y + 4, z, 0, 0.5, 0.5, 0.5, TENTS[Math.floor(rand() * TENTS.length)]!);
+          }
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind === "noria") {
+        // Noria: aro + cabinas.
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(12, 0.6, 6, 24), lambert(0xffd60a));
+        rim.position.set(m.x, 14, m.z);
+        rim.rotation.y = Math.PI / 2;
+        scene.add(rim);
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2, 8), lambert(0xffffff));
+        hub.position.set(m.x, 14, m.z);
+        hub.rotation.z = Math.PI / 2;
+        scene.add(hub);
+        const legL = new THREE.Mesh(new THREE.BoxGeometry(1, 16, 1), lambert(0xdee2e6));
+        legL.position.set(m.x - 4, 8, m.z);
+        legL.rotation.z = 0.35;
+        const legR = legL.clone();
+        legR.position.set(m.x + 4, 8, m.z);
+        legR.rotation.z = -0.35;
+        scene.add(legL, legR);
+        for (let k = 0; k < 8; k++) {
+          const a = (k / 8) * Math.PI * 2;
+          const cx = m.x;
+          const cy = 14 + Math.sin(a) * 12;
+          const cz = m.z + Math.cos(a) * 12;
+          booths.add(cx, cy - 1, cz, 0, 2, 2, 2, TENTS[k % TENTS.length]!);
+        }
+      }
+      if (m.kind === "tienda") {
+        booths.add(m.x, 0, m.z, m.rotation ?? 0, 8, 4, 8, 0xff4d6d);
+        roofs.add(m.x, 4, m.z, m.rotation ?? 0, 9, 4, 9, 0xffd60a);
+      }
+    }
+
+    boostPadMarkers(scene, track, 0x80ffdb);
+    for (const b of [booths, roofs, poles, lights]) b.build(scene);
+    startArch(scene, track, 0xff2e63);
+  },
+};
+
+// --- Tema estación ---
+const estacion: ThemeKit = {
+  sky: 0xb7c4d4,
+  fog: [75, 250],
+  ground: 0x6d6a62,
+  track: { road: 0x3f4248, curbA: 0xd9d4c8, curbB: 0x8b4513, verge: 0x5c5952, wall: 0x8a8580, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const cyl = new THREE.CylinderGeometry(0.15, 0.15, 1, 6);
+    cyl.translate(0, 0.5, 0);
+
+    const buildings = new Batch(box, lambert());
+    const roofs = new Batch(box, lambert(0x3d3d3d));
+    const rails = new Batch(box, lambert(0x2b2b2b));
+    const sleepers = new Batch(box, lambert(0x6b4f2a));
+    const cars = new Batch(box, lambert());
+    const lamps = new Batch(cyl, lambert(0x444444));
+
+    for (let i = 0; i < pts.length; i += 4) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const heading = Math.atan2(-l.z, l.x) + Math.PI / 2;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.5) {
+          const w = 5 + rand() * 6;
+          const h = 4 + rand() * 5;
+          const d = 4 + rand() * 4;
+          const off = edge + 4 + d / 2;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 2 + Math.max(w, d) / 2)) continue;
+          buildings.add(x, p.y - 0.2, z, heading, w, h, d, rand() < 0.5 ? 0xc5b9a0 : 0x9aa0a6);
+          roofs.add(x, p.y - 0.2 + h, z, heading, w * 1.05, 0.5, d * 1.05);
+        }
+        if (i % 10 === 0) {
+          const off = edge + 1.2;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 0.4)) {
+            lamps.add(x, p.y - 0.2, z, 0, 1, 5, 1);
+            buildings.add(x, p.y + 4.6, z, 0, 0.5, 0.4, 0.5, 0xffe08a);
+          }
+        }
+      }
+    }
+
+    // Vías junto a los hazards (pasos a nivel) + vagones sencillos.
+    for (const h of track.hazards) {
+      const mid = (h.from + (h.to < h.from ? h.to + track.length : h.to)) / 2;
+      const p = pointAt(track, mid % track.length);
+      const nx = Math.cos(p.heading);
+      const nz = -Math.sin(p.heading);
+      for (const lat of [-1, 1] as const) {
+        const lx = -nz * lat;
+        const lz = nx * lat;
+        for (let t = -8; t <= 8; t += 1.5) {
+          const x = p.x + nx * t + lx * (p.width / 2 + track.verge + 3);
+          const z = p.z + nz * t + lz * (p.width / 2 + track.verge + 3);
+          sleepers.add(x, p.y - 0.05, z, p.heading, 2.2, 0.15, 0.35);
+        }
+        for (const railOff of [-0.7, 0.7]) {
+          for (let t = -8; t <= 8; t += 2) {
+            const x = p.x + nx * t + lx * (p.width / 2 + track.verge + 3) + (-nz) * railOff;
+            const z = p.z + nz * t + lz * (p.width / 2 + track.verge + 3) + nx * railOff;
+            rails.add(x, p.y + 0.05, z, p.heading, 0.12, 0.12, 2);
+          }
+        }
+        // Vagones aparcados cerca del cruce.
+        const bx = p.x + lx * (p.width / 2 + track.verge + 3) - nx * 12;
+        const bz = p.z + lz * (p.width / 2 + track.verge + 3) - nz * 12;
+        cars.add(bx, p.y, bz, p.heading, 2.6, 2.4, 8, lat > 0 ? 0xc1121f : 0x457b9d);
+        cars.add(bx + nx * 9, p.y, bz + nz * 9, p.heading, 2.6, 2.4, 8, 0xe9c46a);
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "estacion") continue;
+      const s = m.scale ?? 1;
+      buildings.add(m.x, 0, m.z, m.rotation ?? 0, 18 * s, 7 * s, 10 * s, 0xd6cfc2);
+      roofs.add(m.x, 7 * s, m.z, m.rotation ?? 0, 19 * s, 0.8 * s, 11 * s);
+      // Marquesina.
+      buildings.add(m.x, 4.5 * s, m.z + 7 * s, m.rotation ?? 0, 16 * s, 0.3 * s, 4 * s, 0xadb5bd);
+      for (let k = -2; k <= 2; k++) {
+        lamps.add(m.x + k * 3.5 * s, 0, m.z + 7 * s, 0, 1, 4.5 * s, 1);
+      }
+    }
+
+    for (const b of [buildings, roofs, rails, sleepers, cars, lamps]) b.build(scene);
+    startArch(scene, track, 0x8b4513);
+  },
+};
+
+// --- Tema nieve ---
+const nieve: ThemeKit = {
+  sky: 0xd7e8f7,
+  fog: [60, 200],
+  ground: 0xeef4fa,
+  track: { road: 0x5a6270, curbA: 0xffffff, curbB: 0x4a90c8, verge: 0xdde6f0, wall: 0xc5d3e0, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const trunk = new THREE.CylinderGeometry(0.2, 0.28, 1, 6);
+    trunk.translate(0, 0.5, 0);
+    const pine = new THREE.ConeGeometry(1, 2, 6);
+    pine.translate(0, 1, 0);
+    const roof = new THREE.ConeGeometry(0.75, 1, 4);
+    roof.rotateY(Math.PI / 4);
+    roof.translate(0, 0.5, 0);
+
+    const trunks = new Batch(trunk, lambert(0x5c4030));
+    const pines = new Batch(pine, lambert(0x1f4d3a));
+    const snowcaps = new Batch(pine, lambert(0xf5fbff));
+    const cabins = new Batch(box, lambert(0x8b5a2b));
+    const roofs = new Batch(roof, lambert(0xffffff));
+    const rocks = new Batch(box, lambert(0x9aa4b0));
+
+    for (let i = 0; i < pts.length; i += 3) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.7) {
+          const off = edge + 3 + rand() * 10;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 1.5)) continue;
+          const h = 3 + rand() * 5;
+          trunks.add(x, p.y - 0.2, z, 0, 1, h * 0.45, 1);
+          pines.add(x, p.y + h * 0.2, z, 0, 2 + rand(), h * 0.7, 2 + rand());
+          snowcaps.add(x, p.y + h * 0.55, z, 0, 1.2, h * 0.25, 1.2);
+        }
+        if (i % 12 === 0 && rand() < 0.4) {
+          const off = edge + 1.5;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 0.6)) rocks.add(x, p.y - 0.1, z, rand(), 1.4, 0.8, 1.1);
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "cabanas") continue;
+      for (let k = 0; k < 4; k++) {
+        const ox = (k % 2) * 10 - 5;
+        const oz = Math.floor(k / 2) * 12 - 6;
+        const x = m.x + ox;
+        const z = m.z + oz;
+        if (!clearOfTrack(track, x, z, 3)) continue;
+        cabins.add(x, 0, z, 0.2 * k, 6, 3.5, 5, 0x8b5a2b);
+        roofs.add(x, 3.5, z, 0.2 * k, 7, 2.5, 6);
+      }
+    }
+
+    for (const b of [trunks, pines, snowcaps, cabins, roofs, rocks]) b.build(scene);
+    startArch(scene, track, 0x4a90c8);
+  },
+};
+
+// --- Tema cañón ---
+const ROCK = [0xc45c26, 0xa3471c, 0xd9793a, 0x8d3b16];
+
+const canon: ThemeKit = {
+  sky: 0xf0c27a,
+  fog: [100, 320],
+  ground: 0xc9844a,
+  track: { road: 0x5a4a3a, curbA: 0xf2e2c4, curbB: 0xb5451b, verge: 0xb8733d, wall: 0xa0522d, groundY: -0.4 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const cyl = new THREE.CylinderGeometry(0.5, 0.7, 1, 6);
+    cyl.translate(0, 0.5, 0);
+
+    const mesas = new Batch(cyl, lambert());
+    const cactus = new Batch(box, lambert(0x3a7d44));
+
+    for (let i = 0; i < pts.length; i += 3) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.6) {
+          const off = edge + 5 + rand() * 12;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 3)) continue;
+          const h = 4 + rand() * 14;
+          const r = 2 + rand() * 4;
+          mesas.add(x, p.y - 0.4, z, rand(), r, h, r, ROCK[Math.floor(rand() * ROCK.length)]!);
+        }
+        if (i % 11 === 0 && rand() < 0.5) {
+          const off = edge + 2;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 0.5)) {
+            cactus.add(x, p.y - 0.1, z, 0, 0.5, 2.5 + rand() * 2, 0.5);
+            if (rand() < 0.5) cactus.add(x + 0.4, p.y + 1, z, 0, 0.35, 1.2, 0.35);
+          }
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "arco") continue;
+      const s = m.scale ?? 1;
+      // Arco natural: dos pilares + dintel.
+      const leftP = new THREE.Mesh(new THREE.CylinderGeometry(3 * s, 4 * s, 16 * s, 7), lambert(0xb5451b));
+      leftP.position.set(m.x - 7 * s, 8 * s, m.z);
+      const rightP = new THREE.Mesh(new THREE.CylinderGeometry(3 * s, 4 * s, 16 * s, 7), lambert(0xc45c26));
+      rightP.position.set(m.x + 7 * s, 8 * s, m.z);
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(18 * s, 4 * s, 6 * s), lambert(0xd9793a));
+      lintel.position.set(m.x, 17 * s, m.z);
+      scene.add(leftP, rightP, lintel);
+    }
+
+    for (const b of [mesas, cactus]) b.build(scene);
+    startArch(scene, track, 0xb5451b);
+  },
+};
+
+// --- Tema volcán ---
+const volcan: ThemeKit = {
+  sky: 0xff9a5a,
+  fog: [70, 220],
+  ground: 0x3d4f2f,
+  track: { road: 0x3a3532, curbA: 0xe8e0d0, curbB: 0xff5722, verge: 0x2f3d24, wall: 0x5c4033, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+    const trunk = new THREE.CylinderGeometry(0.2, 0.3, 1, 6);
+    trunk.translate(0, 0.5, 0);
+    const canopy = new THREE.IcosahedronGeometry(1, 0);
+    const rock = new THREE.ConeGeometry(1, 1.5, 5);
+    rock.translate(0, 0.75, 0);
+
+    const trunks = new Batch(trunk, lambert(0x4a3728));
+    const leaves = new Batch(canopy, lambert(0x1b5e20));
+    const rocks = new Batch(rock, lambert(0x4a4038));
+    const lava = new Batch(box, lambert(0xff5722));
+
+    for (let i = 0; i < pts.length; i += 3) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.55) {
+          const off = edge + 3 + rand() * 8;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 1.5)) continue;
+          const h = 4 + rand() * 6;
+          trunks.add(x, p.y - 0.2, z, 0, 1, h, 1);
+          leaves.add(x, p.y + h - 0.2, z, rand(), 3, 2, 3);
+        }
+        if (rand() < 0.35) {
+          const off = edge + 2 + rand() * 4;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 1)) rocks.add(x, p.y - 0.2, z, rand(), 1.5 + rand(), 1 + rand(), 1.5 + rand());
+        }
+      }
+    }
+
+    // Manchas de lava en zonas fall/slow.
+    for (const z of track.zones) {
+      if (z.type !== "fall" && z.type !== "slow") continue;
+      const end = z.to < z.from ? z.to + track.length : z.to;
+      for (let d = z.from; d < end; d += 4) {
+        const lat = (z.lateralMin + z.lateralMax) / 2;
+        const p = pointAt(track, d % track.length, lat);
+        lava.add(p.x, p.y - 0.15, p.z, p.heading, 4, 0.08, 3.5, 0xff6d00);
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "volcan") continue;
+      const s = m.scale ?? 1;
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(28 * s, 40 * s, 8), lambert(0x3e2723));
+      cone.position.set(m.x, 20 * s, m.z);
+      const crater = new THREE.Mesh(new THREE.CylinderGeometry(6 * s, 8 * s, 3 * s, 8), lambert(0xff3d00));
+      crater.position.set(m.x, 38 * s, m.z);
+      const glow = new THREE.Mesh(new THREE.CylinderGeometry(4 * s, 4 * s, 1 * s, 8), new THREE.MeshBasicMaterial({ color: 0xffab40 }));
+      glow.position.set(m.x, 39.5 * s, m.z);
+      scene.add(cone, crater, glow);
+    }
+
+    for (const b of [trunks, leaves, rocks, lava]) b.build(scene);
+    startArch(scene, track, 0xff5722);
+  },
+};
+
+// --- Tema neón / ciudad nocturna ---
+const NEON = [0xff2d95, 0x00f5d4, 0xfee440, 0x9b5de5, 0x00bbf9];
+const TOWER = [0x1a1d29, 0x222636, 0x2a2f42, 0x161821];
+
+const neon: ThemeKit = {
+  sky: 0x0b1020,
+  fog: [50, 180],
+  ground: 0x12141c,
+  track: { road: 0x2a2d38, curbA: 0xff2d95, curbB: 0x00f5d4, verge: 0x1a1d26, wall: 0x3a3f55, groundY: -0.2 },
+  decorate(scene, track, def) {
+    const rand = seeded(def.seed);
+    const left = leftNormals(track);
+    const pts = track.points;
+
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    box.translate(0, 0.5, 0);
+
+    const towers = new Batch(box, lambert());
+    const accents = new Batch(box, lambert());
+    const lamps = new Batch(box, lambert());
+
+    for (let i = 0; i < pts.length; i += 3) {
+      const p = pts[i]!;
+      const l = left[i]!;
+      const heading = Math.atan2(-l.z, l.x) + Math.PI / 2;
+      const edge = p.w / 2 + track.verge;
+      for (const side of [-1, 1] as const) {
+        if (rand() < 0.75) {
+          const w = 4 + rand() * 6;
+          const h = 8 + rand() * 28;
+          const d = 4 + rand() * 6;
+          const off = edge + 4 + d / 2 + rand() * 4;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (!clearOfTrack(track, x, z, 2 + Math.max(w, d) / 2)) continue;
+          towers.add(x, p.y - 0.2, z, heading, w, h, d, TOWER[Math.floor(rand() * TOWER.length)]!);
+          // Franja de neón en la cornisa.
+          accents.add(x, p.y - 0.2 + h, z, heading, w * 1.02, 0.35, d * 1.02, NEON[Math.floor(rand() * NEON.length)]!);
+          if (rand() < 0.4) {
+            accents.add(x, p.y + h * 0.4, z + (d / 2 + 0.1) * Math.cos(heading), heading, w * 0.6, 1.2, 0.2, NEON[Math.floor(rand() * NEON.length)]!);
+          }
+        }
+        if (i % 8 === 0) {
+          const off = edge + 1.1;
+          const x = p.x + l.x * off * side;
+          const z = p.z + l.z * off * side;
+          if (clearOfTrack(track, x, z, 0.4)) {
+            lamps.add(x, p.y - 0.2, z, 0, 0.2, 5, 0.2, 0x333849);
+            lamps.add(x, p.y + 4.6, z, 0, 0.55, 0.35, 0.55, NEON[Math.floor(rand() * NEON.length)]!);
+          }
+        }
+      }
+    }
+
+    for (const m of def.landmarks ?? []) {
+      if (m.kind !== "rascacielos") continue;
+      const s = m.scale ?? 1;
+      const h = 55 * s;
+      towers.add(m.x, 0, m.z, m.rotation ?? 0, 10 * s, h, 10 * s, 0x1a1d29);
+      accents.add(m.x, h, m.z, m.rotation ?? 0, 10.5 * s, 1.2 * s, 10.5 * s, 0xff2d95);
+      towers.add(m.x + 8 * s, 0, m.z + 6 * s, 0.2, 7 * s, h * 0.7, 7 * s, 0x222636);
+      accents.add(m.x + 8 * s, h * 0.7, m.z + 6 * s, 0.2, 7.4 * s, 0.8 * s, 7.4 * s, 0x00f5d4);
+      // Antena.
+      lamps.add(m.x, h, m.z, 0, 0.4 * s, 10 * s, 0.4 * s, 0x9b5de5);
+    }
+
+    boostPadMarkers(scene, track, 0x00f5d4);
+    for (const b of [towers, accents, lamps]) b.build(scene);
+    startArch(scene, track, 0xff2d95);
+  },
+};
+
+export const THEMES: Record<ThemeId, ThemeKit> = {
+  pruebas,
+  puerto,
+  playa,
+  mercado,
+  vinedos,
+  feria,
+  estacion,
+  nieve,
+  canon,
+  volcan,
+  neon,
+};

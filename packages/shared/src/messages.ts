@@ -44,6 +44,9 @@ export interface JoinOptions {
 
 export type RoomPhase = "lobby" | "countdown" | "racing";
 
+/** Modo elegido por el anfitrión: una carrera, aleatorio o una copa. */
+export type LobbyMode = "single" | "random" | "cup-sol" | "cup-luna";
+
 export interface LobbyPlayer {
   id: string;
   name: string;
@@ -58,10 +61,27 @@ export interface LobbyPlayer {
   racing: boolean;
 }
 
+export interface CupScore {
+  id: string;
+  name: string;
+  color: number;
+  points: number;
+}
+
+export interface CupStatus {
+  name: string;
+  /** Carrera actual (1-based). */
+  race: number;
+  total: number;
+  scores: CupScore[];
+}
+
 export interface LobbyMessage {
   code: string;
   phase: RoomPhase;
   trackId: string;
+  mode: LobbyMode;
+  cup: CupStatus | null;
   players: LobbyPlayer[];
 }
 
@@ -150,6 +170,8 @@ export interface RaceResult {
 
 export interface ResultsMessage {
   results: RaceResult[];
+  /** Si hay copa en curso: clasificación acumulada y si ya terminó. */
+  cup?: CupStatus & { finished: boolean };
 }
 
 /** Tipos de mensaje. Cliente → servidor: profile, setTrack, start, state, useItem. Servidor → cliente: el resto. */

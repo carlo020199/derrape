@@ -1,8 +1,11 @@
 import * as THREE from "three";
 
-// Chispas de derrape: un pool fijo de puntos (sin crear objetos por frame).
-const MAX = 160;
+// Chispas y partículas: un pool fijo de puntos (sin crear objetos por frame).
+const MAX = 280;
 export const SPARK_COLORS = [0x000000, 0x4cc9f0, 0xff9f1c, 0xb15cff];
+const BOOST_COLOR = 0xffe066;
+const HIT_COLOR = 0xff4d6d;
+const NITRO_COLOR = 0x7CFC00;
 
 export class Sparks {
   readonly points: THREE.Points;
@@ -19,21 +22,37 @@ export class Sparks {
     geo.setAttribute("color", new THREE.BufferAttribute(this.col, 3));
     this.points = new THREE.Points(
       geo,
-      new THREE.PointsMaterial({ size: 0.25, vertexColors: true, transparent: true, depthWrite: false }),
+      new THREE.PointsMaterial({ size: 0.28, vertexColors: true, transparent: true, depthWrite: false }),
     );
     this.points.frustumCulled = false;
   }
 
-  emit(at: THREE.Vector3, level: number, count: number) {
-    this.tmp.setHex(SPARK_COLORS[level] ?? 0xffffff);
+  private burst(at: THREE.Vector3, hex: number, count: number, speed: number, up: number, life: number) {
+    this.tmp.setHex(hex);
     for (let k = 0; k < count; k++) {
       const i = this.next;
       this.next = (this.next + 1) % MAX;
       this.pos.set([at.x, at.y, at.z], i * 3);
-      this.vel.set([(Math.random() - 0.5) * 4, 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 4], i * 3);
+      this.vel.set([(Math.random() - 0.5) * speed, up + Math.random() * up, (Math.random() - 0.5) * speed], i * 3);
       this.col.set([this.tmp.r, this.tmp.g, this.tmp.b], i * 3);
-      this.life[i] = 0.25 + Math.random() * 0.15;
+      this.life[i] = life * (0.7 + Math.random() * 0.5);
     }
+  }
+
+  emit(at: THREE.Vector3, level: number, count: number) {
+    this.burst(at, SPARK_COLORS[level] ?? 0xffffff, count, 4, 1.5, 0.3);
+  }
+
+  emitBoost(at: THREE.Vector3) {
+    this.burst(at, BOOST_COLOR, 10, 6, 2, 0.35);
+  }
+
+  emitNitro(at: THREE.Vector3) {
+    this.burst(at, NITRO_COLOR, 14, 7, 2.5, 0.4);
+  }
+
+  emitHit(at: THREE.Vector3) {
+    this.burst(at, HIT_COLOR, 18, 8, 3, 0.45);
   }
 
   update(dt: number) {
