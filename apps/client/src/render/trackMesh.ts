@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Track } from "@derrape/shared";
+import { sharedVertexToonDouble } from "./materials";
 
 // Malla de la pista generada a partir de la línea central: asfalto, bordillos, arcén,
 // muros y talud hasta el suelo (para los tramos elevados).
@@ -68,7 +69,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
     geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(geo, sharedVertexToonDouble());
     group.add(mesh);
     return mesh;
   }
@@ -100,7 +101,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   const g = checker.getContext("2d")!;
   for (let x = 0; x < 16; x++) {
     for (let y = 0; y < 2; y++) {
-      g.fillStyle = (x + y) % 2 === 0 ? "#ffffff" : "#1b1b1b";
+      g.fillStyle = (x + y) % 2 === 0 ? "#F3E7D3" : "#120F1E";
       g.fillRect(x, y, 1, 1);
     }
   }

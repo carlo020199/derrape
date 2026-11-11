@@ -87,6 +87,7 @@ export function setupGarage(preview: GaragePreview, actions: GarageActions) {
         const diff = final[key] - k.stats[key];
         const bar = document.createElement("span");
         bar.className = "bar";
+        bar.dataset.stat = key;
         for (let i = 1; i <= 5; i++) bar.append(Object.assign(document.createElement("i"), { className: i <= final[key] ? "on" : "" }));
         row.append(
           Object.assign(document.createElement("span"), { textContent: STAT_NAMES[key] }),

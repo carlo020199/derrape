@@ -31,7 +31,26 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyQ") itemQueue.push("back");
 });
 
+let hintTimer = 0;
+
+/** Vuelve a enseñar la ayuda táctil al empezar una carrera. Se va al primer toque o a los 4 s. */
+export function showTouchHint() {
+  document.body.classList.remove("hint-gone");
+  const hint = document.querySelector<HTMLElement>("#touch-help");
+  if (!hint) return;
+  hint.classList.remove("show");
+  void hint.offsetWidth;
+  hint.classList.add("show");
+  window.clearTimeout(hintTimer);
+  hintTimer = window.setTimeout(() => document.body.classList.add("hint-gone"), 4500);
+}
+
 export function setupTouchControls(zone: HTMLElement) {
+  // En un móvil la ayuda de teclado no debe asomar ni antes del primer toque.
+  if (window.matchMedia("(pointer: coarse)").matches) {
+    touch.active = true;
+    document.body.classList.add("touch");
+  }
   const fingers = new Map<number, FingerGesture>();
   let steering: number | null = null;
 
@@ -41,6 +60,10 @@ export function setupTouchControls(zone: HTMLElement) {
     document.body.classList.add("touch");
   };
   window.addEventListener("touchstart", activate, { passive: true });
+  window.addEventListener("pointerdown", () => {
+    if (document.body.classList.contains("in-menu")) return;
+    document.body.classList.add("hint-gone");
+  });
 
   const sync = () => {
     touch.holding = fingers.size > 0;

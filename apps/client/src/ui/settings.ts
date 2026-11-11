@@ -6,7 +6,7 @@ export interface Settings {
 }
 
 const KEY = "derrape.settings";
-const DEFAULTS: Settings = { gyro: false, showFps: true };
+const DEFAULTS: Settings = { gyro: false, showFps: false };
 
 function load(): Settings {
   try {

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { ItemWorld } from "@derrape/shared";
+import { toonMaterial } from "./materials";
 
 // Dibuja cajas, manchas de aceite y cohetes. Las mallas se reutilizan (pool) para no crear objetos por frame.
 
@@ -65,10 +66,10 @@ export class ItemsView {
 
     const bodyGeo = new THREE.ConeGeometry(0.35, 1.4, 8);
     bodyGeo.rotateX(Math.PI / 2);
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe63946 });
+    const bodyMat = toonMaterial({ color: 0xd9362b });
     const flameGeo = new THREE.ConeGeometry(0.25, 0.7, 6);
     flameGeo.rotateX(-Math.PI / 2);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffd23f });
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb423 });
     this.rockets = new Pool(this.group, () => {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(bodyGeo, bodyMat));

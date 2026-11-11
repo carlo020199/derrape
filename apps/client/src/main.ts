@@ -49,6 +49,8 @@ window.addEventListener("pointerdown", unlockOnce);
 // --- Lo común a todas las carreras ---
 const canvas = $<HTMLCanvasElement>("#game");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
 const camera = new THREE.PerspectiveCamera(CAMERA.baseFov, 1, 0.1, 500);
 const view: GameView = {
   renderer,
@@ -107,11 +109,15 @@ async function loadDef(trackId: string) {
 }
 
 // --- En solitario ---
+let soloToken = 0;
 async function startSolo(trackId: string) {
+  const token = ++soloToken;
   endSession();
   soloTrack = trackId;
   document.body.classList.remove("online");
   const def = await loadDef(trackId);
+  // Si se cambió de circuito mientras este cargaba, no se pinta el trazado viejo.
+  if (token !== soloToken) return;
   showScreen(null);
   session = createRaceSession(view, { def, look: { character: profile.character, kart: profile.kart, color: KART_COLORS[profile.color] ?? KART_COLORS[0] } });
 }

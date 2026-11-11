@@ -61,13 +61,16 @@ import {
 import { sfx } from "../audio/sfx";
 import { readInput } from "../input";
 import { readKeyboard } from "../input/keyboard";
-import { takeItemAction, touch } from "../input/touch";
+import { showTouchHint, takeItemAction, touch } from "../input/touch";
 import { INTERP_DELAY, ItemsBuffer, SnapshotBuffer } from "../net/interpolation";
 import type { Net } from "../net/net";
+import { BlobShadows } from "../render/blobShadow";
 import type { ChaseCamera } from "../render/chaseCamera";
 import { ItemsView } from "../render/itemsView";
 import { createKartModel, type KartModel } from "../render/kartModel";
+import { toonMaterial } from "../render/materials";
 import { Minimap } from "../render/minimap";
+import { createGradientSky, lighten } from "../render/sky";
 import { createNameTag } from "../render/nameTag";
 import type { AutoQuality } from "../render/quality";
 import { Sparks } from "../render/sparks";
@@ -173,21 +176,29 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const track = buildTrackFromDef(def);
   const theme = THEMES[def.theme];
   const laps = online?.start.laps ?? def.laps;
+  showTouchHint();
+
+  // El cielo (radio 230) tiene que caber en el plano lejano. La niebla corta a 190.
+  camera.far = 260;
+  camera.updateProjectionMatrix();
 
   // --- Escena ---
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(theme.sky);
-  scene.fog = new THREE.Fog(theme.sky, theme.fog[0], theme.fog[1]);
-  scene.add(new THREE.HemisphereLight(0xffffff, theme.ground, 1.4));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.3);
-  sun.position.set(30, 60, 20);
-  scene.add(sun);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshLambertMaterial({ color: theme.ground }));
+  scene.background = new THREE.Color(theme.horizon);
+  scene.fog = new THREE.Fog(theme.horizon, theme.fog[0], theme.fog[1]);
+  scene.add(new THREE.HemisphereLight(lighten(theme.sky, 0.55), theme.ground, 1.15));
+  const moon = new THREE.DirectionalLight(0xcfc4ff, 1.05);
+  moon.position.set(-50, 80, 30);
+  scene.add(moon);
+  const sky = createGradientSky(theme.sky, theme.horizon, 230);
+  scene.add(sky);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), toonMaterial({ color: theme.ground }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = theme.track.groundY;
   scene.add(ground);
   scene.add(createTrackMesh(track, theme.track));
   theme.decorate(scene, track, def);
+  const blobs = new BlobShadows(scene);
 
   const minimap = new Minimap($<HTMLCanvasElement>("#minimap"));
   minimap.setTrack(track);
@@ -268,6 +279,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       ),
     ];
   }
+  const playerHex = `#${(online
+    ? (KART_COLORS[online.players.find((p) => p.id === online.myId)?.color ?? 0] ?? KART_COLORS[0])
+    : (opts.look?.color ?? KART_COLORS[0])
+  )
+    .toString(16)
+    .padStart(6, "0")}`;
 
   // Objetos. En solitario se simulan aquí. Online los decide el servidor: este mundo solo sirve
   // para dibujar lo que llega por red (las cajas salen en los mismos sitios en todos los móviles).
@@ -696,7 +713,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         lastCount = n;
         countdownEl.textContent = String(n);
         countdownEl.hidden = false;
-        countdownEl.classList.remove("pop");
+        countdownEl.classList.remove("pop", "go");
         void countdownEl.offsetWidth;
         countdownEl.classList.add("pop");
         sfx.countdown(n);
@@ -705,6 +722,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       lastCount = 0;
       countdownEl.textContent = "¡YA!";
       countdownEl.classList.remove("pop");
+      countdownEl.classList.add("go");
       void countdownEl.offsetWidth;
       countdownEl.classList.add("pop");
       sfx.countdown(0);
@@ -784,10 +802,15 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     const me = player.race.state;
     const root = player.model.root;
     chase.update(root.position.x, player.y, root.position.z, root.rotation.y, me.speed / KART.maxSpeed, dt);
+    sky.position.copy(camera.position);
+    blobs.update(track, [
+      ...locals.map((r) => ({ x: r.model.root.position.x, z: r.model.root.position.z, on: true })),
+      ...remotes.map((r) => ({ x: r.model.root.position.x, z: r.model.root.position.z, on: r.model.root.visible })),
+    ]);
     renderer.render(scene, camera);
 
     const dots = [
-      { x: me.x, z: me.z, me: true, color: "#ffffff" },
+      { x: me.x, z: me.z, me: true, color: playerHex },
       ...locals.filter((r) => r !== player).map((r, i) => ({ x: r.race.state.x, z: r.race.state.z, color: `#${KART_COLORS[(i + 1) % KART_COLORS.length]!.toString(16).padStart(6, "0")}` })),
       ...remotes.filter((r) => r.shown).map((r) => ({ x: r.shown!.x, z: r.shown!.z, color: "#9b5de5" })),
     ];
@@ -832,10 +855,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       // Liberar la memoria de la GPU (geometrías, materiales y texturas de este circuito).
       scene.traverse((o) => {
         const mesh = o as THREE.Mesh;
-        mesh.geometry?.dispose();
+        if (mesh.geometry && !mesh.geometry.userData.shared) mesh.geometry.dispose();
         const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
         for (const m of mats) {
-          (m as THREE.MeshBasicMaterial).map?.dispose();
+          if (m.userData.shared) continue;
+          const mat = m as THREE.MeshBasicMaterial;
+          if (mat.map && !mat.map.userData.shared) mat.map.dispose();
           m.dispose();
         }
       });

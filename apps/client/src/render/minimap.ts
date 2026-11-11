@@ -1,5 +1,29 @@
 import { pointAt, type Track } from "@derrape/shared";
 
+export interface MapBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+/**
+ * Proyecta un punto del mundo al canvas.
+ * +z queda arriba. +x se voltea: en la cámara de persecución, con el kart
+ * mirando hacia +z, el +x del mundo está a su izquierda. Sin el volteo,
+ * una curva a la izquierda se dibuja a la derecha.
+ */
+export function projectMinimap(x: number, z: number, bounds: MapBounds, width: number, height: number, pad = 14): [number, number] {
+  const span = Math.max(1e-3, bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ);
+  // Escala uniforme y margen: el canvas se recorta en círculo. Si el trazado
+  // (un óvalo) llena el cuadrado, el trazo cae en el borde y desaparece.
+  const fit = (Math.min(width, height) - pad * 2) * 0.72;
+  const scale = fit / span;
+  const midX = (bounds.minX + bounds.maxX) / 2;
+  const midZ = (bounds.minZ + bounds.maxZ) / 2;
+  return [width / 2 - (x - midX) * scale, height / 2 - (z - midZ) * scale];
+}
+
 /** Minimapa 2D del circuito (canvas HTML encima del juego). */
 export class Minimap {
   private readonly ctx: CanvasRenderingContext2D;
@@ -27,28 +51,21 @@ export class Minimap {
     this.maxX = Math.max(...xs);
     this.minZ = Math.min(...zs);
     this.maxZ = Math.max(...zs);
+    this.draw([], 0, track);
   }
 
   private project(x: number, z: number): [number, number] {
-    const w = this.canvas.width - this.pad * 2;
-    const h = this.canvas.height - this.pad * 2;
-    const sx = (x - this.minX) / Math.max(1e-3, this.maxX - this.minX);
-    const sz = (z - this.minZ) / Math.max(1e-3, this.maxZ - this.minZ);
-    return [this.pad + sx * w, this.pad + (1 - sz) * h];
+    return projectMinimap(x, z, { minX: this.minX, maxX: this.maxX, minZ: this.minZ, maxZ: this.maxZ }, this.canvas.width, this.canvas.height, this.pad);
   }
 
   draw(karts: { x: number; z: number; me?: boolean; color: string }[], startDist = 0, track?: Track) {
     const c = this.ctx;
     const { width: W, height: H } = this.canvas;
     c.clearRect(0, 0, W, H);
-    c.fillStyle = "rgb(0 0 0 / 0.45)";
-    c.beginPath();
-    c.roundRect(0, 0, W, H, 10);
-    c.fill();
 
     if (this.path.length < 2) return;
-    c.strokeStyle = "rgb(255 255 255 / 0.55)";
-    c.lineWidth = 2;
+    c.strokeStyle = "#F3E7D3";
+    c.lineWidth = 3;
     c.lineJoin = "round";
     c.beginPath();
     this.path.forEach((p, i) => {
@@ -62,7 +79,7 @@ export class Minimap {
     if (track) {
       const s = pointAt(track, startDist);
       const [sx, sy] = this.project(s.x, s.z);
-      c.fillStyle = "#fff";
+      c.fillStyle = "#FFB423";
       c.fillRect(sx - 2, sy - 2, 4, 4);
     }
 
@@ -73,8 +90,8 @@ export class Minimap {
       c.arc(x, y, k.me ? 4.5 : 3, 0, Math.PI * 2);
       c.fill();
       if (k.me) {
-        c.strokeStyle = "#fff";
-        c.lineWidth = 1.5;
+        c.strokeStyle = "#FFF7EA";
+        c.lineWidth = 2;
         c.stroke();
       }
     }

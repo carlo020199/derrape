@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { KART_COLORS } from "@derrape/shared";
 import { createKartModel, type KartModel } from "./kartModel";
+import { toonMaterial } from "./materials";
+import { createGradientSky } from "./sky";
 
 /**
  * Vista previa 3D del piloto y el coche elegidos, girando sobre una peana. Usa el mismo renderer que
@@ -19,14 +21,18 @@ export class GaragePreview {
     private renderer: THREE.WebGLRenderer,
     private canvas: HTMLCanvasElement,
   ) {
-    this.scene.background = new THREE.Color(0x2a3170);
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4488, 1.5));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    this.scene.background = new THREE.Color(0x1e1830);
+    this.scene.add(createGradientSky(0x120f1e, 0x2e2547, 40));
+    this.scene.add(new THREE.HemisphereLight(0x9a8cb8, 0x2e2547, 0.85));
+    const sun = new THREE.DirectionalLight(0xffb423, 1.7);
     sun.position.set(4, 8, 6);
     this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xcfc4ff, 0.55);
+    fill.position.set(-5, 3, -2);
+    this.scene.add(fill);
     const pedestal = new THREE.Mesh(
       new THREE.CylinderGeometry(2.4, 2.6, 0.2, 32),
-      new THREE.MeshLambertMaterial({ color: 0x1b1f3a }),
+      toonMaterial({ color: 0xf3e7d3 }),
     );
     pedestal.position.y = -0.1;
     this.scene.add(pedestal);
