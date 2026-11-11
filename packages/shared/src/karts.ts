@@ -18,6 +18,22 @@ export const STAT_NAMES: Record<keyof KartStats, string> = {
   weight: "Peso",
 };
 
+/**
+ * Silueta visual. No entra en la física: el choque sigue siendo la esfera de `KART.radius`
+ * y las medidas de abajo no cambian el tamaño de esa esfera.
+ */
+export type KartSkin =
+  | "classic"
+  | "coffin"
+  | "pumpkin"
+  | "tomb"
+  | "bat"
+  | "broom"
+  | "churro"
+  | "scythe"
+  | "ribs"
+  | "horns";
+
 /** Forma del coche (el cliente lo construye con primitivas). Medidas en metros; +Z es delante. */
 export interface KartLook {
   /** Largo y ancho del chasis. */
@@ -36,6 +52,8 @@ export interface KartLook {
   body: "none" | "box" | "van" | "cage" | "bars";
   /** Morro puntiagudo (deportivos). */
   nose: boolean;
+  /** Piel redondeada. Solo dibujo. */
+  skin: KartSkin;
 }
 
 export interface KartDef {
@@ -61,20 +79,21 @@ const L = (look: Partial<KartLook>): KartLook => ({
   wing: 0,
   body: "none",
   nose: false,
+  skin: "classic",
   ...look,
 });
 
 export const KARTS: readonly KartDef[] = [
-  { id: "chispa", name: "Chispa", style: "Kart clásico", stats: { speed: 3, accel: 3, handling: 3, weight: 3 }, forWho: "Equilibrado, el de empezar", look: L({}) },
-  { id: "bolido", name: "Bólido", style: "Kart de carreras alargado", stats: { speed: 5, accel: 2, handling: 2, weight: 3 }, forWho: "Rectas largas", look: L({ length: 2.8, width: 1.15, height: 0.3, nose: true, wing: 1 }) },
-  { id: "pulga", name: "Pulga", style: "Mini kart de ruedas gordas", stats: { speed: 2, accel: 5, handling: 4, weight: 1 }, forWho: "Circuitos técnicos", look: L({ length: 1.6, width: 1.1, frontWheel: 0.36, rearWheel: 0.4, frontWheelW: 0.4, rearWheelW: 0.45 }) },
-  { id: "tanque", name: "Tanque", style: "Todoterreno cuadrado", stats: { speed: 3, accel: 2, handling: 2, weight: 5 }, forWho: "Empujar a los demás", look: L({ length: 2.3, width: 1.6, height: 0.5, frontWheel: 0.4, rearWheel: 0.4, frontWheelW: 0.4, rearWheelW: 0.4, body: "box" }) },
-  { id: "centella", name: "Centella", style: "Deportivo bajo", stats: { speed: 4, accel: 3, handling: 3, weight: 2 }, forWho: "Rápido y manejable", look: L({ length: 2.5, width: 1.35, height: 0.22, nose: true, frontWheel: 0.24, rearWheel: 0.26 }) },
-  { id: "mosquito", name: "Mosquito", style: "Kart-patinete muy ligero", stats: { speed: 2, accel: 4, handling: 5, weight: 1 }, forWho: "Precisión", look: L({ length: 1.7, width: 0.7, height: 0.22, frontWheel: 0.22, rearWheel: 0.22, frontWheelW: 0.2, rearWheelW: 0.2, body: "bars" }) },
-  { id: "furgo", name: "Furgo", style: "Furgoneta de comida mini", stats: { speed: 4, accel: 1, handling: 2, weight: 5 }, forWho: "Pesado y veloz", look: L({ length: 2.6, width: 1.5, height: 0.45, frontWheel: 0.3, rearWheel: 0.3, body: "van" }) },
-  { id: "flecha", name: "Flecha", style: "Kart con alerón enorme", stats: { speed: 5, accel: 1, handling: 3, weight: 3 }, forWho: "Expertos", look: L({ length: 2.5, width: 1.25, height: 0.28, nose: true, wing: 2 }) },
-  { id: "grillo", name: "Grillo", style: "Buggy de playa", stats: { speed: 2, accel: 4, handling: 3, weight: 3 }, forWho: "Salidas y remontadas", look: L({ length: 2.1, width: 1.45, height: 0.4, frontWheel: 0.3, rearWheel: 0.38, rearWheelW: 0.42, body: "cage" }) },
-  { id: "derrapin", name: "Derrapín", style: "Kart bajo con ruedas traseras anchas", stats: { speed: 3, accel: 3, handling: 4, weight: 2 }, forWho: "Extra: el turbo de derrape carga un 15 % más rápido", driftChargeMult: 1.15, look: L({ length: 2.3, height: 0.25, rearWheel: 0.32, rearWheelW: 0.6, nose: true }) },
+  { id: "chispa", name: "Chispa", style: "Kart clásico de hueso y brasa", stats: { speed: 3, accel: 3, handling: 3, weight: 3 }, forWho: "Equilibrado, el de empezar", look: L({ skin: "classic" }) },
+  { id: "bolido", name: "Bólido", style: "Ataúd redondeado y alargado", stats: { speed: 5, accel: 2, handling: 2, weight: 3 }, forWho: "Rectas largas", look: L({ length: 2.8, width: 1.15, height: 0.3, nose: true, wing: 1, skin: "coffin" }) },
+  { id: "pulga", name: "Pulga", style: "Calabaza de ruedas gordas", stats: { speed: 2, accel: 5, handling: 4, weight: 1 }, forWho: "Circuitos técnicos", look: L({ length: 1.6, width: 1.1, frontWheel: 0.36, rearWheel: 0.4, frontWheelW: 0.4, rearWheelW: 0.45, skin: "pumpkin" }) },
+  { id: "tanque", name: "Tanque", style: "Frontal de lápida y cuatro escapes", stats: { speed: 3, accel: 2, handling: 2, weight: 5 }, forWho: "Empujar a los demás", look: L({ length: 2.3, width: 1.6, height: 0.5, frontWheel: 0.4, rearWheel: 0.4, frontWheelW: 0.4, rearWheelW: 0.4, body: "box", skin: "tomb" }) },
+  { id: "centella", name: "Centella", style: "Deportivo bajo con aletas de murciélago", stats: { speed: 4, accel: 3, handling: 3, weight: 2 }, forWho: "Rápido y manejable", look: L({ length: 2.5, width: 1.35, height: 0.22, nose: true, frontWheel: 0.24, rearWheel: 0.26, skin: "bat" }) },
+  { id: "mosquito", name: "Mosquito", style: "Patinete-escoba", stats: { speed: 2, accel: 4, handling: 5, weight: 1 }, forWho: "Precisión", look: L({ length: 1.7, width: 0.7, height: 0.22, frontWheel: 0.22, rearWheel: 0.22, frontWheelW: 0.2, rearWheelW: 0.2, body: "bars", skin: "broom" }) },
+  { id: "furgo", name: "Furgo", style: "Furgoneta de churros del más allá", stats: { speed: 4, accel: 1, handling: 2, weight: 5 }, forWho: "Pesado y veloz", look: L({ length: 2.6, width: 1.5, height: 0.45, frontWheel: 0.3, rearWheel: 0.3, body: "van", skin: "churro" }) },
+  { id: "flecha", name: "Flecha", style: "Alerón en hoja de guadaña", stats: { speed: 5, accel: 1, handling: 3, weight: 3 }, forWho: "Expertos", look: L({ length: 2.5, width: 1.25, height: 0.28, nose: true, wing: 2, skin: "scythe" }) },
+  { id: "grillo", name: "Grillo", style: "Buggy con jaula de costillas", stats: { speed: 2, accel: 4, handling: 3, weight: 3 }, forWho: "Salidas y remontadas", look: L({ length: 2.1, width: 1.45, height: 0.4, frontWheel: 0.3, rearWheel: 0.38, rearWheelW: 0.42, body: "cage", skin: "ribs" }) },
+  { id: "derrapin", name: "Derrapín", style: "Traseras anchas y cuernecitos romos", stats: { speed: 3, accel: 3, handling: 4, weight: 2 }, forWho: "Extra: el turbo de derrape carga un 15 % más rápido", driftChargeMult: 1.15, look: L({ length: 2.3, height: 0.25, rearWheel: 0.32, rearWheelW: 0.6, nose: true, skin: "horns" }) },
 ];
 
 export const DEFAULT_KART = KARTS[0]!.id;

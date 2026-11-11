@@ -1,44 +1,59 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { driverOutlineMaterial, sharedVertexToon } from "./materials";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { PALETTE, driverOutlineMaterial, sharedBoneToon, sharedVertexToon } from "./materials";
 import {
   DEFAULT_CHARACTER,
   DEFAULT_KART,
   findCharacter,
   findKart,
   type CharacterDef,
+  type CharacterLook,
   type KartDef,
   type KartLook,
 } from "@derrape/shared";
 
-// Coches y pilotos hechos con primitivas (originales, sin assets externos). Cada pieza se fusiona
-// en UNA malla con color por vértice y las mallas se comparten entre karts iguales: un kart cuesta
-// 2 llamadas de dibujo (coche + piloto) en vez de ~30.
+// Pilotos chibi-calavera y karts redondeados, hechos con primitivas (sin assets).
+// El coche es una malla; el piloto son cuerpo + cabeza, cada uno con contorno por escala.
+// Las llamas no van en la malla: cuelgan de anclas que lee `flames.ts`.
 
 export type Mood = "idle" | "celebrate" | "angry";
 
 export interface KartModel {
   root: THREE.Group;
-  /** Parte que se inclina/gira al derrapar (el root sigue el rumbo real). */
+  /** Parte que se inclina al derrapar (el root sigue el rumbo real). */
   body: THREE.Group;
   /** Posiciones locales de las ruedas traseras, para las chispas. */
   rearWheels: THREE.Vector3[];
-  /** Burbuja del escudo (oculta si no hay escudo). */
+  /** Bocas de escape, en el chasis. */
+  exhausts: THREE.Object3D[];
+  /** Llamas del piloto (coleta, melena, antena, bufanda, farol). */
+  ornaments: THREE.Object3D[];
+  /** Esas llamas son espectrales aunque el escape vaya en naranja. */
+  ornamentSpectral: boolean;
+  /** Centro de la cabeza, para las chispas del enfado. */
+  head: THREE.Object3D;
   shield: THREE.Mesh;
-  /** Cambia el gesto del piloto (celebrar, enfadado). `time` en segundos. */
+  /** Largo del coche, para el tamaño de la llama. */
+  flameLength: number;
+  mood: Mood;
+  /** Cerca de la cámara. Lejos se cambia al modelo barato. */
+  readonly detail: boolean;
+  setDetail(near: boolean): void;
   setMood(mood: Mood, time: number): void;
+  setOutline(on: boolean): void;
 }
 
-const shieldGeo = new THREE.SphereGeometry(1.7, 16, 12);
+const shieldGeo = new THREE.SphereGeometry(1.7, 12, 8);
 shieldGeo.userData.shared = true;
-const shieldMat = new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.3, depthWrite: false });
+const shieldMat = new THREE.MeshBasicMaterial({ color: 0x3ff2c8, transparent: true, opacity: 0.28, depthWrite: false });
 shieldMat.userData.shared = true;
 const partsMat = sharedVertexToon();
+const boneMat = sharedBoneToon();
 const outlineMat = driverOutlineMaterial();
 
-const DARK = 0x222831;
-const TYRE = 0x1b1b1b;
-const METAL = 0x9aa5b1;
+const { noche: NOCHE, hueso: HUESO, huesoSombra: HUESO_S, marfil: MARFIL, brasa: BRASA, llama: LLAMA, sombra: SOMBRA, ciruela: CIRUELA } = PALETTE;
+const TYRE = 0x16141f;
 
 type Vec3 = [number, number, number];
 
@@ -50,81 +65,138 @@ class Parts {
   private e = new THREE.Euler();
 
   add(geo: THREE.BufferGeometry, color: number, pos: Vec3, rot: Vec3 = [0, 0, 0], scale: Vec3 = [1, 1, 1]) {
+    const src = geo.index ? geo.toNonIndexed() : geo;
+    if (src !== geo) geo.dispose();
     this.m.compose(new THREE.Vector3(...pos), this.q.setFromEuler(this.e.set(...rot)), new THREE.Vector3(...scale));
-    geo.applyMatrix4(this.m);
+    src.applyMatrix4(this.m);
     const c = new THREE.Color(color);
-    const n = geo.getAttribute("position").count;
+    const n = src.getAttribute("position").count;
     const colors = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) colors.set([c.r, c.g, c.b], i * 3);
-    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    this.list.push(geo);
+    src.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    this.list.push(src);
     return this;
   }
 
-  box(w: number, h: number, d: number, color: number, pos: Vec3, rot?: Vec3) {
-    return this.add(new THREE.BoxGeometry(w, h, d), color, pos, rot);
+  ball(r: number, color: number, pos: Vec3, scale?: Vec3, seg: [number, number] = [6, 5]) {
+    return this.add(new THREE.SphereGeometry(r, seg[0], seg[1]), color, pos, [0, 0, 0], scale);
   }
 
-  ball(r: number, color: number, pos: Vec3, scale?: Vec3) {
-    return this.add(new THREE.SphereGeometry(r, 10, 8), color, pos, [0, 0, 0], scale);
-  }
-
-  /** Media esfera (casco, gorra). */
   dome(r: number, color: number, pos: Vec3, scale?: Vec3) {
-    return this.add(new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), color, pos, [0, 0, 0], scale);
+    return this.add(new THREE.SphereGeometry(r, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), color, pos, [0, 0, 0], scale);
   }
 
-  /** Cilindro con el eje en Y (usa `rot` para girarlo). */
-  cyl(r: number, h: number, color: number, pos: Vec3, rot?: Vec3) {
-    return this.add(new THREE.CylinderGeometry(r, r, h, 10), color, pos, rot);
+  capsule(radius: number, length: number, color: number, pos: Vec3, rot?: Vec3, scale?: Vec3, radial = 5) {
+    return this.add(new THREE.CapsuleGeometry(radius, length, 1, radial), color, pos, rot, scale);
   }
 
-  torus(r: number, tube: number, color: number, pos: Vec3, rot?: Vec3) {
-    return this.add(new THREE.TorusGeometry(r, tube, 6, 12), color, pos, rot);
+  cyl(rTop: number, rBot: number, h: number, color: number, pos: Vec3, rot?: Vec3) {
+    return this.add(new THREE.CylinderGeometry(rTop, rBot, h, 5), color, pos, rot);
+  }
+
+  torus(r: number, tube: number, color: number, pos: Vec3, rot?: Vec3, arc = Math.PI * 2) {
+    return this.add(new THREE.TorusGeometry(r, tube, 3, 8, arc), color, pos, rot);
+  }
+
+  cone(r: number, h: number, color: number, pos: Vec3, rot?: Vec3) {
+    const g = new THREE.ConeGeometry(r, h, 5);
+    g.translate(0, h / 2, 0);
+    return this.add(g, color, pos, rot);
+  }
+
+  rounded(w: number, h: number, d: number, color: number, pos: Vec3, rot?: Vec3, radius = 0.1) {
+    const rad = Math.min(radius, w / 2, h / 2, d / 2);
+    return this.add(new RoundedBoxGeometry(w, h, d, 1, Math.max(0.02, rad)), color, pos, rot);
   }
 
   build(): THREE.BufferGeometry {
-    const merged = mergeGeometries(this.list, false)!;
+    const merged = mergeGeometries(this.list, false);
     for (const g of this.list) g.dispose();
+    if (!merged) throw new Error("no se pudo fusionar la malla");
+    // No recomputar normales: en una malla sin índices cada triángulo quedaría plano
+    // y la esfera de 20×14 se vería como una cabeza facetada.
+    if (!merged.getAttribute("normal")) merged.computeVertexNormals();
     return merged;
   }
 }
 
 const mix = (a: number, b: number, t: number) => new THREE.Color(a).lerp(new THREE.Color(b), t).getHex();
 
+interface BuiltKart {
+  geo: THREE.BufferGeometry;
+  seat: THREE.Vector3;
+  rear: THREE.Vector3[];
+  exhausts: THREE.Vector3[];
+}
+
+interface BuiltDriver {
+  body: THREE.BufferGeometry;
+  head: THREE.BufferGeometry;
+  pupils: THREE.BufferGeometry;
+  headPos: THREE.Vector3;
+  /** Adornos en el espacio de la cabeza (origen = centro de la calavera). */
+  ornaments: THREE.Vector3[];
+  spectral: boolean;
+  pupil: number;
+}
+
 // --- Coche ---
 
-function buildKartGeometry(look: KartLook, color: number): { geo: THREE.BufferGeometry; seat: THREE.Vector3; rear: THREE.Vector3[] } {
+function emblem(p: Parts, pos: Vec3) {
+  p.ball(0.11, HUESO, pos, [1, 1, 0.45], [5, 4]);
+  p.ball(0.028, NOCHE, [pos[0] - 0.038, pos[1] + 0.02, pos[2] + 0.04], undefined, [4, 3]);
+  p.ball(0.028, NOCHE, [pos[0] + 0.038, pos[1] + 0.02, pos[2] + 0.04], undefined, [4, 3]);
+}
+
+function buildKartGeometry(look: KartLook, color: number): BuiltKart {
   const p = new Parts();
   const { length: len, width: wid, height: hgt } = look;
-  const wheelTop = Math.max(look.frontWheel, look.rearWheel);
-  const y0 = wheelTop * 0.9 + hgt / 2; // altura del centro del chasis
-  const top = y0 + hgt / 2;
-  const light = mix(color, 0xffffff, 0.35);
+  const y0 = Math.max(look.frontWheel, look.rearWheel) * 0.9 + hgt / 2;
+  const light = mix(color, HUESO, 0.35);
+  const dark = mix(color, NOCHE, 0.55);
   const half = Math.PI / 2;
 
-  // Chasis y parachoques
-  if (look.body === "bars") p.box(look.width * 0.9, hgt, len, color, [0, y0, 0]);
-  else p.box(wid, hgt, len, color, [0, y0, 0]);
-  p.box(wid + 0.1, 0.12, 0.3, DARK, [0, y0 + 0.05, len / 2 + 0.05]);
-  if (look.nose) {
-    p.box(wid * 0.55, hgt * 0.8, len * 0.28, light, [0, y0 - 0.02, len / 2 + 0.2]);
-    p.box(wid * 0.9, 0.06, 0.28, DARK, [0, y0 - hgt / 2, len / 2 + 0.2]);
+  // Carrocería más alta y con bisel grande: el chasis de datos es bajo y se leía como una losa.
+  const bodyH = Math.max(hgt * 1.65, 0.5);
+  const yBody = Math.max(look.frontWheel, look.rearWheel) * 0.62 + bodyH * 0.28;
+  if (look.skin === "coffin") {
+    p.capsule(bodyH * 0.42, len * 0.38, color, [0, yBody, 0], [half, 0, 0], [wid / (bodyH * 0.9), 0.72, 1]);
+  } else if (look.skin === "pumpkin") {
+    const r = Math.min(wid, len) * 0.48;
+    p.ball(r, color, [0, yBody, 0], [1, 0.78, 1.08], [8, 6]);
+    for (let i = 0; i < 3; i++) {
+      p.torus(r * 0.9, 0.02, dark, [0, yBody, 0], [(i / 3) * Math.PI, half, 0]);
+    }
+  } else if (look.skin === "broom") {
+    p.capsule(0.055, len * 0.92, MARFIL, [0, yBody, 0.05], [half, 0, 0]);
+    p.capsule(0.045, 0.55, color, [0, yBody + 0.38, len * 0.28], [0.4, 0, 0]);
+  } else {
+    p.rounded(wid * 0.98, bodyH, len * 0.84, color, [0, yBody, 0.02], undefined, Math.min(0.22, bodyH * 0.46));
   }
 
-  // Ruedas
+  const nosed = look.skin === "classic" || look.skin === "bat" || look.skin === "horns" || look.skin === "scythe" || look.skin === "tomb";
+  if (nosed) {
+    p.add(new THREE.SphereGeometry(wid * 0.28, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2), light, [0, yBody, len * 0.4], [half, 0, 0], [1, 0.62, 0.8]);
+    emblem(p, [0, yBody + bodyH * 0.12, len * 0.48]);
+  }
+
+  // Ruedas 1,3 veces más anchas. El radio de apoyo no cambia: solo el dibujo.
   const fz = len * 0.33;
   const rz = -len * 0.33;
+  const hub = look.skin === "tomb" || look.skin === "churro" ? HUESO : look.skin === "pumpkin" ? LLAMA : BRASA;
   const wheel = (r: number, w: number, x: number, z: number) => {
-    p.cyl(r, w, TYRE, [x, r, z], [0, 0, half]);
-    p.cyl(r * 0.5, w + 0.02, METAL, [x, r, z], [0, 0, half]);
+    const fat = w * 1.3;
+    const sign = Math.sign(x || 1);
+    const xw = x + sign * w * 0.16;
+    p.add(new THREE.TorusGeometry(r * 0.72, Math.min(r * 0.36, fat * 0.42), 3, 6), TYRE, [xw, r, z], [0, half, 0]);
+    p.cyl(r * 0.4, r * 0.4, fat * 0.28, hub, [xw, r, z], [0, 0, half]);
+    p.ball(r * 0.24, HUESO, [xw + sign * fat * 0.16, r, z], [0.36, 1, 1], [5, 3]);
   };
   const fx = wid / 2 + look.frontWheelW / 2 - 0.05;
   const rx = wid / 2 + look.rearWheelW / 2 - 0.05;
-  if (look.body === "bars") {
-    // Patinete: ruedas en el eje central.
-    p.cyl(look.frontWheel, look.frontWheelW, TYRE, [0, look.frontWheel, fz], [0, 0, half]);
-    p.cyl(look.rearWheel, look.rearWheelW, TYRE, [0, look.rearWheel, rz], [0, 0, half]);
+  if (look.skin === "broom") {
+    wheel(look.frontWheel, look.frontWheelW, 0, fz);
+    wheel(look.rearWheel, look.rearWheelW, 0, rz);
   } else {
     wheel(look.frontWheel, look.frontWheelW, -fx, fz);
     wheel(look.frontWheel, look.frontWheelW, fx, fz);
@@ -132,150 +204,283 @@ function buildKartGeometry(look: KartLook, color: number): { geo: THREE.BufferGe
     wheel(look.rearWheel, look.rearWheelW, rx, rz);
   }
 
-  // Carrocería extra y posición del asiento
-  let seatZ = -len * 0.1;
-  const seatY = top + 0.05;
-  switch (look.body) {
-    case "box": {
-      p.box(wid * 0.92, 0.35, len * 0.36, light, [0, top + 0.17, len * 0.28]); // capó
-      for (const s of [-1, 1]) p.box(0.08, 0.9, 0.08, DARK, [s * wid * 0.4, seatY + 0.45, seatZ - 0.45]);
-      p.box(wid * 0.85, 0.08, 0.1, DARK, [0, seatY + 0.9, seatZ - 0.45]);
+  let seatZ = -len * 0.08;
+  const seatY = yBody + bodyH * 0.42;
+  switch (look.skin) {
+    case "tomb": {
+      p.ball(0.28, HUESO, [0, yBody + bodyH * 0.2, len * 0.46], [wid * 1.1, 0.9, 0.28], [6, 4]);
       break;
     }
-    case "van": {
-      seatZ = len * 0.18;
-      p.box(wid * 0.96, 1.15, len * 0.5, light, [0, top + 0.57, -len * 0.2]); // caja de la furgo
-      p.box(wid * 1.0, 0.1, len * 0.52, color, [0, top + 1.18, -len * 0.2]); // toldo
-      p.box(wid * 0.7, 0.4, 0.05, DARK, [0, top + 0.7, len * 0.05 + 0.02]); // ventanilla de servicio
-      p.box(wid * 0.9, 0.25, len * 0.22, color, [0, top + 0.12, len * 0.38]); // morro
-      break;
-    }
-    case "cage": {
-      for (const sx of [-1, 1]) {
-        p.cyl(0.04, 1.0, DARK, [sx * wid * 0.42, seatY + 0.5, seatZ + 0.45]);
-        p.cyl(0.04, 1.0, DARK, [sx * wid * 0.42, seatY + 0.5, seatZ - 0.5]);
-        p.cyl(0.04, 0.95, DARK, [sx * wid * 0.42, seatY + 1.0, seatZ - 0.02], [half, 0, 0]);
+    case "bat": {
+      for (const s of [-1, 1] as const) {
+        p.ball(0.28, dark, [s * wid * 0.55, y0 + 0.05, 0.05], [1.3, 0.18, 0.85], [6, 4]);
       }
-      p.cyl(0.04, wid * 0.84, DARK, [0, seatY + 1.0, seatZ - 0.5], [0, 0, half]);
       break;
     }
-    case "bars": {
-      p.cyl(0.04, 0.9, METAL, [0, top + 0.45, fz]);
-      p.cyl(0.04, 0.7, DARK, [0, top + 0.9, fz], [0, 0, half]);
-      seatZ = -len * 0.12;
+    case "broom": {
+      for (let i = -3; i <= 3; i++) {
+        p.cone(0.05, 0.32, LLAMA, [i * 0.07, y0 + 0.02, -len * 0.42], [half + i * 0.12, 0, 0]);
+      }
+      seatZ = -len * 0.05;
+      break;
+    }
+    case "churro": {
+      seatZ = len * 0.12;
+      p.capsule(0.36, len * 0.22, light, [0, yBody + bodyH * 0.45, -len * 0.14], [half, 0, 0], [wid * 1.1, 0.8, 1]);
+      p.capsule(0.045, len * 0.28, CIRUELA, [0, yBody + bodyH * 0.85, -len * 0.14], [half, 0, 0], [wid * 6, 1, 1]);
+      break;
+    }
+    case "scythe": {
+      p.add(new THREE.TorusGeometry(wid * 0.85, 0.07, 3, 10, Math.PI * 1.15), HUESO, [0, yBody + bodyH * 0.5 + 0.35, -len * 0.15], [0.4, 0, 0]);
+      break;
+    }
+    case "ribs": {
+      for (let i = 0; i < 3; i++) {
+        p.torus(wid * 0.42, 0.035, HUESO, [0, seatY + 0.35, seatZ - 0.15 + i * 0.18], [half, 0, 0], Math.PI);
+      }
+      break;
+    }
+    case "horns": {
+      p.cone(0.07, 0.22, HUESO, [-0.16, y0 + hgt * 0.45, len * 0.28], [-0.5, 0, 0.3]);
+      p.cone(0.07, 0.22, HUESO, [0.16, y0 + hgt * 0.45, len * 0.28], [-0.5, 0, -0.3]);
       break;
     }
     default:
       break;
   }
 
-  // Asiento y volante
-  p.box(0.8, 0.12, 0.7, DARK, [0, seatY, seatZ]);
-  p.box(0.8, 0.5, 0.12, DARK, [0, seatY + 0.28, seatZ - 0.32]);
-  if (look.body !== "bars") p.torus(0.17, 0.035, DARK, [0, seatY + 0.55, seatZ + 0.62], [-0.9, 0, 0]);
+  p.capsule(0.12, 0.22, NOCHE, [0, seatY, seatZ], [half, 0, 0], [1.4, 0.55, 1]);
 
-  // Alerón
-  if (look.wing > 0) {
+  if (look.wing > 0 && look.skin !== "scythe") {
     const big = look.wing === 2;
-    const wy = top + (big ? 0.85 : 0.5);
-    const ww = wid * (big ? 1.3 : 1.0);
-    const wz = -len / 2 - 0.05;
-    p.box(ww, 0.08, big ? 0.5 : 0.35, color === DARK ? METAL : light, [0, wy, wz]);
-    for (const s of [-1, 1]) {
-      p.box(0.08, big ? 0.45 : 0.3, 0.1, DARK, [s * wid * 0.3, wy - (big ? 0.22 : 0.15), wz]);
-      if (big) p.box(0.06, 0.3, 0.55, color, [s * ww * 0.5, wy + 0.08, wz]);
-    }
+    const wy = yBody + bodyH * 0.5 + (big ? 0.35 : 0.18);
+    const wz = -len * 0.42;
+    p.capsule(0.05, wid * (big ? 0.7 : 0.45), light, [0, wy, wz], [0, 0, half], [1, 0.7, big ? 2.2 : 1.6]);
   }
 
-  return {
-    geo: p.build(),
-    seat: new THREE.Vector3(0, seatY + 0.08, seatZ),
-    rear:
-      look.body === "bars"
-        ? [new THREE.Vector3(0, 0.1, rz - look.rearWheel)]
-        : [new THREE.Vector3(-rx, 0.1, rz - look.rearWheel), new THREE.Vector3(rx, 0.1, rz - look.rearWheel)],
+  // Escapes: 4 en los pesados, pareja central en Derrapín, 2 en el resto.
+  const exhausts: THREE.Vector3[] = [];
+  const tilt = -Math.PI / 2 + (25 * Math.PI) / 180;
+  const dir = new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(tilt, 0, 0));
+  const addExhaust = (x: number, y: number, z: number) => {
+    const mouth = new THREE.Vector3(x, y, z);
+    const center = mouth.clone().addScaledVector(dir, -0.28);
+    p.cyl(0.09, 0.15, 0.7, MARFIL, [center.x, center.y, center.z], [tilt, 0, 0]);
+    exhausts.push(mouth);
   };
+  const ey = yBody + 0.06;
+  const ez = -len * 0.58;
+  if (look.skin === "tomb" || look.skin === "churro") {
+    addExhaust(-wid * 0.32, ey, ez);
+    addExhaust(-wid * 0.12, ey + 0.04, ez - 0.02);
+    addExhaust(wid * 0.12, ey + 0.04, ez - 0.02);
+    addExhaust(wid * 0.32, ey, ez);
+  } else if (look.skin === "horns") {
+    addExhaust(-0.1, ey, ez);
+    addExhaust(0.1, ey, ez);
+  } else if (look.skin === "broom") {
+    addExhaust(0, ey, -len * 0.5);
+  } else {
+    const spread = look.skin === "pumpkin" ? 0.18 : wid * 0.28;
+    addExhaust(-spread, ey, ez);
+    addExhaust(spread, ey, ez);
+  }
+
+  const rear =
+    look.skin === "broom"
+      ? [new THREE.Vector3(0, 0.08, rz - look.rearWheel * 0.3)]
+      : [new THREE.Vector3(-rx, 0.08, rz - look.rearWheel * 0.2), new THREE.Vector3(rx, 0.08, rz - look.rearWheel * 0.2)];
+
+  return { geo: p.build(), seat: new THREE.Vector3(0, seatY + 0.06, seatZ), rear, exhausts };
 }
 
-// --- Piloto (origen = el asiento; +Z = delante) ---
+// --- Piloto ---
 
-function buildDriverGeometry(c: CharacterDef): THREE.BufferGeometry {
-  const p = new Parts();
-  const half = Math.PI / 2;
-  const arms = (color: number, y = 0.6, w = 0.16) => {
-    for (const s of [-1, 1]) p.box(w, w, 0.5, color, [s * 0.32, y, 0.3], [0.25, s * -0.15, 0]);
-  };
-
-  switch (c.look) {
-    case "mechanic": {
-      p.box(0.52, 0.55, 0.36, c.color, [0, 0.4, 0]); // mono azul
-      arms(c.color);
-      p.ball(0.27, c.skin, [0, 0.93, 0]);
-      p.dome(0.29, 0x5b3a29, [0, 0.95, -0.03], [1, 0.95, 1]); // pelo
-      p.ball(0.1, 0x5b3a29, [0, 0.95, -0.32]); // coleta
-      p.torus(0.27, 0.045, c.accent, [0, 1.05, 0.02], [half, 0, 0]); // pañuelo en la frente
-      p.box(0.1, 0.62, 0.06, METAL, [-0.18, 0.55, -0.26], [0, 0, 0.35]); // llave inglesa
-      p.ball(0.09, METAL, [-0.3, 0.87, -0.26]);
-      break;
-    }
-    case "robot": {
-      p.ball(0.36, c.color, [0, 0.36, 0], [1, 0.9, 1]);
-      arms(c.skin, 0.5, 0.13);
-      p.box(0.62, 0.5, 0.5, c.color, [0, 0.95, 0]);
-      p.box(0.5, 0.34, 0.05, 0x10202c, [0, 0.95, 0.26]); // pantalla
-      p.box(0.1, 0.1, 0.06, c.accent, [-0.12, 0.98, 0.29]); // ojos
-      p.box(0.1, 0.1, 0.06, c.accent, [0.12, 0.98, 0.29]);
-      p.box(0.2, 0.04, 0.06, c.accent, [0, 0.86, 0.29]); // boca
-      p.cyl(0.025, 0.3, METAL, [0, 1.35, 0]); // antena
-      p.ball(0.07, 0xe63946, [0, 1.52, 0]);
-      for (const s of [-1, 1]) p.cyl(0.08, 0.1, c.skin, [s * 0.36, 0.95, 0], [0, 0, half]);
-      break;
-    }
-    case "courier": {
-      p.box(0.52, 0.55, 0.36, c.color, [0, 0.4, 0]);
-      arms(c.color);
-      p.ball(0.27, c.skin, [0, 0.93, 0]);
-      p.dome(0.29, c.accent, [0, 0.97, 0]); // gorra
-      p.box(0.34, 0.04, 0.26, c.accent, [0, 0.99, 0.3]); // visera
-      p.box(0.62, 0.62, 0.4, c.accent, [0, 0.56, -0.38]); // mochila térmica
-      p.box(0.64, 0.12, 0.42, c.color, [0, 0.62, -0.38]);
-      break;
-    }
-    case "bulldog": {
-      p.box(0.56, 0.55, 0.38, c.color, [0, 0.4, 0]);
-      arms(c.color, 0.6, 0.18);
-      p.ball(0.3, c.skin, [0, 0.95, 0], [1.2, 0.95, 1.05]); // cabeza ancha
-      p.box(0.32, 0.2, 0.22, mix(c.skin, 0xffffff, 0.3), [0, 0.86, 0.3]); // hocico
-      p.ball(0.06, DARK, [0, 0.92, 0.42]); // nariz
-      for (const s of [-1, 1]) {
-        p.box(0.1, 0.26, 0.16, 0x7a5a3a, [s * 0.36, 0.98, -0.02], [0, 0, s * 0.3]); // orejas
-        p.cyl(0.09, 0.05, DARK, [s * 0.14, 1.02, 0.27], [half, 0, 0]); // gafas de aviador
-        p.cyl(0.07, 0.06, 0x4cc9f0, [s * 0.14, 1.02, 0.28], [half, 0, 0]);
-      }
-      p.box(0.46, 0.04, 0.05, DARK, [0, 1.02, 0.2]); // puente de las gafas
-      p.torus(0.27, 0.08, c.accent, [0, 0.7, 0], [half, 0, 0]); // bufanda
-      p.box(0.14, 0.05, 0.5, c.accent, [0.12, 0.66, -0.4], [0.2, 0, 0]); // cola de la bufanda
-      break;
-    }
-    case "granny": {
-      p.box(0.64, 0.6, 0.42, c.color, [0, 0.42, 0]);
-      arms(c.color, 0.62, 0.18);
-      p.ball(0.28, c.skin, [0, 0.98, 0]);
-      p.ball(0.12, 0xe8e8e8, [0, 1.05, -0.3]); // moño
-      p.dome(0.32, c.accent, [0, 1.0, 0], [1, 0.9, 1.05]); // casco vintage
-      p.torus(0.31, 0.03, DARK, [0, 1.0, 0], [half, 0, 0]);
-      p.box(0.5, 0.1, 0.07, DARK, [0, 0.98, 0.26]); // gafas de sol
-      p.box(0.14, 0.04, 0.12, mix(c.accent, 0x000000, 0.2), [0, 1.04, 0.31]);
-      break;
-    }
+/**
+ * Calavera que se lee de frente: cráneo liso, cuencas grandes, nariz en corazón
+ * invertido, mentón y sonrisa con dientes. Las pupilas van en otra malla (emisivas).
+ */
+function skull(p: Parts, r: number, scale: Vec3 = [1, 1, 1]) {
+  p.ball(r, HUESO, [0, 0, 0], scale, [20, 14]);
+  const sx = scale[0];
+  const sy = scale[1];
+  const sz = scale[2];
+  const eyeX = r * 0.34 * sx;
+  const eyeY = r * 0.06 * sy;
+  // ~28 % del ancho de la cara. El ovalo sale hacia delante para no quedar dentro del cráneo.
+  const socketR = r * 0.23 * sx;
+  const eyeZ = r * 0.8 * sz;
+  for (const s of [-1, 1] as const) {
+    p.ball(socketR, SOMBRA, [s * eyeX, eyeY, eyeZ], [1.15, 1.35, 0.62], [6, 5]);
   }
+  // Nariz: corazón invertido (dos lóbulos y una punta hacia abajo), en sombra.
+  const ny = -r * 0.02 * sy;
+  const nz = r * 0.96 * sz;
+  p.ball(r * 0.07, SOMBRA, [-r * 0.065 * sx, ny + r * 0.045, nz], undefined, [4, 3]);
+  p.ball(r * 0.07, SOMBRA, [r * 0.065 * sx, ny + r * 0.045, nz], undefined, [4, 3]);
+  p.cone(r * 0.07, r * 0.13, SOMBRA, [0, ny - r * 0.04, nz], [Math.PI, 0, 0]);
+  // Sonrisa en arco: el centro baja y las comisuras suben, sobre la curva de la cara.
+  const mouthY = -r * 0.3 * sy;
+  const mouthZ = r * 0.8 * sz;
+  p.torus(r * 0.2, r * 0.03, SOMBRA, [0, mouthY, mouthZ], [0.2, 0, Math.PI], Math.PI * 0.85);
+  for (let i = 0; i < 4; i++) {
+    const a = -0.95 + (i / 3) * 1.9;
+    const bow = Math.cos(a);
+    p.ball(
+      r * 0.035,
+      HUESO,
+      [Math.sin(a) * r * 0.18 * sx, mouthY - bow * r * 0.08 * sy, mouthZ + bow * r * 0.05 * sz],
+      [0.7, 1.25, 0.5],
+      [4, 3],
+    );
+  }
+}
+
+function pupils(r: number, scale: Vec3 = [1, 1, 1]): THREE.BufferGeometry {
+  const p = new Parts();
+  const eyeX = r * 0.34 * scale[0];
+  const eyeY = r * 0.06 * scale[1];
+  const eyeZ = r * 0.98 * scale[2];
+  for (const s of [-1, 1] as const) p.ball(r * 0.1, 0xffffff, [s * eyeX, eyeY, eyeZ], [1, 1.25, 0.6], [5, 4]);
   return p.build();
 }
 
-// --- Caché: una malla por coche+color y una por personaje ---
+function buildDriver(c: CharacterDef): BuiltDriver {
+  const body = new Parts();
+  const head = new Parts();
+  const ornaments: THREE.Vector3[] = [];
+  let spectral = false;
+  let pupil: number = LLAMA;
+  let headR = 0.42;
+  let headY = 1.08;
+  const arm = (x: number, color: number) => {
+    body.capsule(0.07, 0.22, color, [x * 0.32, 0.58, 0.16], [0.7, 0, x * -0.35], undefined, 4);
+    body.ball(0.09, HUESO, [x * 0.46, 0.4, 0.34], undefined, [4, 3]);
+  };
 
-const kartCache = new Map<string, ReturnType<typeof buildKartGeometry>>();
-const driverCache = new Map<string, THREE.BufferGeometry>();
+  switch (c.look as CharacterLook) {
+    case "mechanic": {
+      body.capsule(0.22, 0.34, c.color, [0, 0.46, 0]);
+      arm(-1, c.color);
+      arm(1, c.color);
+      body.capsule(0.04, 0.36, HUESO, [-0.26, 0.58, -0.2], [0.15, 0, 0.45]);
+      skull(head, headR);
+      head.torus(headR * 0.72, 0.035, c.color, [0, headR * 0.2, 0], [halfTurn(), 0, 0]);
+      for (let i = 0; i < 6; i++) {
+        const t = i / 5;
+        ornaments.push(new THREE.Vector3(Math.sin(t * 0.9) * 0.06, headR * (0.15 + t * 1.05), -headR * (0.75 + t * 0.9)));
+      }
+      spectral = true;
+      pupil = c.accent;
+      break;
+    }
+    case "robot": {
+      headR = 0.36;
+      body.ball(0.34, c.color, [0, 0.4, 0], [1.15, 0.82, 1], [7, 5]);
+      arm(-1, MARFIL);
+      arm(1, MARFIL);
+      skull(head, headR, [1.05, 0.95, 0.85]);
+      head.cyl(0.02, 0.02, 0.28, MARFIL, [0, headR + 0.12, 0]);
+      ornaments.push(new THREE.Vector3(0, headR + 0.32, 0));
+      spectral = true;
+      pupil = c.accent;
+      break;
+    }
+    case "courier": {
+      body.capsule(0.22, 0.32, SOMBRA, [0, 0.46, 0]);
+      arm(-1, SOMBRA);
+      arm(1, SOMBRA);
+      body.capsule(0.16, 0.22, c.color, [0, 0.5, -0.32], [halfTurn(), 0, 0], [1.35, 0.85, 1]);
+      skull(head, headR);
+      head.dome(headR * 0.92, c.accent, [0, headR * 0.15, -0.02]);
+      head.ball(headR * 0.2, c.accent, [0, headR * 0.08, headR * 0.72], [2.2, 0.28, 1.15], [5, 3]);
+      break;
+    }
+    case "bulldog": {
+      body.capsule(0.24, 0.3, c.color, [0, 0.46, 0.02], undefined, [1.15, 1, 1.05]);
+      arm(-1, c.color);
+      arm(1, c.color);
+      body.torus(0.28, 0.04, NOCHE, [0, 0.62, 0.04], [halfTurn(), 0, 0]);
+      const wide: Vec3 = [1.25, 0.95, 1.05];
+      skull(head, headR, wide);
+      head.torus(0.18, 0.018, NOCHE, [0, 0.06, headR * 0.72], [halfTurn(), 0, 0]);
+      pupil = c.accent;
+      break;
+    }
+    case "granny": {
+      body.capsule(0.24, 0.32, c.color, [0, 0.48, 0]);
+      arm(-1, c.color);
+      arm(1, c.color);
+      skull(head, headR);
+      head.dome(headR * 1.02, MARFIL, [0, 0.02, 0], [1, 0.85, 1.05]);
+      head.torus(0.16, 0.016, NOCHE, [0, 0.02, headR * 0.7], [halfTurn(), 0, 0]);
+      ornaments.push(new THREE.Vector3(-0.08, -0.15, -0.15), new THREE.Vector3(0.1, -0.28, -0.05));
+      break;
+    }
+    case "mascot": {
+      body.capsule(0.24, 0.34, c.color, [0, 0.48, 0]);
+      arm(-1, c.color);
+      arm(1, c.color);
+      skull(head, headR);
+      for (let i = 0; i < 7; i++) {
+        const a = -Math.PI * 0.9 + (i / 6) * Math.PI * 1.8;
+        ornaments.push(new THREE.Vector3(Math.sin(a) * headR * 0.92, headR * (0.42 + Math.cos(a * 0.5) * 0.2), -headR * 0.15 + Math.cos(a) * headR * 0.2));
+      }
+      break;
+    }
+    case "sheet": {
+      const pts: THREE.Vector2[] = [];
+      for (let i = 0; i <= 6; i++) {
+        const t = i / 6;
+        const y = t * 0.85;
+        const wave = 0.2 + 0.06 * Math.sin(t * Math.PI) + (t < 0.18 ? Math.sin(i * 2.2) * 0.03 : 0);
+        pts.push(new THREE.Vector2(wave * (1.05 - t * 0.25), y));
+      }
+      body.add(new THREE.LatheGeometry(pts, 8), c.color, [0, 0.08, 0]);
+      headR = 0.34;
+      headY = 0.95;
+      skull(head, headR, [1, 0.92, 1]);
+      body.cyl(0.06, 0.07, 0.16, MARFIL, [0.28, 0.42, 0.22]);
+      body.ball(0.09, LLAMA, [0.28, 0.56, 0.22], undefined, [5, 4]);
+      ornaments.push(new THREE.Vector3(0.28, 0.62 - headY, 0.22));
+      spectral = true;
+      pupil = c.accent;
+      break;
+    }
+    case "dandy": {
+      body.ball(0.32, c.color, [0, 0.5, 0], [1.05, 1.1, 0.9], [7, 5]);
+      arm(-1, c.color);
+      arm(1, c.color);
+      body.ball(0.06, c.accent, [-0.07, 0.62, 0.28], [1, 0.7, 0.5], [4, 3]);
+      body.ball(0.06, c.accent, [0.07, 0.62, 0.28], [1, 0.7, 0.5], [4, 3]);
+      skull(head, headR);
+      head.cyl(headR * 0.55, headR * 0.55, 0.22, NOCHE, [0, headR * 0.95, 0]);
+      head.add(new THREE.CylinderGeometry(headR * 0.85, headR * 0.85, 0.035, 8), NOCHE, [0, headR * 0.72, 0]);
+      headY = 1.12;
+      break;
+    }
+  }
+
+  const headScale: Vec3 = c.look === "bulldog" ? [1.25, 0.95, 1.05] : c.look === "robot" ? [1.05, 0.95, 0.85] : [1, 1, 1];
+  return {
+    body: body.build(),
+    head: head.build(),
+    pupils: pupils(headR, headScale),
+    headPos: new THREE.Vector3(0, headY, 0.02),
+    ornaments,
+    spectral,
+    pupil,
+  };
+}
+
+function halfTurn() {
+  return Math.PI / 2;
+}
+
+// --- Caché ---
+
+const kartCache = new Map<string, BuiltKart>();
+const driverCache = new Map<string, BuiltDriver>();
 
 function kartParts(def: KartDef, color: number) {
   const key = `${def.id}:${color}`;
@@ -288,20 +493,66 @@ function kartParts(def: KartDef, color: number) {
   return v;
 }
 
-function driverGeometry(def: CharacterDef) {
+function driverParts(def: CharacterDef) {
   let g = driverCache.get(def.id);
   if (!g) {
-    g = buildDriverGeometry(def);
-    g.userData.shared = true;
+    g = buildDriver(def);
+    g.body.userData.shared = true;
+    g.head.userData.shared = true;
+    g.pupils.userData.shared = true;
     driverCache.set(def.id, g);
   }
   return g;
 }
 
-/** Tamaño del piloto: Kiko es pequeño y Nonna Pina, algo más grande. */
-const DRIVER_SCALE: Record<string, number> = { kiko: 0.85, "nonna-pina": 1.08 };
+/** Kiko es pequeño; Nonna y Don Osario, un poco más grandes. */
+const DRIVER_SCALE: Record<string, number> = { kiko: 0.84, "nonna-pina": 1.06, "don-osario": 1.14, mimi: 0.96, brasa: 0.98 };
 
-export function createKartModel(color = 0xff6b35, characterId: string = DEFAULT_CHARACTER, kartId: string = DEFAULT_KART): KartModel {
+function pin(parent: THREE.Object3D, pos: THREE.Vector3) {
+  const o = new THREE.Object3D();
+  o.position.copy(pos);
+  parent.add(o);
+  return o;
+}
+
+function buildLod(look: KartLook, color: number, c: CharacterDef): { kart: THREE.BufferGeometry; driver: THREE.BufferGeometry } {
+  const p = new Parts();
+  const h = Math.max(look.height * 1.4, 0.42);
+  const y = look.frontWheel * 0.7 + h * 0.2;
+  const half = Math.PI / 2;
+  p.rounded(look.width * 0.96, h, look.length * 0.8, color, [0, y, 0], undefined, 0.14);
+  const wheel = (r: number, w: number, x: number, z: number) => {
+    p.add(new THREE.TorusGeometry(r * 0.72, r * 0.28, 3, 6), TYRE, [x, r, z], [0, half, 0]);
+  };
+  if (look.skin === "broom") {
+    wheel(look.frontWheel, look.frontWheelW, 0, look.length * 0.3);
+    wheel(look.rearWheel, look.rearWheelW, 0, -look.length * 0.3);
+  } else {
+    const fx = look.width / 2 + look.frontWheelW * 0.4;
+    const rx = look.width / 2 + look.rearWheelW * 0.4;
+    wheel(look.frontWheel, look.frontWheelW, -fx, look.length * 0.3);
+    wheel(look.frontWheel, look.frontWheelW, fx, look.length * 0.3);
+    wheel(look.rearWheel, look.rearWheelW, -rx, -look.length * 0.3);
+    wheel(look.rearWheel, look.rearWheelW, rx, -look.length * 0.3);
+  }
+  const d = new Parts();
+  d.capsule(0.2, 0.26, c.color, [0, 0.42, 0]);
+  d.ball(0.38, HUESO, [0, 1.02, 0.02], undefined, [8, 6]);
+  d.ball(0.09, SOMBRA, [-0.12, 1.06, 0.32], [1.1, 1.3, 0.55], [5, 4]);
+  d.ball(0.09, SOMBRA, [0.12, 1.06, 0.32], [1.1, 1.3, 0.55], [5, 4]);
+  return { kart: p.build(), driver: d.build() };
+}
+
+function outlined(geo: THREE.BufferGeometry, parent: THREE.Object3D) {
+  const shell = new THREE.Mesh(geo, outlineMat);
+  shell.scale.setScalar(1.04);
+  shell.name = "contorno";
+  parent.add(shell);
+  parent.add(new THREE.Mesh(geo, boneMat));
+  return shell;
+}
+
+export function createKartModel(color: number = BRASA, characterId: string = DEFAULT_CHARACTER, kartId: string = DEFAULT_KART): KartModel {
   const character = findCharacter(characterId) ?? findCharacter(DEFAULT_CHARACTER)!;
   const kart = findKart(kartId) ?? findKart(DEFAULT_KART)!;
   const root = new THREE.Group();
@@ -309,49 +560,105 @@ export function createKartModel(color = 0xff6b35, characterId: string = DEFAULT_
   root.add(body);
 
   const parts = kartParts(kart, color);
-  body.add(new THREE.Mesh(parts.geo, partsMat));
+  const hiKart = new THREE.Mesh(parts.geo, partsMat);
+  body.add(hiKart);
+  const exhausts = parts.exhausts.map((pos) => pin(body, pos));
+  const lod = buildLod(kart.look, color, character);
+  lod.kart.userData.shared = false;
+  lod.driver.userData.shared = false;
+  const loKart = new THREE.Mesh(lod.kart, partsMat);
+  loKart.name = "lejos";
+  loKart.visible = false;
+  body.add(loKart);
 
+  const built = driverParts(character);
   const driver = new THREE.Group();
   driver.position.copy(parts.seat);
   driver.scale.setScalar(DRIVER_SCALE[character.id] ?? 1);
-  const driverGeo = driverGeometry(character);
-  // Casco invertido solo en el piloto. Escalar 1,04 (en vez de empujar por la normal)
-  // porque el piloto actual está hecho de cajas: empujar las caras abre grietas.
-  const shell = new THREE.Mesh(driverGeo, outlineMat);
-  shell.scale.setScalar(1.04);
-  shell.name = "contorno";
-  driver.add(shell);
-  driver.add(new THREE.Mesh(driverGeo, partsMat));
+  if (character.look === "sheet") driver.position.y += 0.18;
+  const shells: THREE.Mesh[] = [];
+  const driverBody = new THREE.Group();
+  shells.push(outlined(built.body, driverBody));
+  driver.add(driverBody);
+
+  const head = new THREE.Group();
+  head.position.copy(built.headPos);
+  shells.push(outlined(built.head, head));
+  const pupilMat = new THREE.MeshBasicMaterial({ color: built.pupil, toneMapped: false });
+  const pupilMesh = new THREE.Mesh(built.pupils, pupilMat);
+  head.add(pupilMesh);
+  const ornaments = built.ornaments.map((pos) => pin(head, pos));
+  driver.add(head);
+  const loDriver = new THREE.Mesh(lod.driver, boneMat);
+  loDriver.name = "lejos";
+  loDriver.visible = false;
+  loDriver.position.copy(driver.position);
+  loDriver.scale.copy(driver.scale);
   body.add(driver);
+  body.add(loDriver);
+
   const baseY = driver.position.y;
   const baseScale = driver.scale.x;
+  let headScale = 1;
+  let headVel = 0;
+  let lastTime = 0;
 
   const shield = new THREE.Mesh(shieldGeo, shieldMat);
-  shield.position.y = 0.8;
+  shield.position.y = 0.9;
   shield.visible = false;
   root.add(shield);
 
-  let lastMood: Mood = "idle";
+  let mood: Mood = "idle";
+  let near = true;
+  const hiBits = [hiKart, driverBody, head, pupilMesh];
   return {
     root,
     body,
     shield,
     rearWheels: parts.rear,
-    setMood(mood, time) {
-      if (mood === "celebrate") {
-        driver.position.y = baseY + Math.abs(Math.sin(time * 8)) * 0.25;
-        driver.rotation.set(0, Math.sin(time * 6) * 0.5, Math.sin(time * 5) * 0.12);
-        driver.scale.setScalar(baseScale);
-      } else if (mood === "angry") {
+    exhausts,
+    ornaments,
+    ornamentSpectral: built.spectral,
+    head,
+    flameLength: kart.look.length,
+    get mood() {
+      return mood;
+    },
+    get detail() {
+      return near;
+    },
+    setDetail(on) {
+      near = on;
+      for (const o of hiBits) o.visible = on;
+      if (!on) for (const s of shells) s.visible = false;
+      loKart.visible = !on;
+      loDriver.visible = !on;
+    },
+    setOutline(on) {
+      for (const s of shells) s.visible = on && near;
+    },
+    setMood(next, time) {
+      mood = next;
+      const dt = Math.min(0.05, Math.max(0, time - lastTime || 0));
+      lastTime = time;
+      const target = next === "celebrate" ? 1.1 : 1;
+      headVel += ((target - headScale) * 46 - headVel * 9) * dt;
+      headScale += headVel * dt;
+      head.scale.set(1, headScale, 1);
+      pupilMat.color.setHex(next === "angry" ? PALETTE.ascua : built.pupil);
+      if (next === "celebrate") {
+        driver.position.y = baseY + Math.abs(Math.sin(time * 8)) * 0.12;
+        driver.rotation.set(0, Math.sin(time * 6) * 0.35, 0);
+        driver.scale.set(baseScale, baseScale, baseScale);
+      } else if (next === "angry") {
         driver.position.y = baseY;
-        driver.rotation.set(0, 0, Math.sin(time * 45) * 0.14);
-        driver.scale.setScalar(baseScale * 1.12);
-      } else if (lastMood !== "idle") {
+        driver.rotation.set(0, 0, Math.sin(time * 42) * 0.08);
+        driver.scale.setScalar(baseScale);
+      } else if (driver.position.y !== baseY || driver.rotation.y !== 0) {
         driver.position.y = baseY;
         driver.rotation.set(0, 0, 0);
         driver.scale.setScalar(baseScale);
       }
-      lastMood = mood;
     },
   };
 }
@@ -359,7 +666,17 @@ export function createKartModel(color = 0xff6b35, characterId: string = DEFAULT_
 /** Libera las mallas guardadas (al cerrar el juego o para depurar). */
 export function disposeKartModelCache() {
   for (const v of kartCache.values()) v.geo.dispose();
-  for (const g of driverCache.values()) g.dispose();
+  for (const g of driverCache.values()) {
+    g.body.dispose();
+    g.head.dispose();
+    g.pupils.dispose();
+  }
   kartCache.clear();
   driverCache.clear();
+}
+
+export function triangleCount(geo: THREE.BufferGeometry) {
+  const pos = geo.getAttribute("position");
+  if (!pos) return 0;
+  return geo.index ? geo.index.count / 3 : pos.count / 3;
 }

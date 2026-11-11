@@ -9,10 +9,13 @@ export const CAMERA = {
   fastFov: 76,
   /** Rapidez con la que la cámara alcanza su objetivo (1/s). */
   follow: 6,
-  /** En vertical la pantalla es estrecha: más campo de visión y cámara algo más alta y lejos. */
-  portraitExtraFov: 18,
-  portraitHeight: 3.6,
-  portraitDistance: 7.5,
+  /**
+   * En vertical el kart tiene que ocupar cerca de un tercio del ancho.
+   * Más cerca y más baja que antes; el campo de visión apenas crece.
+   */
+  portraitExtraFov: 4,
+  portraitHeight: 2.45,
+  portraitDistance: 4.2,
 };
 
 export class ChaseCamera {
@@ -32,10 +35,10 @@ export class ChaseCamera {
     const fx = Math.sin(heading);
     const fz = Math.cos(heading);
     const portrait = this.camera.aspect < 1;
-    const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * 1.2;
+    const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * (portrait ? 0.35 : 1.2);
     const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
     const targetPos = new THREE.Vector3(x - fx * dist, y + height, z - fz * dist);
-    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, y + 0.8, z + fz * CAMERA.lookAhead);
+    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, y + (portrait ? 0.28 : 0.8), z + fz * CAMERA.lookAhead);
 
     if (!this.initialized) {
       this.pos.copy(targetPos);

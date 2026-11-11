@@ -4,6 +4,13 @@
 
 /** Límite de pixel ratio (las pantallas 3x no compensan lo que cuestan). */
 export const MAX_PIXEL_RATIO = 2;
+/**
+ * El contorno de los pilotos se quita en el último escalón (0,75).
+ * No hay bloom: el fuego es aditivo y ya se lee sin él.
+ */
+export function showDriverOutline(pixelRatio: number) {
+  return pixelRatio >= 1;
+}
 /** Pasos de resolución, de mejor a peor. */
 const STEPS = [2, 1.5, 1.25, 1, 0.75];
 /** Por debajo de estos fps durante `SLOW_SECONDS` se baja un paso. */

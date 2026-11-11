@@ -1,0 +1,148 @@
+{
+  "fecha": "2026-11-11",
+  "metodo": "Conteo del grafo con el frustum de la cámara de persecución en vertical (390×844, far 260), 8 karts delante. Los que están a más de 15 m usan el modelo lejano, como en la carrera. Un InstancedMesh cuenta todos sus triángulos si su esfera toca el frustum. Sin WebGL. El antes es main con las fases 1–2.",
+  "limites": {
+    "llamadas": 120,
+    "triangulos": 150000,
+    "pilotoYkartCerca": 1800,
+    "pilotoYkartLejos": 600
+  },
+  "peor": {
+    "llamadas": {
+      "antes": 50,
+      "despues": 46
+    },
+    "triangulos": {
+      "antes": 78867,
+      "despues": 87732
+    }
+  },
+  "pilotoYkart": {
+    "nota": "De cerca, sin contar el contorno. La pareja más cara es Toni + Tanque. Lejos, el modelo barato.",
+    "parejaMaxCerca": 1793,
+    "parejaMaxLejos": 442
+  },
+  "circuitos": [
+    {
+      "id": "pruebas",
+      "antes": {
+        "llamadas": 42,
+        "triangulos": 16485
+      },
+      "despues": {
+        "llamadas": 39,
+        "triangulos": 16726
+      }
+    },
+    {
+      "id": "paseo-del-puerto",
+      "antes": {
+        "llamadas": 50,
+        "triangulos": 27122
+      },
+      "despues": {
+        "llamadas": 46,
+        "triangulos": 47409
+      }
+    },
+    {
+      "id": "playa-dorada",
+      "antes": {
+        "llamadas": 44,
+        "triangulos": 26661
+      },
+      "despues": {
+        "llamadas": 37,
+        "triangulos": 37478
+      }
+    },
+    {
+      "id": "mercado-central",
+      "antes": {
+        "llamadas": 43,
+        "triangulos": 28173
+      },
+      "despues": {
+        "llamadas": 37,
+        "triangulos": 49434
+      }
+    },
+    {
+      "id": "vinedos",
+      "antes": {
+        "llamadas": 43,
+        "triangulos": 78867
+      },
+      "despues": {
+        "llamadas": 35,
+        "triangulos": 87732
+      }
+    },
+    {
+      "id": "feria-loca",
+      "antes": {
+        "llamadas": 45,
+        "triangulos": 30937
+      },
+      "despues": {
+        "llamadas": 37,
+        "triangulos": 49250
+      }
+    },
+    {
+      "id": "estacion-vieja",
+      "antes": {
+        "llamadas": 43,
+        "triangulos": 26133
+      },
+      "despues": {
+        "llamadas": 37,
+        "triangulos": 45734
+      }
+    },
+    {
+      "id": "pico-nevado",
+      "antes": {
+        "llamadas": 44,
+        "triangulos": 31623
+      },
+      "despues": {
+        "llamadas": 38,
+        "triangulos": 56556
+      }
+    },
+    {
+      "id": "canon-rojo",
+      "antes": {
+        "llamadas": 42,
+        "triangulos": 27177
+      },
+      "despues": {
+        "llamadas": 36,
+        "triangulos": 42514
+      }
+    },
+    {
+      "id": "volcan-dormido",
+      "antes": {
+        "llamadas": 43,
+        "triangulos": 29709
+      },
+      "despues": {
+        "llamadas": 37,
+        "triangulos": 43774
+      }
+    },
+    {
+      "id": "ciudad-neon",
+      "antes": {
+        "llamadas": 43,
+        "triangulos": 29907
+      },
+      "despues": {
+        "llamadas": 37,
+        "triangulos": 64728
+      }
+    }
+  ]
+}
