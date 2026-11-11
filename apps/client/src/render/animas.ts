@@ -124,8 +124,9 @@ function humpGeometry(len: number, lip: number, halfWidth: number, yScale = 1) {
   }
   for (let i = 0; i < pos.count; i++) {
     const u = (pos.getZ(i) - zMin) / (zMax - zMin || 1);
-    const bandIndex = u > 0.5 ? Math.floor((u - 0.5) / 0.14) : -1;
-    const band = bandIndex >= 0 && bandIndex <= 4 && bandIndex % 2 === 0;
+    // Tres franjas anchas en la cara de llegada, no solo en el labio.
+    const stripe = Math.floor(u * 8);
+    const band = stripe % 2 === 1 && stripe <= 5 && pos.getY(i) > radius * 0.25;
     const c = band ? brasa : pos.getY(i) > radius * 0.7 ? bone : shade;
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
@@ -318,6 +319,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
 
   // Rampas S y M: lomos de hueso.
   const humps: THREE.BufferGeometry[] = [];
+  const stripes: THREE.BufferGeometry[] = [];
   for (const z of track.zones) {
     if (z.type !== "ramp" || !z.size || z.size === "L") continue;
     const spec = RAMP[z.size];
@@ -325,8 +327,21 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     const g = humpGeometry(spec.len, spec.lip, Math.min(2.15, lip.width * 0.16), 1.45);
     g.applyMatrix4(M(lip.x, lip.y, lip.z, 0, lip.heading));
     humps.push(g);
+    if (z.size === "M") {
+      const box = new THREE.BoxGeometry(4.2, 0.38, 0.32);
+      const world = new THREE.Matrix4().makeRotationY(lip.heading).setPosition(lip.x, lip.y, lip.z);
+      for (let i = 0; i < 3; i++) {
+        stripes.push(bake(box, world.clone().multiply(M(0, 1.05 + i * 0.48, -5.35 + i * 0.42)), BRASA));
+      }
+      box.dispose();
+    }
   }
   if (humps.length) scene.add(new THREE.Mesh(merge(humps), bone));
+  if (stripes.length) {
+    const paint = new THREE.Mesh(merge(stripes), new THREE.MeshBasicMaterial({ color: BRASA }));
+    paint.name = "franjas-rampa";
+    scene.add(paint);
+  }
 
   // Laguna bajo el salto, siempre por debajo del asfalto más bajo de la zona.
   // Se dibuja antes que los karts y con depthTest, para no teñir la escena.

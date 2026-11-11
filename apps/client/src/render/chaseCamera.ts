@@ -95,20 +95,32 @@ export class ChaseCamera {
     const portrait = this.camera.aspect < 1;
     const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * (portrait ? 0.35 : 1.2);
     const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
-    // Detrás del kart y por encima de la calzada que hay bajo la propia cámara.
-    const behindX = x - fx * dist;
-    const behindZ = z - fz * dist;
+    // La misma altura y el mismo cabeceo que en llano. El peralte no sube la cámara ni la inclina hacia el suelo.
+    let behindX = x - fx * dist;
+    let behindZ = z - fz * dist;
+    let camBase = y + height;
+    let lookX = x + fx * CAMERA.lookAhead;
+    let lookZ = z + fz * CAMERA.lookAhead;
+    const lookBase = y + (portrait ? 0.28 : 0.8);
+    if (!cue.airborne && cue.bankDeg !== 0) {
+      // Solo si ese punto cae dentro del lado alto: se corre hacia el interior, en paralelo al rumbo.
+      const inside = Math.sign(cue.bankDeg);
+      const leftX = fz;
+      const leftZ = -fx;
+      for (let step = 0; step < 8; step++) {
+        if (camBase >= cue.floorAt(behindX, behindZ) + 0.35) break;
+        behindX += leftX * inside * 0.45;
+        behindZ += leftZ * inside * 0.45;
+        lookX += leftX * inside * 0.45;
+        lookZ += leftZ * inside * 0.45;
+      }
+      const road = cue.floorAt(behindX, behindZ);
+      if (camBase < road + 0.15) camBase = road + 0.15;
+    }
     const underCam = cue.floorAt(behindX, behindZ);
-    // En peralte se mira más lejos, para que el cielo y el horizonte entren en el encuadre.
-    const banked = !cue.airborne && Math.abs(cue.bankDeg) > 15;
-    const lookDist = banked ? 12 : CAMERA.lookAhead;
-    const lookX = x + fx * lookDist;
-    const lookZ = z + fz * lookDist;
     const underLook = cue.floorAt(lookX, lookZ);
-    const kartCam = y + height;
-    const camHeight = banked ? height + 1.05 : height;
-    const desiredCam = cue.airborne ? Math.min(kartCam, underCam + height + 0.6) : Math.max(underCam + camHeight, underCam + 1.5);
-    const desiredLook = cue.airborne ? Math.min(y + 0.35, underLook + 1) : banked ? y - 0.4 : y + (portrait ? 0.4 : 0.7);
+    const desiredCam = cue.airborne ? Math.min(y + height, underCam + height + 0.6) : camBase;
+    const desiredLook = cue.airborne ? Math.min(y + 0.35, underLook + 0.8 + 0.6) : lookBase;
     if (!this.initialized) {
       this.camY = desiredCam;
       this.lookY = desiredLook;
@@ -124,12 +136,13 @@ export class ChaseCamera {
     this.camY += (desiredCam - this.camY) * kY;
     this.lookY += (desiredLook - this.lookY) * kY;
     const targetPos = new THREE.Vector3(behindX, this.camY + this.dip, behindZ);
-    const floor = cue.floorAt(targetPos.x, targetPos.z) + 1.5;
+    const floor = cue.floorAt(targetPos.x, targetPos.z) + 0.15;
     if (targetPos.y < floor) targetPos.y = floor;
-    const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, this.lookY, z + fz * CAMERA.lookAhead);
+    const targetLook = new THREE.Vector3(lookX, this.lookY, lookZ);
     this.pos.lerp(targetPos, kPos);
     this.look.lerp(targetLook, Math.min(1, kPos * 2));
-    if (cue.floorAt(this.pos.x, this.pos.z) + 1.5 > this.pos.y) this.pos.y = cue.floorAt(this.pos.x, this.pos.z) + 1.5;
+    const settled = cue.floorAt(this.pos.x, this.pos.z) + 0.15;
+    if (settled > this.pos.y) this.pos.y = settled;
 
     this.camera.position.copy(this.pos);
     this.camera.up.set(0, 1, 0);
