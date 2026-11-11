@@ -147,12 +147,12 @@ export class ChaseCamera {
     this.camera.position.copy(this.pos);
     this.camera.up.set(0, 1, 0);
     this.camera.lookAt(this.look);
-    const roll = THREE.MathUtils.degToRad(Math.max(-12, Math.min(12, cue.bankDeg * 0.35)));
+    const roll = THREE.MathUtils.degToRad(Math.max(-18, Math.min(18, cue.bankDeg * 0.5)));
     this.camera.rotateZ(roll);
-    // El peralte del kart no se suma: el horizonte (el arriba del mundo) no pasa de 12°.
+    // El peralte del kart no se suma: el horizonte (el arriba del mundo) no pasa de 18°.
     this.worldUp.set(0, 1, 0).applyQuaternion(this.invQuat.copy(this.camera.quaternion).invert());
     const tilt = Math.atan2(this.worldUp.x, this.worldUp.y);
-    const maxTilt = THREE.MathUtils.degToRad(12);
+    const maxTilt = THREE.MathUtils.degToRad(18);
     if (Math.abs(tilt) > maxTilt) this.camera.rotateZ(Math.sign(tilt) * maxTilt - tilt);
 
     const fov =
