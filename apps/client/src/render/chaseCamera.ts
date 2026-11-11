@@ -95,16 +95,25 @@ export class ChaseCamera {
     const portrait = this.camera.aspect < 1;
     const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * (portrait ? 0.35 : 1.2);
     const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
-    const groundCam = cue.groundY + height;
+    // Detrás del kart y por encima de la calzada que hay bajo la propia cámara.
+    const behindX = x - fx * dist;
+    const behindZ = z - fz * dist;
+    const underCam = cue.floorAt(behindX, behindZ);
+    // En peralte se mira más lejos, para que el cielo y el horizonte entren en el encuadre.
+    const banked = !cue.airborne && Math.abs(cue.bankDeg) > 15;
+    const lookDist = banked ? 12 : CAMERA.lookAhead;
+    const lookX = x + fx * lookDist;
+    const lookZ = z + fz * lookDist;
+    const underLook = cue.floorAt(lookX, lookZ);
     const kartCam = y + height;
-    // En el aire la cámara sigue la altura con un lerp de ~0,15 por fotograma y no sube más de 0,6 m.
-    const desiredCam = cue.airborne ? Math.min(kartCam, groundCam + 0.6) : kartCam;
-    const desiredLook = cue.airborne ? Math.min(y + 0.35, cue.groundY + 0.8 + 0.6) : y + (portrait ? 0.28 : 0.8);
+    const camHeight = banked ? height + 1.05 : height;
+    const desiredCam = cue.airborne ? Math.min(kartCam, underCam + height + 0.6) : Math.max(underCam + camHeight, underCam + 1.5);
+    const desiredLook = cue.airborne ? Math.min(y + 0.35, underLook + 1) : banked ? y - 0.4 : y + (portrait ? 0.4 : 0.7);
     if (!this.initialized) {
       this.camY = desiredCam;
       this.lookY = desiredLook;
-      this.pos.set(x - fx * dist, desiredCam, z - fz * dist);
-      this.look.set(x + fx * CAMERA.lookAhead, desiredLook, z + fz * CAMERA.lookAhead);
+      this.pos.set(behindX, desiredCam, behindZ);
+      this.look.set(lookX, desiredLook, lookZ);
       this.initialized = true;
     }
     if (this.wasAir && !cue.airborne) this.dip = -0.2;
@@ -114,7 +123,7 @@ export class ChaseCamera {
     const kY = cue.airborne ? 1 - Math.pow(0.85, dt * 60) : 1 - Math.exp(-5 * dt);
     this.camY += (desiredCam - this.camY) * kY;
     this.lookY += (desiredLook - this.lookY) * kY;
-    const targetPos = new THREE.Vector3(x - fx * dist, this.camY + this.dip, z - fz * dist);
+    const targetPos = new THREE.Vector3(behindX, this.camY + this.dip, behindZ);
     const floor = cue.floorAt(targetPos.x, targetPos.z) + 1.5;
     if (targetPos.y < floor) targetPos.y = floor;
     const targetLook = new THREE.Vector3(x + fx * CAMERA.lookAhead, this.lookY, z + fz * CAMERA.lookAhead);

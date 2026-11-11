@@ -26,7 +26,11 @@ function paint(geo: THREE.BufferGeometry, color: number) {
 }
 
 function bake(geo: THREE.BufferGeometry, matrix: THREE.Matrix4, color: number) {
-  const g = geo.clone();
+  const src = geo.clone();
+  // Normales suaves mientras la malla aún comparte vértices. Si se calculan
+  // después de separar los triángulos, cada cara queda plana y el hueso se ve gris.
+  if (!src.getAttribute("normal")) src.computeVertexNormals();
+  const g = src.index ? src.toNonIndexed() : src;
   g.applyMatrix4(matrix);
   return paint(g, color);
 }
@@ -37,10 +41,12 @@ function merge(parts: THREE.BufferGeometry[]) {
   for (const g of flat) count += g.getAttribute("position").count;
   const pos = new Float32Array(count * 3);
   const col = new Float32Array(count * 3);
+  const nor = new Float32Array(count * 3);
   let o = 0;
   for (const g of flat) {
     const p = g.getAttribute("position");
     const c = g.getAttribute("color");
+    const nrm = g.getAttribute("normal");
     for (let i = 0; i < p.count; i++) {
       pos[(o + i) * 3] = p.getX(i);
       pos[(o + i) * 3 + 1] = p.getY(i);
@@ -50,6 +56,11 @@ function merge(parts: THREE.BufferGeometry[]) {
         col[(o + i) * 3 + 1] = c.getY(i);
         col[(o + i) * 3 + 2] = c.getZ(i);
       }
+      if (nrm) {
+        nor[(o + i) * 3] = nrm.getX(i);
+        nor[(o + i) * 3 + 1] = nrm.getY(i);
+        nor[(o + i) * 3 + 2] = nrm.getZ(i);
+      }
     }
     o += p.count;
     g.dispose();
@@ -57,7 +68,7 @@ function merge(parts: THREE.BufferGeometry[]) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  geo.computeVertexNormals();
+  geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
   return geo;
 }
 
@@ -91,30 +102,37 @@ export function triangleCount(geo: THREE.BufferGeometry) {
  * Lomo apoyado en la calzada: bajo por detrás, alto en el labio (z = 0).
  * No es un disco flotante: la base está en y = 0 y el ancho cabe en la pista.
  */
-function humpGeometry(len: number, lip: number, halfWidth: number) {
-  const g = new THREE.SphereGeometry(1, 14, 10);
-  const pos = g.getAttribute("position");
+function humpGeometry(len: number, lip: number, halfWidth: number, yScale = 1) {
+  const radius = Math.max(0.34, lip * 0.62);
+  const straight = Math.max(0.5, len * 0.62);
+  const g = new THREE.CapsuleGeometry(radius, straight, 5, 14);
+  g.rotateX(Math.PI / 2);
+  g.translate(0, radius * 0.72, -len * 0.28);
+  g.scale(halfWidth / radius, yScale, 1);
+  if (!g.getAttribute("normal")) g.computeVertexNormals();
+  const flat = g.index ? g.toNonIndexed() : g;
+  const pos = flat.getAttribute("position");
   const bone = new THREE.Color(HUESO);
   const shade = new THREE.Color(PALETTE.huesoSombra);
   const brasa = new THREE.Color(BRASA);
   const colors = new Float32Array(pos.count * 3);
+  let zMin = Infinity;
+  let zMax = -Infinity;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = Math.max(0, pos.getY(i));
-    const z = pos.getZ(i);
-    const u = (z + 1) / 2;
-    const h = lip * (0.12 + 0.88 * u * u);
-    pos.setXYZ(i, x * halfWidth, y * h, (z - 1) * (len / 2));
-    const band = u > 0.72 && Math.floor(u * 16) % 2 === 0;
-    const c = band ? brasa : y > 0.55 ? bone : shade;
+    zMin = Math.min(zMin, pos.getZ(i));
+    zMax = Math.max(zMax, pos.getZ(i));
+  }
+  for (let i = 0; i < pos.count; i++) {
+    const u = (pos.getZ(i) - zMin) / (zMax - zMin || 1);
+    const bandIndex = u > 0.5 ? Math.floor((u - 0.5) / 0.14) : -1;
+    const band = bandIndex >= 0 && bandIndex <= 4 && bandIndex % 2 === 0;
+    const c = band ? brasa : pos.getY(i) > radius * 0.7 ? bone : shade;
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
     colors[i * 3 + 2] = c.b;
   }
-  pos.needsUpdate = true;
-  g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  g.computeVertexNormals();
-  return g;
+  flat.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  return flat;
 }
 
 /**
@@ -124,19 +142,23 @@ function humpGeometry(len: number, lip: number, halfWidth: number) {
 export function jawLocalGeometry(): THREE.BufferGeometry {
   const lip = RAMP.L.lip;
   const len = RAMP.L.len;
-  // La cara mira a −z (por donde llega el kart). El cráneo queda abierto sobre el vuelo.
-  const jaw = humpGeometry(len, lip, 4.4);
+  const jaw = humpGeometry(len, lip, 6.0);
   const parts: THREE.BufferGeometry[] = [jaw];
-  const tooth = new THREE.SphereGeometry(0.48, 10, 8);
-  for (const x of [-3.4, -1.7, 0, 1.7, 3.4]) {
-    parts.push(bake(tooth, M(x, 2.15, -1.35, 0, 0, 0, 0.85, 1.35, 0.7), HUESO));
+  const tooth = new THREE.SphereGeometry(0.46, 12, 10);
+  for (const x of [-2.8, -1.4, 0, 1.4, 2.8]) {
+    parts.push(bake(tooth, M(x, lip * 0.72, -0.15, 0, 0, 0, 0.8, 1.25, 0.7), HUESO));
   }
-  const cheek = new THREE.SphereGeometry(1.35, 12, 10);
-  parts.push(bake(cheek, M(-5.1, 8.6, -0.4), HUESO));
-  parts.push(bake(cheek, M(5.1, 8.6, -0.4), HUESO));
-  // Fondo del cráneo en 4,42 + 6 m: el ápice del salto pasa por debajo.
-  const skull = new THREE.SphereGeometry(3.15, 18, 14);
-  parts.push(bake(skull, M(0, 4.42 + 6 + 3.15, 1.2), HUESO));
+  // Mofletes pegados a la mandíbula. El arco sale de ellos y cruza por encima de la pista.
+  // Columnas de hueso: salen de la mandíbula y se funden con los pies del arco.
+  const leg = new THREE.CapsuleGeometry(1.55, 6.2, 5, 14);
+  parts.push(bake(leg, M(-6.4, 4.4, -0.15), HUESO));
+  parts.push(bake(leg, M(6.4, 4.4, -0.15), HUESO));
+  const archR = 7.9;
+  const tube = 1.45;
+  const footY = 5.05;
+  const arch = new THREE.TorusGeometry(archR, tube, 12, 28, Math.PI);
+  // Los pies del arco (y local 0) quedan en los mofletes. El intradós del centro supera 10,4 m.
+  parts.push(bake(arch, M(0, footY, -0.15), HUESO));
   return merge(parts);
 }
 
@@ -238,22 +260,29 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const bone = sharedBoneToon();
 
   // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
-  const spot = pointAt(track, 78, 10);
+  const spot = pointAt(track, 42, 11);
+  const road = pointAt(track, 42, 0);
   const tower = new THREE.Mesh(campanarioGeometry(), bone);
   tower.position.set(spot.x, spot.y, spot.z);
-  const bell = new THREE.Mesh(new THREE.SphereGeometry(1.05, 14, 10), new THREE.MeshBasicMaterial({ color: LLAMA }));
-  bell.position.set(1.15, 9.4, 1.15);
+  tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
+  bell.position.set(0, 9.2, 1.85);
   tower.add(bell);
+  const bellRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 8, 16), boneToonMaterial());
+  bellRing.position.copy(bell.position);
+  bellRing.rotation.x = Math.PI / 2;
+  tower.add(bellRing);
   tower.name = "campanario";
   scene.add(tower);
 
   // Arco-calavera en la salida, en vez del arco genérico.
   const start = pointAt(track, 0);
+  const span = 4.6;
   const arch = merge([
-    bake(new THREE.CapsuleGeometry(0.32, 5, 2, 8), M(-(start.width / 2 + 1), 3, 0), HUESO),
-    bake(new THREE.CapsuleGeometry(0.32, 5, 2, 8), M(start.width / 2 + 1, 3, 0), HUESO),
-    bake(new THREE.CapsuleGeometry(0.4, start.width, 2, 8), M(0, 6.1, 0, 0, 0, Math.PI / 2), HUESO),
-    bake(new THREE.SphereGeometry(1.1, 12, 10), M(0, 7.3, 0.2), HUESO),
+    bake(new THREE.CapsuleGeometry(0.28, 2.6, 3, 10), M(-span, 1.7, 0), HUESO),
+    bake(new THREE.CapsuleGeometry(0.28, 2.6, 3, 10), M(span, 1.7, 0), HUESO),
+    bake(new THREE.CapsuleGeometry(0.32, span * 2, 3, 12), M(0, 3.35, 0, 0, 0, Math.PI / 2), HUESO),
+    bake(new THREE.SphereGeometry(0.7, 14, 12), M(0, 4.15, 0.15), HUESO),
   ]);
   const archMesh = new THREE.Mesh(arch, bone);
   placeOnTrack(archMesh, start.x, start.y, start.z, start.heading);
@@ -268,8 +297,8 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     jaw.name = "mandibula";
     const brasaMat = new THREE.MeshBasicMaterial({ color: BRASA });
     for (let i = 0; i < 3; i++) {
-      const band = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.28, 0.55), brasaMat);
-      band.position.set(0, 0.55 + i * 0.72, -1.6 - i * 1.35);
+      const band = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.22, 0.42), brasaMat);
+      band.position.set(0, 0.85 + i * 0.48, -0.35);
       jaw.add(band);
     }
     scene.add(jaw);
@@ -279,7 +308,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     base.setPosition(lip.x, lip.y, lip.z);
     // Cuencas en la cara del cráneo, mirando a quien se acerca.
     for (const [i, x] of [-1.35, 1.35].entries()) {
-      const local = M(x, 13.15, -2.15);
+      const local = M(x, 11.4, -1.15);
       eyes.setMatrixAt(i, base.clone().multiply(local));
     }
     eyes.frustumCulled = false;
@@ -293,7 +322,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     if (z.type !== "ramp" || !z.size || z.size === "L") continue;
     const spec = RAMP[z.size];
     const lip = pointAt(track, z.to);
-    const g = humpGeometry(spec.len, spec.lip, Math.min(3.2, lip.width * 0.28));
+    const g = humpGeometry(spec.len, spec.lip, Math.min(2.15, lip.width * 0.16), 1.45);
     g.applyMatrix4(M(lip.x, lip.y, lip.z, 0, lip.heading));
     humps.push(g);
   }

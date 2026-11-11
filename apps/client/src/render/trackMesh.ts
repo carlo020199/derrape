@@ -163,7 +163,8 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   strip((w, b) => w / 2 - curb(b), (w) => w / 2, colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat);
   strip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat);
   if (colors.racingLine != null) {
-    strip(() => -0.26, () => 0.26, colors.racingLine, colors.racingLine, 0.05, 0.05, false, false, 1, vividRoad());
+    // Misma luz que el asfalto: un básico sin iluminar se ve como una losa oscura.
+    strip(() => -0.14, () => 0.14, colors.racingLine, colors.racingLine, 0.04, 0.04);
   }
   if (colors.bankEdge) bankEdge(group, track, left, heightAt);
   // Arcén.

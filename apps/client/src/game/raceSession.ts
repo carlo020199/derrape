@@ -714,7 +714,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.body.rotation.y = r.driftVisual + r.spinVisual;
     m.body.rotation.z = -r.driftVisual * 0.15;
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
-    m.setDetail(camera.position.distanceTo(m.root.position) < 15);
+    m.setDetail(poseHold || camera.position.distanceTo(m.root.position) < 15);
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     paintKartFire(m, view, time, dt);
   }
@@ -731,7 +731,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       root.rotation.set(0, heading, 0);
       return;
     }
-    aimEuler.set(-pitch, heading, bank, "YXZ");
+    // El signo del peralte en el euler YXZ queda al revés de la normal de la calzada.
+    aimEuler.set(-pitch, heading, -bank, "YXZ");
     aimTarget.setFromEuler(aimEuler);
     if (!store.aimReady) {
       store.aim.copy(aimTarget);
@@ -988,6 +989,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       };
       return {
         kart: player.race.state,
+        stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
         boxes: world.boxes,
         length: track.length,
         teleport: place,
