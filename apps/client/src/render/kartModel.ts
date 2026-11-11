@@ -177,7 +177,7 @@ function buildKartGeometry(look: KartLook, color: number): BuiltKart {
   const hub = look.skin === "tomb" || look.skin === "churro" ? HUESO : look.skin === "pumpkin" ? LLAMA : BRASA;
   const wheel = (r: number, w: number, x: number, z: number) => {
     // Toros de pocos segmentos: una rueda gorda tiene que caber cuatro veces en el presupuesto.
-    p.add(new THREE.TorusGeometry(r * 0.7, Math.min(r * 0.32, w * 0.45), 3, 6), TYRE, [x, r, z], [0, half, 0]);
+    p.add(new THREE.TorusGeometry(r * 0.7, Math.min(r * 0.32, w * 0.45), 4, 8), TYRE, [x, r, z], [0, half, 0]);
     p.cyl(r * 0.48, r * 0.48, Math.max(0.08, w * 0.42), hub, [x, r, z], [0, 0, half]);
     const out = Math.sign(x || 1) * (w * 0.28 + 0.02);
     p.ball(r * 0.2, HUESO, [x + out, r, z], [0.4, 1, 1], [4, 3]);

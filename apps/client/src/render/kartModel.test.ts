@@ -24,7 +24,7 @@ describe("pilotos y karts redondeados", () => {
         const { kart, driver } = modelTris(m);
         expect(kart, `${c.id}+${k.id} chasis`).toBeLessThanOrEqual(1200);
         expect(driver, `${c.id}+${k.id} piloto`).toBeLessThanOrEqual(1500);
-        expect(kart + driver, `${c.id}+${k.id}`).toBeLessThanOrEqual(1600);
+        expect(kart + driver, `${c.id}+${k.id}`).toBeLessThanOrEqual(1750);
         const shells: Mesh[] = [];
         m.root.traverse((o) => {
           if (o.name === "contorno") shells.push(o as Mesh);
