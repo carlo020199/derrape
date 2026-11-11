@@ -16,4 +16,17 @@ describe("minimapa", () => {
     const [, top] = projectMinimap(50, 80, bounds, size.w, size.h, size.pad);
     expect(top).toBeLessThan(bottom);
   });
+
+  it("un óvalo cabe dentro del círculo y no se recorta en el borde", () => {
+    const oval = { minX: -170, maxX: 170, minZ: -220, maxZ: 220 };
+    const w = 120;
+    const h = 120;
+    for (let i = 0; i < 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      const [sx, sy] = projectMinimap(170 * Math.cos(a), 220 * Math.sin(a), oval, w, h, 14);
+      const dx = sx - w / 2;
+      const dy = sy - h / 2;
+      expect(Math.hypot(dx, dy)).toBeLessThan(w / 2 - 6);
+    }
+  });
 });

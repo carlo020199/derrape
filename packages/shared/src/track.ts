@@ -267,10 +267,14 @@ export function startPose(track: Track): { x: number; z: number; heading: number
   return pointAt(track, 0);
 }
 
-/** Posiciones de la parrilla de salida: dos columnas detrás de la meta. */
+/**
+ * Parrilla: dos columnas detrás de la meta.
+ * La fila de atrás va a 10 m (la cámara de persecución está a ~7,5 m): si no,
+ * ese kart queda entre la cámara y el piloto y se ve enorme, pegado al objetivo.
+ */
 export function gridPose(track: Track, slot: number): { x: number; z: number; heading: number } {
   const row = Math.floor(slot / 2);
   const side = slot % 2 === 0 ? 1 : -1;
   const lateral = side * Math.min(3, track.width / 4);
-  return pointAt(track, -6 - row * 6 - (side < 0 ? 3 : 0), lateral);
+  return pointAt(track, -6 - row * 10 - (side < 0 ? 3 : 0), lateral);
 }

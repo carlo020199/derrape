@@ -1,0 +1,50 @@
+{
+  "volcan-dormido": {
+    "calls": {
+      "calls": 22,
+      "triangles": 18753
+    },
+    "ink": {
+      "inside": 764,
+      "edge": 0,
+      "help": "block",
+      "hidden": false
+    }
+  },
+  "ciudad-neon": {
+    "calls": {
+      "calls": 22,
+      "triangles": 18951
+    },
+    "ink": {
+      "inside": 750,
+      "edge": 0,
+      "help": "block",
+      "hidden": false
+    }
+  },
+  "feria-loca": {
+    "calls": {
+      "calls": 24,
+      "triangles": 19981
+    },
+    "ink": {
+      "inside": 747,
+      "edge": 0,
+      "help": "block",
+      "hidden": false
+    }
+  },
+  "paseo-del-puerto": {
+    "calls": {
+      "calls": 29,
+      "triangles": 16166
+    },
+    "ink": {
+      "inside": 758,
+      "edge": 0,
+      "help": "block",
+      "hidden": false
+    }
+  }
+}

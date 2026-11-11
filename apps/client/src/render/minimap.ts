@@ -13,12 +13,15 @@ export interface MapBounds {
  * mirando hacia +z, el +x del mundo está a su izquierda. Sin el volteo,
  * una curva a la izquierda se dibuja a la derecha.
  */
-export function projectMinimap(x: number, z: number, bounds: MapBounds, width: number, height: number, pad = 10): [number, number] {
-  const w = width - pad * 2;
-  const h = height - pad * 2;
-  const sx = (x - bounds.minX) / Math.max(1e-3, bounds.maxX - bounds.minX);
-  const sz = (z - bounds.minZ) / Math.max(1e-3, bounds.maxZ - bounds.minZ);
-  return [pad + (1 - sx) * w, pad + (1 - sz) * h];
+export function projectMinimap(x: number, z: number, bounds: MapBounds, width: number, height: number, pad = 14): [number, number] {
+  const span = Math.max(1e-3, bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ);
+  // Escala uniforme y margen: el canvas se recorta en círculo. Si el trazado
+  // (un óvalo) llena el cuadrado, el trazo cae en el borde y desaparece.
+  const fit = (Math.min(width, height) - pad * 2) * 0.72;
+  const scale = fit / span;
+  const midX = (bounds.minX + bounds.maxX) / 2;
+  const midZ = (bounds.minZ + bounds.maxZ) / 2;
+  return [width / 2 - (x - midX) * scale, height / 2 - (z - midZ) * scale];
 }
 
 /** Minimapa 2D del circuito (canvas HTML encima del juego). */
@@ -48,7 +51,7 @@ export class Minimap {
     this.maxX = Math.max(...xs);
     this.minZ = Math.min(...zs);
     this.maxZ = Math.max(...zs);
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.draw([], 0, track);
   }
 
   private project(x: number, z: number): [number, number] {

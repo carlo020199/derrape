@@ -82,7 +82,7 @@
     <div id="home" class="screen" hidden>
       <div class="card home-card">
         <h1 class="logo"><span class="logo-d">D</span>errape</h1>
-        <label class="field">Tu nombre <input id="home-name" maxlength="12" autocomplete="off" enterkeyhint="done" /></label>
+        <label class="field">Tu nombre <input id="home-name" placeholder="Escribe tu nombre" maxlength="12" autocomplete="off" enterkeyhint="done" /></label>
         <button id="home-create" class="primary">Crear sala</button>
         <div class="join-row">
           <input id="home-code" placeholder="CÓDIGO" maxlength="4" autocomplete="off" autocapitalize="characters" enterkeyhint="go" />
@@ -134,7 +134,6 @@
     </div>
 
     <div id="help">Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning</div>
-    <div id="touch-help">Arrastra a los lados para girar · lejos para derrapar<br />Toca = objeto · desliza ↑ adelante · ↓ atrás</div>
 
     <div id="menu" class="overlay" hidden>
       <div class="card">
@@ -157,6 +156,8 @@
     <div id="rotate" class="overlay">
       <div class="card"><div class="rotate-icon">↻📱</div><h2>Pon el móvil en vertical</h2><p>Derrape se juega en vertical.</p></div>
     </div>
+
+    <div id="touch-help">Arrastra a los lados para girar · lejos para derrapar<br />Toca = objeto · desliza ↑ adelante · ↓ atrás</div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

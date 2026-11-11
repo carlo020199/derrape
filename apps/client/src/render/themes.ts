@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, type ThemeId, type Track, type TrackDef } from "@derrape/shared";
-import { toonMaterial } from "./materials";
+import { sharedVertexToon, toonMaterial } from "./materials";
 import { leftNormals, type TrackColors } from "./trackMesh";
 
 // Kits de tema: colores del entorno y decoración reutilizable. Todo con primitivas low-poly
@@ -108,10 +108,31 @@ function startArch(scene: THREE.Object3D, track: Track, color: number) {
     post.position.set(p.x + nx * half * side, p.y + 3, p.z + nz * half * side);
     scene.add(post);
   }
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 0.6, 1.2, 0.5), toon(HUESO));
+  // Cápsula ~30 % más fina que la caja de 1,2 m, con el canto de abajo en Sombra.
+  const bar = new THREE.Mesh(archBarGeometry(half * 2 + 0.6), sharedVertexToon());
   bar.position.set(p.x, p.y + 6, p.z);
   bar.rotation.y = archBarYaw(p.heading);
   scene.add(bar);
+}
+
+/** Barra del arco: cápsula en Hueso con el canto inferior en Sombra. Una sola malla. */
+function archBarGeometry(length: number): THREE.BufferGeometry {
+  const radius = 0.42;
+  const straight = Math.max(0.3, length - radius * 2);
+  const geo = new THREE.CapsuleGeometry(radius, straight, 3, 8);
+  geo.rotateZ(Math.PI / 2);
+  const pos = geo.getAttribute("position");
+  const colors = new Float32Array(pos.count * 3);
+  const bone = new THREE.Color(HUESO);
+  const sombra = new THREE.Color(SOMBRA);
+  for (let i = 0; i < pos.count; i++) {
+    const c = pos.getY(i) < -radius * 0.45 ? sombra : bone;
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  return geo;
 }
 
 /** Marcas planas de turbo sobre la pista (sin tocar trackMesh). */

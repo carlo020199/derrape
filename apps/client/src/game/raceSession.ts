@@ -61,7 +61,7 @@ import {
 import { sfx } from "../audio/sfx";
 import { readInput } from "../input";
 import { readKeyboard } from "../input/keyboard";
-import { takeItemAction, touch } from "../input/touch";
+import { showTouchHint, takeItemAction, touch } from "../input/touch";
 import { INTERP_DELAY, ItemsBuffer, SnapshotBuffer } from "../net/interpolation";
 import type { Net } from "../net/net";
 import { BlobShadows } from "../render/blobShadow";
@@ -176,6 +176,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const track = buildTrackFromDef(def);
   const theme = THEMES[def.theme];
   const laps = online?.start.laps ?? def.laps;
+  showTouchHint();
 
   // El cielo (radio 230) tiene que caber en el plano lejano. La niebla corta a 190.
   camera.far = 260;

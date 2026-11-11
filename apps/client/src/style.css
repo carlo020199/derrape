@@ -230,9 +230,22 @@ body.touch #touch-zone { display: block; }
   text-align: center;
   color: var(--texto);
   pointer-events: none;
-  animation: fade-out 600ms ease-out 6s forwards;
+  z-index: 6;
 }
-body.touch #touch-help { display: block; }
+body.touch #touch-help.show {
+  display: block;
+  animation: fade-out 500ms ease-out 4s forwards;
+}
+body.hint-gone #touch-help,
+body.in-menu #touch-help,
+.screen:not([hidden]) ~ #touch-help,
+#results:not([hidden]) ~ #touch-help,
+#menu:not([hidden]) ~ #touch-help,
+#pause:not([hidden]) ~ #touch-help,
+#loading:not([hidden]) ~ #touch-help,
+#reconnecting:not([hidden]) ~ #touch-help {
+  display: none !important;
+}
 @keyframes fade-out { to { opacity: 0; } }
 
 #item-slot {
@@ -674,6 +687,7 @@ body.touch #touch-help { display: block; }
   -webkit-user-select: text;
 }
 .screen input::placeholder { color: var(--tenue); opacity: 1; }
+#home-name::placeholder { color: rgb(243 231 211 / 0.5); opacity: 1; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 800; color: var(--tenue); }
 .join-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .join-row input {
