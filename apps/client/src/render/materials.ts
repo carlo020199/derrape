@@ -86,6 +86,11 @@ function boneGradientMap(): THREE.DataTexture {
   return tex;
 }
 
+/** Toon de piezas de hueso: la sombra se queda en #C8B597, no en gris. */
+export function boneToonMaterial(): THREE.MeshToonMaterial {
+  return new THREE.MeshToonMaterial({ color: PALETTE.hueso, gradientMap: boneGradientMap() });
+}
+
 let boneToon: THREE.MeshToonMaterial | null = null;
 /** Toon de los pilotos: el hueso se queda hueso en la banda oscura. */
 export function sharedBoneToon(): THREE.MeshToonMaterial {

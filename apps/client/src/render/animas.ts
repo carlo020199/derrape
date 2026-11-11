@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { closestPoint, pointAt, RAMP, type Track, type TrackDef } from "@derrape/shared";
-import { PALETTE, sharedVertexToon, toonMaterial } from "./materials";
+import { closestPoint, pointAt, RAMP, surfaceY, type Track, type TrackDef } from "@derrape/shared";
+import { PALETTE, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -87,30 +87,33 @@ export function triangleCount(geo: THREE.BufferGeometry) {
   return pos ? pos.count / 3 : 0;
 }
 
-/** Lomo redondeado. El labio (z alta) lleva bandas brasa. */
+/**
+ * Lomo apoyado en la calzada: bajo por detrás, alto en el labio (z = 0).
+ * No es un disco flotante: la base está en y = 0 y el ancho cabe en la pista.
+ */
 function humpGeometry(len: number, lip: number, halfWidth: number) {
-  const g = new THREE.SphereGeometry(1, 16, 12);
-  g.scale(halfWidth, lip, len / 2);
-  g.translate(0, lip * 0.15, -len / 2);
+  const g = new THREE.SphereGeometry(1, 14, 10);
   const pos = g.getAttribute("position");
-  const colors = new Float32Array(pos.count * 3);
   const bone = new THREE.Color(HUESO);
+  const shade = new THREE.Color(PALETTE.huesoSombra);
   const brasa = new THREE.Color(BRASA);
-  let zMin = Infinity;
-  let zMax = -Infinity;
+  const colors = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
-    zMin = Math.min(zMin, pos.getZ(i));
-    zMax = Math.max(zMax, pos.getZ(i));
-  }
-  for (let i = 0; i < pos.count; i++) {
-    const u = (pos.getZ(i) - zMin) / (zMax - zMin || 1);
-    const band = u > 0.55 && Math.floor(u * 10) % 2 === 0;
-    const c = band ? brasa : bone;
+    const x = pos.getX(i);
+    const y = Math.max(0, pos.getY(i));
+    const z = pos.getZ(i);
+    const u = (z + 1) / 2;
+    const h = lip * (0.12 + 0.88 * u * u);
+    pos.setXYZ(i, x * halfWidth, y * h, (z - 1) * (len / 2));
+    const band = u > 0.72 && Math.floor(u * 16) % 2 === 0;
+    const c = band ? brasa : y > 0.55 ? bone : shade;
     colors[i * 3] = c.r;
     colors[i * 3 + 1] = c.g;
     colors[i * 3 + 2] = c.b;
   }
+  pos.needsUpdate = true;
   g.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  g.computeVertexNormals();
   return g;
 }
 
@@ -121,21 +124,19 @@ function humpGeometry(len: number, lip: number, halfWidth: number) {
 export function jawLocalGeometry(): THREE.BufferGeometry {
   const lip = RAMP.L.lip;
   const len = RAMP.L.len;
-  const jaw = humpGeometry(len, lip, 6.2);
-  const tooth = new THREE.SphereGeometry(0.42, 8, 6);
+  // La cara mira a −z (por donde llega el kart). El cráneo queda abierto sobre el vuelo.
+  const jaw = humpGeometry(len, lip, 4.4);
   const parts: THREE.BufferGeometry[] = [jaw];
-  for (const x of [-5.2, -3.4, -2.0, 2.0, 3.4, 5.2]) {
-    parts.push(bake(tooth, M(x, lip + 0.2, -0.15), HUESO));
+  const tooth = new THREE.SphereGeometry(0.48, 10, 8);
+  for (const x of [-3.4, -1.7, 0, 1.7, 3.4]) {
+    parts.push(bake(tooth, M(x, 2.15, -1.35, 0, 0, 0, 0.85, 1.35, 0.7), HUESO));
   }
-  const post = new THREE.CapsuleGeometry(0.5, 6.2, 2, 8);
-  parts.push(bake(post, M(-8.4, 4.4, 2), HUESO));
-  parts.push(bake(post, M(8.4, 4.4, 2), HUESO));
-  const cheek = new THREE.SphereGeometry(1.35, 10, 8);
-  parts.push(bake(cheek, M(-7.4, 6.8, 2.4), HUESO));
-  parts.push(bake(cheek, M(7.4, 6.8, 2.4), HUESO));
-  // Paladar por encima del vuelo. El ápice de diseño es 4,42 m; debajo del arco quedan 6 m.
-  const palate = new THREE.CapsuleGeometry(0.7, 15, 2, 10);
-  parts.push(bake(palate, M(0, 4.42 + 6 + 0.7, 8, 0, 0, Math.PI / 2), HUESO));
+  const cheek = new THREE.SphereGeometry(1.35, 12, 10);
+  parts.push(bake(cheek, M(-5.1, 8.6, -0.4), HUESO));
+  parts.push(bake(cheek, M(5.1, 8.6, -0.4), HUESO));
+  // Fondo del cráneo en 4,42 + 6 m: el ápice del salto pasa por debajo.
+  const skull = new THREE.SphereGeometry(3.15, 18, 14);
+  parts.push(bake(skull, M(0, 4.42 + 6 + 3.15, 1.2), HUESO));
   return merge(parts);
 }
 
@@ -234,15 +235,15 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   if (moon) moon.scale.setScalar(1.55);
   scene.getObjectByName("cielo")?.add(stars());
 
-  const toon = sharedVertexToon();
+  const bone = sharedBoneToon();
 
-  // Campanario junto a la meta, por delante de la parrilla para que la cámara lo vea.
-  // El hito del diseño cae detrás de la cámara de persecución.
-  // Un poco por delante de la meta y apenas fuera del arcén: la cámara de la parrilla lo tiene en cuadro.
-  const spot = pointAt(track, 6, 7);
-  const tower = new THREE.Mesh(campanarioGeometry(), toon);
-  tower.scale.setScalar(1.55);
+  // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
+  const spot = pointAt(track, 78, 10);
+  const tower = new THREE.Mesh(campanarioGeometry(), bone);
   tower.position.set(spot.x, spot.y, spot.z);
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(1.05, 14, 10), new THREE.MeshBasicMaterial({ color: LLAMA }));
+  bell.position.set(1.15, 9.4, 1.15);
+  tower.add(bell);
   tower.name = "campanario";
   scene.add(tower);
 
@@ -254,7 +255,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     bake(new THREE.CapsuleGeometry(0.4, start.width, 2, 8), M(0, 6.1, 0, 0, 0, Math.PI / 2), HUESO),
     bake(new THREE.SphereGeometry(1.1, 12, 10), M(0, 7.3, 0.2), HUESO),
   ]);
-  const archMesh = new THREE.Mesh(arch, toon);
+  const archMesh = new THREE.Mesh(arch, bone);
   placeOnTrack(archMesh, start.x, start.y, start.z, start.heading);
   scene.add(archMesh);
 
@@ -262,19 +263,27 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const big = track.zones.find((z) => z.type === "ramp" && z.size === "L");
   if (big) {
     const lip = pointAt(track, big.to);
-    const jaw = new THREE.Mesh(jawLocalGeometry(), toon);
+    const jaw = new THREE.Mesh(jawLocalGeometry(), bone);
     placeOnTrack(jaw, lip.x, lip.y, lip.z, lip.heading);
     jaw.name = "mandibula";
+    const brasaMat = new THREE.MeshBasicMaterial({ color: BRASA });
+    for (let i = 0; i < 3; i++) {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.28, 0.55), brasaMat);
+      band.position.set(0, 0.55 + i * 0.72, -1.6 - i * 1.35);
+      jaw.add(band);
+    }
     scene.add(jaw);
-    const eyeGeo = new THREE.SphereGeometry(0.55, 10, 8);
+    const eyeGeo = new THREE.SphereGeometry(0.78, 12, 10);
     const eyes = new THREE.InstancedMesh(eyeGeo, new THREE.MeshBasicMaterial({ color: ANIMA }), 2);
     const base = new THREE.Matrix4().makeRotationY(lip.heading);
     base.setPosition(lip.x, lip.y, lip.z);
-    for (const [i, x] of [-7.4, 7.4].entries()) {
-      const local = M(x, 7.6, 3.6);
+    // Cuencas en la cara del cráneo, mirando a quien se acerca.
+    for (const [i, x] of [-1.35, 1.35].entries()) {
+      const local = M(x, 13.15, -2.15);
       eyes.setMatrixAt(i, base.clone().multiply(local));
     }
     eyes.frustumCulled = false;
+    eyes.name = "ojos-calavera";
     scene.add(eyes);
   }
 
@@ -284,36 +293,47 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     if (z.type !== "ramp" || !z.size || z.size === "L") continue;
     const spec = RAMP[z.size];
     const lip = pointAt(track, z.to);
-    const g = humpGeometry(spec.len, spec.lip, Math.min(6.5, lip.width * 0.42));
+    const g = humpGeometry(spec.len, spec.lip, Math.min(3.2, lip.width * 0.28));
     g.applyMatrix4(M(lip.x, lip.y, lip.z, 0, lip.heading));
     humps.push(g);
   }
-  if (humps.length) scene.add(new THREE.Mesh(merge(humps), toon));
+  if (humps.length) scene.add(new THREE.Mesh(merge(humps), bone));
 
-  // Laguna bajo el salto. Translúcida para no competir con el asfalto.
+  // Laguna bajo el salto, siempre por debajo del asfalto más bajo de la zona.
+  // Se dibuja antes que los karts y con depthTest, para no teñir la escena.
   if (big) {
-    const mid = pointAt(track, big.to + 18);
-    const waterY = mid.y - 1.6;
-    const disc = new THREE.Mesh(
-      new THREE.CircleGeometry(34, 28),
-      new THREE.MeshBasicMaterial({ color: ESPECTRO, transparent: true, opacity: 0.85, depthWrite: false }),
-    );
+    let low = Infinity;
+    for (let d = big.from - 6; d <= big.to + 50; d += 2) {
+      const p = pointAt(track, d);
+      low = Math.min(low, p.y);
+      low = Math.min(low, surfaceY({ y: p.y, lateral: p.width / 2, bank: p.bank }));
+      low = Math.min(low, surfaceY({ y: p.y, lateral: -p.width / 2, bank: p.bank }));
+    }
+    const waterY = low - 1.8;
+    const mid = pointAt(track, big.to + 16);
+    const waterMat = new THREE.MeshBasicMaterial({
+      color: ESPECTRO,
+      transparent: true,
+      opacity: 0.85,
+      depthTest: true,
+      depthWrite: true,
+      side: THREE.FrontSide,
+    });
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(22, 28), waterMat);
     disc.rotation.x = -Math.PI / 2;
     disc.position.set(mid.x, waterY, mid.z);
+    disc.renderOrder = -2;
+    disc.name = "laguna";
     scene.add(disc);
     const rim = new THREE.Mesh(
-      new THREE.RingGeometry(32, 36, 28),
-      new THREE.MeshBasicMaterial({ color: ESPECTRO, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }),
+      new THREE.RingGeometry(20.2, 22, 28),
+      new THREE.MeshBasicMaterial({ color: ESPECTRO, depthTest: true, depthWrite: true, side: THREE.FrontSide }),
     );
     rim.rotation.x = -Math.PI / 2;
-    rim.position.set(mid.x, waterY + 0.05, mid.z);
+    rim.position.set(mid.x, waterY + 0.04, mid.z);
+    rim.renderOrder = -2;
+    rim.name = "laguna-borde";
     scene.add(rim);
-    const mist = new THREE.Sprite(
-      new THREE.SpriteMaterial({ color: ESPECTRO, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }),
-    );
-    mist.scale.set(48, 18, 1);
-    mist.position.set(mid.x, waterY + 1.2, mid.z);
-    scene.add(mist);
   }
 
   // Faroles flotantes, una sola malla.
@@ -339,9 +359,9 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   scene.add(lanterns);
 
   // Pinos de hueso y lápidas en el Pinar, linternas ya van en la subida con el mismo lote.
-  const trunks = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.28, 1.4, 2, 6), toonMaterial({ color: HUESO }), 16);
+  const trunks = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.28, 1.4, 2, 6), boneToonMaterial(), 16);
   const crowns = new THREE.InstancedMesh(new THREE.SphereGeometry(0.9, 8, 6), toonMaterial({ color: ANIMA }), 16);
-  const tombs = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.35, 0.7, 2, 6), toonMaterial({ color: HUESO }), 12);
+  const tombs = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.35, 0.7, 2, 6), boneToonMaterial(), 12);
   let trees = 0;
   let graves = 0;
   for (let i = 0; i < pts.length && (trees < 16 || graves < 12); i += 10) {

@@ -1030,7 +1030,17 @@ const animas: ThemeKit = {
   // Un poco más lejos que 40 m: si no, el peralte de la siguiente curva se pierde en la niebla.
   fog: [50, 190],
   ground: 0x1a1430,
-  track: { road: 0x24202e, curbA: 0xf3e7d3, curbB: 0x3ff2c8, verge: 0x2a2338, wall: 0x2e2547, groundY: -8 },
+  track: {
+    road: 0x24202e,
+    curbA: 0xf3e7d3,
+    curbB: 0x3ff2c8,
+    verge: 0x2a2338,
+    wall: 0x2e2547,
+    groundY: -8,
+    curbWidth: 0.8,
+    racingLine: 0x2e2547,
+    bankEdge: true,
+  },
   decorate(scene, track, def) {
     decorateAnimas(scene, track, def);
   },

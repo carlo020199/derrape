@@ -36,6 +36,7 @@ import {
   stepKartOnTrack,
   statsFor,
   SURFACE,
+  gradeAlong,
   hazardActiveAt,
   surfaceY,
   updateProgress,
@@ -123,7 +124,7 @@ export interface RaceSession {
     boxes: { x: number; z: number }[];
     teleport: (distance: number, lateral?: number, speed?: number) => void;
     length: number;
-    fly: (distance: number) => void;
+    fly: (distance: number, speed?: number) => void;
   };
 }
 
@@ -816,6 +817,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   let frames = 0;
   let fpsStart = last;
   let time = 0;
+  /** La consola de fotos deja el kart quieto en un sitio y a una velocidad. */
+  let poseHold = false;
 
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.1, (now - last) / 1000);
@@ -844,11 +847,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       onItemEvents(events);
     }
 
-    accumulator += dt;
-    while (accumulator >= PHYSICS_DT) {
-      stepPhysics();
-      accumulator -= PHYSICS_DT;
-    }
+    if (!poseHold) {
+      accumulator += dt;
+      while (accumulator >= PHYSICS_DT) {
+        stepPhysics();
+        accumulator -= PHYSICS_DT;
+      }
+    } else accumulator = 0;
     const alpha = accumulator / PHYSICS_DT;
 
     fire.begin();
@@ -908,7 +913,11 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
             airborne: me.airborne,
             groundY: surfaceY(closestPoint(track, me.x, me.z)),
             bigJump: me.airborne && me.flightRamp === "L",
-            floorAt: (x, z) => surfaceY(closestPoint(track, x, z)),
+            floorAt: (x, z) => {
+              const road = surfaceY(closestPoint(track, x, z));
+              const lagoon = scene.getObjectByName("laguna");
+              return Math.max(road, lagoon ? lagoon.position.y : -Infinity);
+            },
           }
         : undefined,
     );
@@ -967,10 +976,14 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         s.along = -1;
         s.flightRamp = null;
         const c = closestPoint(track, p.x, p.z);
+        s.grade = gradeAlong(track, c, s.heading);
+        s.bank = c.bank;
         player.y = surfaceY(c);
         player.bank = c.bank;
+        player.aimReady = false;
         Object.assign(player.prev, s);
         phase = "racing";
+        poseHold = true;
         chase.snap();
       };
       return {
@@ -978,14 +991,14 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         boxes: world.boxes,
         length: track.length,
         teleport: place,
-        fly(distance: number) {
-          place(distance);
+        fly(distance: number, speed = 26) {
+          place(distance, 0, speed);
           const s = player.race.state;
           const c = closestPoint(track, s.x, s.z);
           s.airborne = true;
           s.flightRamp = "L";
           s.vy = 3.5;
-          s.y = surfaceY(c) + 4.4;
+          s.y = surfaceY(c) + 2.3;
           player.y = s.y;
           chase.snap();
         },
