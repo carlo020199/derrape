@@ -15,7 +15,6 @@ import {
   botInput,
   buildTrackFromDef,
   closestPoint,
-  collideKartWithTrack,
   collideKarts,
   createItemBoxes,
   createKart,
@@ -34,11 +33,11 @@ import {
   standings,
   startResult,
   stepItems,
-  stepKart,
+  stepKartOnTrack,
   statsFor,
   SURFACE,
   hazardActiveAt,
-  surfaceAt,
+  surfaceY,
   updateProgress,
   useItem,
   type BotDriver,
@@ -119,7 +118,13 @@ export interface RaceSession {
   restart(): void;
   dispose(): void;
   /** Para depurar desde la consola: el estado del kart del jugador y las cajas. */
-  debug(): { kart: KartState; boxes: { x: number; z: number }[] };
+  debug(): {
+    kart: KartState;
+    boxes: { x: number; z: number }[];
+    teleport: (distance: number, lateral?: number, speed?: number) => void;
+    length: number;
+    fly: (distance: number) => void;
+  };
 }
 
 /** Kart que se simula en este móvil (el jugador y, en solitario, los de prueba). */
@@ -138,6 +143,9 @@ interface LocalRacer {
   driftVisual: number;
   spinVisual: number;
   y: number;
+  bank: number;
+  aim: THREE.Quaternion;
+  aimReady: boolean;
   stall: number;
   wrongWay: number;
   respawns: number;
@@ -152,6 +160,9 @@ interface RemoteRacer {
   /** Último estado dibujado (también sirve para los choques). */
   shown: KartState | null;
   y: number;
+  bank: number;
+  aim: THREE.Quaternion;
+  aimReady: boolean;
   driftVisual: number;
   spinVisual: number;
   finished: boolean;
@@ -170,6 +181,8 @@ const lerpAngle = (a: number, b: number, t: number) => {
   while (d < -Math.PI) d += Math.PI * 2;
   return a + d * t;
 };
+const aimEuler = new THREE.Euler(0, 0, 0, "YXZ");
+const aimTarget = new THREE.Quaternion();
 
 export function createRaceSession(view: GameView, opts: SessionOptions): RaceSession {
   const { renderer, camera, chase, quality, showFlash } = view;
@@ -223,6 +236,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     const pose = gridPose(track, slot);
     const state = createKart(pose.x, pose.z, pose.heading);
     state.mass = stats.weight;
+    const planted = closestPoint(track, state.x, state.z);
     return {
       name,
       race: createRaceKart(slot, state, track),
@@ -236,7 +250,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       tuning: bot ? deriveTuning({ ...KART, maxSpeed: KART.maxSpeed * speed }, stats, driftMult) : deriveTuning(KART, stats, driftMult),
       driftVisual: 0,
       spinVisual: 0,
-      y: 0,
+      y: surfaceY(planted),
+      bank: planted.bank,
+      aim: new THREE.Quaternion(),
+      aimReady: false,
       stall: 0,
       wrongWay: 0,
       respawns: 0,
@@ -265,6 +282,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         buffer: new SnapshotBuffer(),
         shown: null,
         y: 0,
+        bank: 0,
+        aim: new THREE.Quaternion(),
+        aimReady: false,
         driftVisual: 0,
         spinVisual: 0,
         finished: false,
@@ -334,6 +354,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       r.stall = 0;
       r.wrongWay = 0;
       r.respawns = 0;
+      r.aimReady = false;
       if (r === player) r.bot = undefined;
     });
     world.karts = locals.map((r) => r.race);
@@ -539,6 +560,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       driftDir: s.driftDir,
       driftLevel: driftLevel(s),
       hop: hopHeight(s),
+      y: player.y,
+      vy: s.vy,
       boosting: s.boostTime > 0,
       spinning: s.spinTime > 0,
       shield: s.shieldTime > 0,
@@ -571,20 +594,24 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     for (const r of locals) {
       const s = r.race.state;
       Object.assign(r.prev, s);
-      if (phase === "countdown") continue;
+      if (phase === "countdown") {
+        const c = closestPoint(track, s.x, s.z);
+        r.y = surfaceY(c);
+        r.bank = c.bank;
+        continue;
+      }
       r.stall = Math.max(0, r.stall - PHYSICS_DT);
       const tuning = r === player ? deriveTuning(KART, r.stats, r.driftMult) : r.tuning;
-      stepKart(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, tuning);
-      const c = collideKartWithTrack(s, track, tuning);
-      s.surface = surfaceAt(track, c);
-      if (hazardActiveAt(track, c, raceTime) && s.spinTime <= 0) {
+      const c = stepKartOnTrack(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, track, tuning);
+      if (!s.airborne && hazardActiveAt(track, c, raceTime) && s.spinTime <= 0) {
         s.spinTime = SURFACE.hazardSpinTime;
         if (r === player) {
           sfx.hit();
           showFlash("¡Tren!");
         }
       }
-      r.y = c.y;
+      r.bank = c.bank;
+      r.y = s.airborne ? s.y : surfaceY(c) + s.climb;
 
       const event = updateProgress(r.progress, track, c.distance, raceTime, laps);
       if (r === player) {
@@ -691,6 +718,27 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     paintKartFire(m, view, time, dt);
   }
 
+  function orientKart(
+    root: THREE.Object3D,
+    store: { aim: THREE.Quaternion; aimReady: boolean },
+    heading: number,
+    pitch: number,
+    bank: number,
+    dt: number,
+  ) {
+    if (!track.relief) {
+      root.rotation.set(0, heading, 0);
+      return;
+    }
+    aimEuler.set(-pitch, heading, bank, "YXZ");
+    aimTarget.setFromEuler(aimEuler);
+    if (!store.aimReady) {
+      store.aim.copy(aimTarget);
+      store.aimReady = true;
+    } else store.aim.slerp(aimTarget, 1 - Math.exp(-12 * dt));
+    root.quaternion.copy(store.aim);
+  }
+
   function drawRemotes(dt: number, time: number) {
     const serverNow = online?.net.clock.now(performance.now());
     if (serverNow == null) return;
@@ -698,8 +746,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       const s = rem.buffer.sample(serverNow - INTERP_DELAY);
       rem.model.root.visible = s !== null;
       if (!s) continue;
-      rem.y = closestPoint(track, s.x, s.z).y;
-      rem.shown = { ...createKart(s.x, s.z, s.heading), speed: s.speed, mass: rem.stats.weight };
+      const ground = closestPoint(track, s.x, s.z);
+      const road = surfaceY(ground);
+      rem.y = typeof s.y === "number" ? s.y : road;
+      rem.bank = ground.bank;
+      rem.shown = { ...createKart(s.x, s.z, s.heading), speed: s.speed, mass: rem.stats.weight, y: rem.y, vy: s.vy ?? 0 };
+      const air = typeof s.y === "number" && s.y > road + 0.5;
       drawKart(
         rem.model,
         rem,
@@ -711,6 +763,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         dt,
         time,
       );
+      const pitch = air ? Math.atan2(s.vy ?? 0, Math.max(1, Math.abs(s.speed))) : 0;
+      orientKart(rem.model.root, rem, s.heading, pitch, air ? 0 : (rem.bank * Math.PI) / 180, dt);
     }
   }
 
@@ -800,13 +854,14 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     fire.begin();
     for (const r of locals) {
       const s = r.race.state;
+      const heading = lerpAngle(r.prev.heading, s.heading, alpha);
       drawKart(
         r.model,
         r,
         r.prev.x + (s.x - r.prev.x) * alpha,
         r.y + hopHeight(s),
         r.prev.z + (s.z - r.prev.z) * alpha,
-        lerpAngle(r.prev.heading, s.heading, alpha),
+        heading,
         {
           driftDir: s.driftDir,
           level: driftLevel(s),
@@ -819,6 +874,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         dt,
         time,
       );
+      const pitch = s.airborne
+        ? Math.atan2(s.vy, Math.max(1, Math.abs(s.speed)))
+        : Math.asin(Math.max(-1, Math.min(1, s.grade)));
+      orientKart(r.model.root, r, heading, pitch, s.airborne ? 0 : (r.bank * Math.PI) / 180, dt);
     }
     drawRemotes(dt, time);
     if (online) syncNetItems();
@@ -835,7 +894,24 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
     const me = player.race.state;
     const root = player.model.root;
-    chase.update(root.position.x, player.y, root.position.z, root.rotation.y, me.speed / KART.maxSpeed, dt);
+    chase.update(
+      root.position.x,
+      player.y,
+      root.position.z,
+      me.heading,
+      me.speed / KART.maxSpeed,
+      dt,
+      track.relief
+        ? {
+            relief: true,
+            bankDeg: player.bank,
+            airborne: me.airborne,
+            groundY: surfaceY(closestPoint(track, me.x, me.z)),
+            bigJump: me.airborne && me.flightRamp === "L",
+            floorAt: (x, z) => surfaceY(closestPoint(track, x, z)),
+          }
+        : undefined,
+    );
     sky.position.copy(camera.position);
     blobs.update(track, [
       ...locals.map((r) => ({ x: r.model.root.position.x, z: r.model.root.position.z, on: true })),
@@ -876,7 +952,44 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       if (!online) resetLocals();
     },
     debug() {
-      return { kart: player.race.state, boxes: world.boxes };
+      const place = (distance: number, lateral = 0, speed = 22) => {
+        const p = pointAt(track, distance, lateral);
+        const s = player.race.state;
+        s.x = p.x;
+        s.z = p.z;
+        s.heading = p.heading;
+        s.speed = speed;
+        // La consola de fotos deja el kart sin acelerar para encuadrar.
+        player.stall = 999;
+        s.airborne = false;
+        s.vy = 0;
+        s.climb = 0;
+        s.along = -1;
+        s.flightRamp = null;
+        const c = closestPoint(track, p.x, p.z);
+        player.y = surfaceY(c);
+        player.bank = c.bank;
+        Object.assign(player.prev, s);
+        phase = "racing";
+        chase.snap();
+      };
+      return {
+        kart: player.race.state,
+        boxes: world.boxes,
+        length: track.length,
+        teleport: place,
+        fly(distance: number) {
+          place(distance);
+          const s = player.race.state;
+          const c = closestPoint(track, s.x, s.z);
+          s.airborne = true;
+          s.flightRamp = "L";
+          s.vy = 3.5;
+          s.y = surfaceY(c) + 4.4;
+          player.y = s.y;
+          chase.snap();
+        },
+      };
     },
     dispose() {
       renderer.setAnimationLoop(null);

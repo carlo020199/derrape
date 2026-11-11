@@ -86,7 +86,9 @@ createDebugPanel(
 let session: RaceSession | null = null;
 let net: Net | null = null;
 let lobby: LobbyMessage | null = null;
-let soloTrack = findTrack(new URLSearchParams(location.search).get("pista") ?? "")?.id ?? DEFAULT_TRACK;
+const query = new URLSearchParams(location.search);
+const queryTrack = query.get("track") ?? query.get("pista");
+let soloTrack = findTrack(queryTrack ?? "")?.id ?? DEFAULT_TRACK;
 
 setupMenu((paused) => {
   releaseTouch();
@@ -292,7 +294,13 @@ void wakeServer((status) => {
 });
 
 // Al recargar en mitad de una sala, se intenta volver a ella; si no, al inicio.
+// ?track=laguna-de-las-animas (o ?pista=) entra directo a ese circuito, para probar en el móvil.
 (async () => {
+  if (queryTrack && findTrack(queryTrack) && !query.get("sala")) {
+    document.body.classList.remove("online");
+    await startSolo(queryTrack);
+    return;
+  }
   const n = connectNet();
   if (await n.resume()) {
     net = n;

@@ -1,7 +1,7 @@
 # Derrape — Contenido de lanzamiento
 
 Todo disponible desde el primer día (nada que desbloquear):
-**10 circuitos · 8 personajes · 10 coches.** Todo ORIGINAL (ver reglas en `CLAUDE.md`).
+**10 circuitos de copa, 1 extra, 8 personajes y 10 coches.** Todo ORIGINAL (ver reglas en `CLAUDE.md`).
 
 Los nombres son provisionales: cámbialos libremente.
 
@@ -73,6 +73,11 @@ Cada circuito tiene **una mecánica propia** para que se sienta distinto. Vuelta
 | 8 | **Cañón Rojo** | Desierto y cañones | ★★★ | Puentes de madera estrechos y salto largo sobre el cañón |
 | 9 | **Volcán Dormido** | Selva y lava | ★★★ | Atajo arriesgado junto a la lava (caer = respawn) |
 | 10 | **Ciudad Neón** | Ciudad de noche con rascacielos | ★★★ | Túneles, rampas entre azoteas y luces de neón |
+
+### Extra (no entra en las copas)
+| # | Circuito | Tema | Dificultad | Mecánica propia |
+|---|---|---|---|---|
+| 11 | **Laguna de las Ánimas** | Noche de difuntos junto a una laguna espectral | ★★★ | Peralte, cuestas y saltos S/M/L con vuelo real. Se abre directo con `?track=laguna-de-las-animas` |
 
 Cómo hacer 10 circuitos sin volverse loco:
 - Cada circuito es **un archivo de datos** (`packages/shared/src/tracks/NN-nombre.ts`): puntos de la spline,

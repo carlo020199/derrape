@@ -94,6 +94,13 @@ export interface NetKartState {
   driftDir: number;
   driftLevel: number;
   hop: number;
+  /**
+   * Altura absoluta del kart (m). Si falta, quien dibuja usa la de la pista
+   * (clientes de antes de los saltos reales).
+   */
+  y?: number;
+  /** Velocidad vertical (m/s), para interpolar el vuelo. */
+  vy?: number;
   boosting: boolean;
   spinning: boolean;
   shield: boolean;

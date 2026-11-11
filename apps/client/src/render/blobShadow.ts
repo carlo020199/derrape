@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { closestPoint, pointAt, type Track } from "@derrape/shared";
+import { closestPoint, surfaceNormal, surfaceY, type Track } from "@derrape/shared";
 import { NOCHE } from "./materials";
 
 function radialTexture(): THREE.CanvasTexture {
@@ -21,7 +21,6 @@ export class BlobShadows {
   readonly mesh: THREE.InstancedMesh;
   private readonly dummy = new THREE.Object3D();
   private readonly up = new THREE.Vector3(0, 1, 0);
-  private readonly tangent = new THREE.Vector3();
   private readonly normal = new THREE.Vector3();
 
   constructor(parent: THREE.Object3D, count = 8) {
@@ -52,19 +51,11 @@ export class BlobShadows {
         this.dummy.quaternion.identity();
       } else {
         const c = closestPoint(track, s.x, s.z);
-        const a = pointAt(track, c.distance - 2);
-        const b = pointAt(track, c.distance + 2);
-        this.tangent.set(b.x - a.x, b.y - a.y, b.z - a.z);
-        if (this.tangent.lengthSq() < 1e-6) this.tangent.set(0, 0, 1);
-        this.tangent.normalize();
-        const sx = this.tangent.z;
-        const sz = -this.tangent.x;
-        this.normal.set(this.tangent.y * sz, this.tangent.z * sx - this.tangent.x * sz, -this.tangent.y * sx);
-        if (this.normal.lengthSq() < 1e-8) this.normal.set(0, 1, 0);
-        else this.normal.normalize();
-        if (this.normal.y < 0) this.normal.negate();
-        // El asfalto está 0,02 m sobre la línea central: +0,05 deja la sombra a +0,03.
-        this.dummy.position.set(s.x, c.y + 0.05, s.z);
+        const n = surfaceNormal(track, c);
+        this.normal.set(n.x, n.y, n.z);
+        // El asfalto está 0,02 m sobre la calzada: +0,05 deja la sombra a +0,03.
+        // Con peralte 0, surfaceY es c.y y la normal es la de la pendiente, como antes.
+        this.dummy.position.set(s.x, surfaceY(c) + 0.05, s.z);
         this.dummy.scale.set(1.35, 1, 1.35);
         this.dummy.quaternion.setFromUnitVectors(this.up, this.normal);
       }

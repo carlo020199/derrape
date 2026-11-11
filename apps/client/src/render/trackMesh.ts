@@ -36,16 +36,34 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   const left = leftNormals(track);
 
   /**
-   * Una tira a lo largo de toda la pista. `inner`/`outer` = desplazamiento lateral en función del
-   * ancho del punto; `yIn`/`yOut` = altura relativa a la pista en cada borde.
+   * Altura de la calzada en un borde. Con peralte 0 es la línea central más el realce,
+   * igual que antes. El talud puede anclarse al suelo (`ground`).
+   */
+  const heightAt = (k: number, lateral: number, lift: number, ground = false) => {
+    if (ground) return colors.groundY;
+    const p = pts[k]!;
+    const bank = ((p.bank ?? 0) * Math.PI) / 180;
+    return p.y - lateral * Math.tan(bank) + lift;
+  };
+  /** Bordillo más ancho y más alto donde el peralte se lee en el móvil. En llano, 0,9 m y +0,04. */
+  const curb = (bank: number) => (Math.abs(bank) >= 12 ? 1.45 : 0.9);
+  const curbLift = (bank: number) => (Math.abs(bank) >= 12 ? 0.1 : 0.04);
+  type Lift = number | ((bank: number) => number);
+  const liftOf = (lift: Lift, bank: number) => (typeof lift === "number" ? lift : lift(bank));
+
+  /**
+   * Una tira a lo largo de toda la pista. `inner`/`outer` = desplazamiento lateral.
+   * `liftIn`/`liftOut` se suman a la superficie peraltada. `groundOut` ancla ese borde al suelo.
    */
   function strip(
-    inner: (w: number) => number,
-    outer: (w: number) => number,
+    inner: (w: number, bank: number) => number,
+    outer: (w: number, bank: number) => number,
     colorA: number,
     colorB = colorA,
-    yIn = (y: number) => y,
-    yOut = (y: number) => y,
+    liftIn: Lift = 0,
+    liftOut: Lift = 0,
+    groundIn = false,
+    groundOut = false,
     every = 1,
   ) {
     const pos: number[] = [];
@@ -54,11 +72,17 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     const cb = new THREE.Color(colorB);
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
-      const vert = (k: number, off: number, y: number) => [pts[k]!.x + left[k]!.x * off, y, pts[k]!.z + left[k]!.z * off];
-      const a0 = vert(i, inner(pts[i]!.w), yIn(pts[i]!.y));
-      const a1 = vert(i, outer(pts[i]!.w), yOut(pts[i]!.y));
-      const b0 = vert(j, inner(pts[j]!.w), yIn(pts[j]!.y));
-      const b1 = vert(j, outer(pts[j]!.w), yOut(pts[j]!.y));
+      const vert = (k: number, off: number, lift: number, ground: boolean) => [
+        pts[k]!.x + left[k]!.x * off,
+        heightAt(k, off, lift, ground),
+        pts[k]!.z + left[k]!.z * off,
+      ];
+      const bi = pts[i]!.bank ?? 0;
+      const bj = pts[j]!.bank ?? 0;
+      const a0 = vert(i, inner(pts[i]!.w, bi), liftOf(liftIn, bi), groundIn);
+      const a1 = vert(i, outer(pts[i]!.w, bi), liftOf(liftOut, bi), groundOut);
+      const b0 = vert(j, inner(pts[j]!.w, bj), liftOf(liftIn, bj), groundIn);
+      const b1 = vert(j, outer(pts[j]!.w, bj), liftOf(liftOut, bj), groundOut);
       const c = Math.floor(i / every) % 2 === 0 ? ca : cb;
       for (const v of [a0, a1, b1, a0, b1, b0]) {
         pos.push(...v);
@@ -75,26 +99,24 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   }
 
   const v = track.verge;
-  const lift = (h: number) => (y: number) => y + h;
-  const ground = () => colors.groundY;
 
-  // Asfalto y bordillos.
-  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, lift(0.02), lift(0.02));
-  strip((w) => w / 2 - 0.9, (w) => w / 2, colors.curbA, colors.curbB, lift(0.04), lift(0.04));
-  strip((w) => -w / 2, (w) => -w / 2 + 0.9, colors.curbA, colors.curbB, lift(0.04), lift(0.04));
+  // Asfalto y bordillos. En llano el realce es el de siempre (0,02 / 0,04).
+  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, 0.02, 0.02);
+  strip((w, b) => w / 2 - curb(b), (w) => w / 2, colors.curbA, colors.curbB, curbLift, curbLift);
+  strip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), colors.curbA, colors.curbB, curbLift, curbLift);
   // Arcén.
   if (v > 0) {
     strip((w) => w / 2, (w) => w / 2 + v, colors.verge);
     strip((w) => -w / 2 - v, (w) => -w / 2, colors.verge);
   }
   // Muros bajos en el borde exterior del arcén, con tapa de hueso.
-  strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, lift(0.9), lift(0));
-  strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, lift(0.9), lift(0));
-  strip((w) => w / 2 + v - 0.16, (w) => w / 2 + v + 0.16, PALETTE.hueso, PALETTE.hueso, lift(0.96), lift(0.96));
-  strip((w) => -w / 2 - v - 0.16, (w) => -w / 2 - v + 0.16, PALETTE.hueso, PALETTE.hueso, lift(0.96), lift(0.96));
-  // Talud desde el muro hasta el suelo (solo se nota donde la pista está elevada).
-  strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, (y) => y, ground);
-  strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, ground, (y) => y);
+  strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, 0.9, 0);
+  strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, 0.9, 0);
+  strip((w) => w / 2 + v - 0.16, (w) => w / 2 + v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+  strip((w) => -w / 2 - v - 0.16, (w) => -w / 2 - v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+  // Talud desde el borde (ya peraltado) hasta el suelo.
+  strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, 0, 0, false, true);
+  strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, 0, 0, true, false);
 
   // Línea de salida a cuadros.
   const checker = document.createElement("canvas");

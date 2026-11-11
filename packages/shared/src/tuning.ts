@@ -132,12 +132,63 @@ export const SURFACE = {
   /** Panel de turbo: duración y fuerza. */
   boostPadTime: 1,
   boostPadMult: 1.3,
-  /** Rampa: salto largo si llegas con velocidad. */
+  /** Rampa: salto largo si llegas con velocidad. Sin `size`, el salto dura `rampHopTime`. */
   rampMinSpeed: 12,
   rampHopTime: 0.55,
   rampHopHeight: 1.4,
   /** Choque con un obstáculo periódico (tren): trompo corto. */
   hazardSpinTime: 0.9,
+};
+
+/**
+ * Cuestas. Solo en circuitos con relieve (`Track.relief`): en el resto la altura sigue siendo visual.
+ * `k·g·sin(pendiente)` empuja en las bajadas y frena en las subidas, con tope para no cambiar la punta.
+ */
+export const SLOPE = {
+  k: 0.35,
+  gGame: 14,
+  maxAccel: 3.5,
+};
+
+/**
+ * Agarre lateral en circuitos con relieve. Es el modelo de la simulación de diseño
+ * (μ = 1,1, g real): sin él el peralte no cambia la velocidad de paso.
+ * En el resto de circuitos no se aplica.
+ */
+export const GRIP = {
+  mu: 1.1,
+  g: 9.81,
+};
+
+/** Peralte. Con bank 0 todas las reglas quedan en el comportamiento de siempre. */
+export const BANK = {
+  /** El giro hacia el lado del peralte se multiplica por `1 + turnBonus·sin(|bank|)`. */
+  turnBonus: 0.35,
+  /** Por debajo de esta velocidad el kart resbala hacia el borde bajo (m/s). */
+  slideSpeed: 8,
+  /** Fracción de `g·sin(bank)` de ese resbalón. */
+  slide: 0.5,
+  /** A partir de este peralte (grados), derrapar carga un poco más. */
+  driftFrom: 25,
+  driftCharge: 1.15,
+};
+
+export type RampSize = "S" | "M" | "L";
+
+/** Vuelo balístico de las rampas con tamaño. `lip` alto del labio (m), `len` largo (m). */
+export const RAMP = {
+  S: { lip: 0.6, len: 4, trick: 0.4 },
+  M: { lip: 1.5, len: 8, trick: 0.6 },
+  L: { lip: 3, len: 12, trick: 0.9 },
+  gGame: 14,
+  /** Giro que se conserva en el aire. */
+  airTurn: 0.3,
+  /** Los muros miden esto (m). Por encima se pasa volando. */
+  wallHeight: 0.9,
+  /** En el salto L hay un muro invisible más alto, para no atajar por el aire. */
+  tallWall: 4,
+  /** Metros de vuelo tras el labio L en los que ese muro sigue contando. */
+  tallSpan: 50,
 };
 
 /** Puntos de copa por posición (1º…8º). */

@@ -13,9 +13,11 @@ export interface TouchState {
   driftSide: number;
   /** true desde el primer toque: se usan los controles táctiles. */
   active: boolean;
+  /** Deslizar hacia arriba: truco en el aire. Se consume al leer la entrada. */
+  trick: boolean;
 }
 
-export const touch: TouchState = { holding: false, steer: 0, drift: false, driftSide: 0, active: false };
+export const touch: TouchState = { holding: false, steer: 0, drift: false, driftSide: 0, active: false, trick: false };
 
 const itemQueue: ItemAction[] = [];
 
@@ -94,6 +96,7 @@ export function setupTouchControls(zone: HTMLElement) {
     fingers.delete(e.pointerId);
     const action = cancelled ? null : g.release(e.timeStamp);
     if (action) itemQueue.push(action);
+    if (action === "forward") touch.trick = true;
     if (e.pointerId === steering) steering = null;
     sync();
   };
