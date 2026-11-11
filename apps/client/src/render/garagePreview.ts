@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { KART_COLORS } from "@derrape/shared";
 import { createKartModel, type KartModel } from "./kartModel";
-import { Fire, paintExhaust } from "./flames";
+import { Fire, paintExhaust, paintHair } from "./flames";
 import { PALETTE, toonMaterial } from "./materials";
 import { createGradientSky } from "./sky";
 
@@ -24,21 +24,27 @@ export class GaragePreview {
     private renderer: THREE.WebGLRenderer,
     private canvas: HTMLCanvasElement,
   ) {
-    this.scene.background = new THREE.Color(0x1e1830);
+    this.scene.background = new THREE.Color(PALETTE.ciruela);
     this.scene.add(createGradientSky(0x120f1e, 0x2e2547, 40));
-    this.scene.add(new THREE.HemisphereLight(0x9a8cb8, 0x2e2547, 0.85));
-    const sun = new THREE.DirectionalLight(0xffb423, 1.7);
-    sun.position.set(4, 8, 6);
-    this.scene.add(sun);
-    const fill = new THREE.DirectionalLight(0xcfc4ff, 0.55);
-    fill.position.set(-5, 3, -2);
-    this.scene.add(fill);
+    this.scene.add(new THREE.HemisphereLight(0xfff7ea, PALETTE.ciruela, 0.55));
+    const key = new THREE.DirectionalLight(0xfff7ea, 1.25);
+    key.position.set(2.2, 3.4, 5);
+    this.scene.add(key);
+    const rim = new THREE.DirectionalLight(PALETTE.anima, 0.85);
+    rim.position.set(-3.5, 2.4, -4);
+    this.scene.add(rim);
     const pedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.4, 2.6, 0.2, 32),
-      toonMaterial({ color: 0xf3e7d3 }),
+      new THREE.CylinderGeometry(2.15, 2.35, 0.28, 28),
+      toonMaterial({ color: PALETTE.ciruela }),
     );
-    pedestal.position.y = -0.1;
-    this.scene.add(pedestal);
+    pedestal.position.y = -0.14;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(2.05, 0.07, 8, 28),
+      new THREE.MeshBasicMaterial({ color: PALETTE.anima, toneMapped: false }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.02;
+    this.scene.add(pedestal, ring);
     this.camera.position.set(3.4, 2.4, 5.2);
     this.camera.lookAt(0, 0.7, 0);
     this.fire = new Fire(this.scene);
@@ -79,25 +85,28 @@ export class GaragePreview {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // En vertical la pantalla es estrecha: se aleja la cámara para que quepa el coche entero.
-    const dist = Math.max(6.6, Math.min(16, 6.97 / this.camera.aspect));
-    this.camera.position.set(0.52, 0.36, 0.78).multiplyScalar(dist);
-    this.camera.lookAt(0, 0.7, 0);
-    // Sube el coche a la parte de arriba de la pantalla, que es la que no tapa el panel.
-    this.camera.setViewOffset(w, h, 0, h * 0.3, w, h);
+    // La hoja tapa desde ~34 % de alto. La cara entera (ojos, nariz y sonrisa) cabe en ese hueco.
+    this.camera.position.set(1.05, 1.28, 4.35);
+    this.camera.lookAt(0, 1.12, 0.1);
+    this.camera.setViewOffset(w, h, 0, h * 0.06, w, h);
     this.camera.updateProjectionMatrix();
 
     this.fire.begin();
     if (this.model) {
-      this.model.root.rotation.y += dt * 0.7;
+      // Tres cuartos de frente, sin dar la espalda: la cara es lo que se elige.
+      const yaw = 0.62 + Math.sin(this.time * 0.6) * 0.12;
+      this.model.root.rotation.y = yaw;
       this.cheer = Math.max(0, this.cheer - dt);
       this.model.setMood(this.cheer > 0 ? "celebrate" : "idle", this.time);
-      const grow = this.cheer > 0 ? 1.35 : 1;
-      for (const a of this.model.exhausts) paintExhaust(this.fire, a.getWorldPosition(this.flameAt), "idle", this.time, grow);
-      for (const a of this.model.ornaments) {
-        const p = a.getWorldPosition(this.flameAt);
-        this.fire.flame(p, this.model.ornamentSpectral ? PALETTE.espectro : PALETTE.llama, 0.24 * grow);
-        this.fire.flame(p, this.model.ornamentSpectral ? PALETTE.anima : PALETTE.brasa, 0.42 * grow);
+      const dir = this.flameAt;
+      const local = new THREE.Vector3(0, 0.42, -1).normalize();
+      for (const a of this.model.exhausts) {
+        a.updateWorldMatrix(true, false);
+        const at = a.getWorldPosition(new THREE.Vector3());
+        dir.copy(local).transformDirection(a.matrixWorld);
+        paintExhaust(this.fire, at, dir, this.model.flameLength * 0.55, "idle", this.time, dt);
       }
+      for (const a of this.model.ornaments) paintHair(this.fire, a.getWorldPosition(new THREE.Vector3()), this.model.ornamentSpectral, this.time, 1.2);
     }
     this.fire.end(dt);
     this.renderer.render(this.scene, this.camera);

@@ -60,10 +60,37 @@ export function toonMaterial(params: THREE.MeshToonMaterialParameters = {}): THR
 }
 
 let vertexToon: THREE.MeshToonMaterial | null = null;
-/** Material compartido de coches, pilotos y piezas con color por vértice. */
+/** Material compartido de coches y piezas con color por vértice. */
 export function sharedVertexToon(): THREE.MeshToonMaterial {
   if (!vertexToon) vertexToon = markShared(toonMaterial({ vertexColors: true }));
   return vertexToon;
+}
+
+let boneGradient: THREE.DataTexture | null = null;
+/**
+ * Sombra del hueso cerca de #C8B597 sobre #F3E7D3.
+ * La rampa general (0,45) apaga el cráneo y lo deja de color carne.
+ */
+function boneGradientMap(): THREE.DataTexture {
+  if (boneGradient) return boneGradient;
+  const data = new Uint8Array([Math.round(0.8 * 255), Math.round(0.91 * 255), 255]);
+  const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.needsUpdate = true;
+  boneGradient = markShared(tex);
+  return tex;
+}
+
+let boneToon: THREE.MeshToonMaterial | null = null;
+/** Toon de los pilotos: el hueso se queda hueso en la banda oscura. */
+export function sharedBoneToon(): THREE.MeshToonMaterial {
+  if (!boneToon) boneToon = markShared(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: boneGradientMap() }));
+  return boneToon;
 }
 
 let vertexToonDouble: THREE.MeshToonMaterial | null = null;

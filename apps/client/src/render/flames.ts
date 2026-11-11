@@ -4,7 +4,7 @@ import { PALETTE } from "./materials";
 // Llamas y chispas en UNA malla instanciada: quads que miran a la cámara,
 // mezcla aditiva, sin escribir profundidad y sin bloom.
 
-const MAX = 480;
+const MAX = 960;
 
 function radialTexture(): THREE.CanvasTexture {
   const c = document.createElement("canvas");
@@ -89,6 +89,23 @@ export class Fire {
     this.slots.push({ x: at.x, y: at.y, z: at.z, hex, size, life: 0, spark: false, vx: 0, vy: 0, vz: 0 });
   }
 
+  /** Chispa que ya nace con velocidad (la estela de la llama). */
+  puff(at: THREE.Vector3, hex: number, vel: THREE.Vector3, size: number, life: number) {
+    if (this.slots.length >= MAX) return;
+    this.slots.push({
+      x: at.x,
+      y: at.y,
+      z: at.z,
+      hex,
+      size,
+      life,
+      spark: true,
+      vx: vel.x,
+      vy: vel.y,
+      vz: vel.z,
+    });
+  }
+
   spark(at: THREE.Vector3, hex: number, count = 1, speed = 4) {
     for (let k = 0; k < count && this.slots.length < MAX; k++) {
       this.slots.push({
@@ -133,17 +150,53 @@ export class Fire {
   }
 }
 
-/** Escape: naranja en reposo, espectral al derrapar cargado o con turbo. */
-export function paintExhaust(fire: Fire, at: THREE.Vector3, mode: "idle" | "drift" | "boost", time: number, grow = 1) {
-  const pulse = (0.86 + Math.sin(time * 22 + at.x * 3) * 0.14) * grow;
-  if (mode === "idle") {
-    fire.flame(at, PALETTE.llama, 0.2 * pulse);
-    fire.flame(at, PALETTE.brasa, 0.35 * pulse);
-  } else if (mode === "drift") {
-    fire.flame(at, PALETTE.espectro, 0.42 * pulse);
-    fire.flame(at, PALETTE.anima, 0.7 * pulse);
-  } else {
-    fire.flame(at, PALETTE.espectro, 0.62 * pulse);
-    fire.flame(at, PALETTE.anima, 1 * pulse);
+const _side = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _puff = new THREE.Vector3();
+
+/**
+ * Cono de 8 (o 10 con turbo) sprites. `length` es el largo de la llama.
+ * Reposo: núcleo Llama y borde Brasa. Turbo y derrape cargado: núcleo Espectro y borde Ánima.
+ */
+export function paintExhaust(
+  fire: Fire,
+  at: THREE.Vector3,
+  dir: THREE.Vector3,
+  length: number,
+  mode: "idle" | "drift" | "boost",
+  time: number,
+  dt = 0,
+) {
+  const boost = mode !== "idle";
+  const core = boost ? PALETTE.espectro : PALETTE.llama;
+  const edge = boost ? PALETTE.anima : PALETTE.brasa;
+  const n = mode === "boost" ? 10 : 8;
+  _side.set(dir.z, 0, -dir.x);
+  if (_side.lengthSq() < 1e-4) _side.set(1, 0, 0);
+  _side.normalize();
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const flicker = 0.78 + Math.sin(time * 28 + i * 1.7 + at.x) * 0.22;
+    const spread = t * length * 0.28 * flicker;
+    const ang = i * 2.2 + time * 9;
+    _puff.copy(at).addScaledVector(dir, t * length * (0.25 + 0.75 * flicker));
+    _puff.addScaledVector(_side, Math.cos(ang) * spread);
+    _puff.addScaledVector(_up, Math.sin(ang) * spread * 0.45 + t * length * 0.08);
+    const size = length * (0.16 + t * 0.42) * flicker;
+    fire.flame(_puff, i % 2 === 0 ? core : edge, size);
   }
+  if (dt > 0 && Math.floor(time * 14) !== Math.floor((time - dt) * 14)) {
+    _puff.copy(at).addScaledVector(dir, length * 0.72);
+    _side.copy(dir).multiplyScalar(length * 1.4);
+    fire.puff(_puff, edge, _side, length * 0.28, 0.38);
+  }
+}
+
+/** Melena o coleta: varios sprites del sistema de fuego, no geometría. */
+export function paintHair(fire: Fire, at: THREE.Vector3, spectral: boolean, time: number, scale = 1) {
+  const core = spectral ? PALETTE.espectro : PALETTE.llama;
+  const edge = spectral ? PALETTE.anima : PALETTE.brasa;
+  const flicker = 0.85 + Math.sin(time * 20 + at.y * 4) * 0.15;
+  fire.flame(at, core, 0.22 * scale * flicker);
+  fire.flame(at, edge, 0.4 * scale * flicker);
 }

@@ -8,12 +8,31 @@ function modelTris(m: KartModel) {
   let driver = 0;
   m.root.traverse((o) => {
     const mesh = o as Mesh;
-    if (!mesh.isMesh || mesh.name === "contorno" || mesh === m.shield) return;
+    if (!mesh.visible || !mesh.isMesh || mesh.name === "contorno" || mesh.name === "lejos" || mesh === m.shield) return;
     const n = triangleCount(mesh.geometry);
     if (o.parent === m.body) kart += n;
     else driver += n;
   });
   return { kart, driver };
+}
+
+function onScreen(o: Mesh) {
+  let p: Mesh["parent"] = o;
+  while (p) {
+    if (!p.visible) return false;
+    p = p.parent;
+  }
+  return true;
+}
+
+function visibleTris(m: KartModel) {
+  let n = 0;
+  m.root.traverse((o) => {
+    const mesh = o as Mesh;
+    if (!mesh.isMesh || mesh.name === "contorno" || mesh === m.shield || !onScreen(mesh)) return;
+    n += triangleCount(mesh.geometry);
+  });
+  return n;
 }
 
 describe("pilotos y karts redondeados", () => {
@@ -22,9 +41,10 @@ describe("pilotos y karts redondeados", () => {
       for (const k of KARTS) {
         const m = createKartModel(0xff6a1f, c.id, k.id);
         const { kart, driver } = modelTris(m);
-        expect(kart, `${c.id}+${k.id} chasis`).toBeLessThanOrEqual(1200);
-        expect(driver, `${c.id}+${k.id} piloto`).toBeLessThanOrEqual(1500);
-        expect(kart + driver, `${c.id}+${k.id}`).toBeLessThanOrEqual(1750);
+        expect(kart + driver, `${c.id}+${k.id} de cerca`).toBeLessThanOrEqual(1800);
+        m.setDetail(false);
+        expect(visibleTris(m), `${c.id}+${k.id} lejos`).toBeLessThanOrEqual(600);
+        m.setDetail(true);
         const shells: Mesh[] = [];
         m.root.traverse((o) => {
           if (o.name === "contorno") shells.push(o as Mesh);

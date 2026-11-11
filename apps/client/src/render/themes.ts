@@ -86,7 +86,8 @@ const toon = (color = 0xffffff) => toonMaterial({ color });
 const HUESO = 0xf3e7d3;
 const ASCUA = 0xd9362b;
 const SOMBRA = 0x2e2547;
-const NIEBLA: [number, number] = [45, 190];
+/** Un poco más lejos que 45–190, para que las siluetas a contraluz se lean. */
+const NIEBLA: [number, number] = [68, 240];
 
 /**
  * Giro de la barra del arco. La caja es ancha en X y, con `rotation.y = heading`,
@@ -257,7 +258,7 @@ const puerto: ThemeKit = {
       const shape = new THREE.Shape(poly.map((q) => new THREE.Vector2(q.x, -q.z)));
       const water = new THREE.Mesh(
         new THREE.ShapeGeometry(shape),
-        new THREE.MeshBasicMaterial({ color: 0x143044, transparent: true, opacity: 0.92 }),
+        new THREE.MeshBasicMaterial({ color: 0x2bd9b5, transparent: true, opacity: 0.72 }),
       );
       water.rotation.x = -Math.PI / 2;
       water.position.y = -0.1;

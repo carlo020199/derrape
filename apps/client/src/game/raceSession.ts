@@ -73,7 +73,7 @@ import { Minimap } from "../render/minimap";
 import { createGradientSky, createMoon, lighten } from "../render/sky";
 import { createNameTag } from "../render/nameTag";
 import { showDriverOutline, type AutoQuality } from "../render/quality";
-import { Fire, TURBO_COLORS, paintExhaust } from "../render/flames";
+import { Fire, TURBO_COLORS, paintExhaust, paintHair } from "../render/flames";
 import { HIT_SPARK, NITRO_SPARK } from "../render/sparks";
 import { THEMES } from "../render/themes";
 import { createTrackMesh } from "../render/trackMesh";
@@ -625,20 +625,24 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
   // --- Dibujo ---
   const wheelWorld = new THREE.Vector3();
+  const flameDir = new THREE.Vector3();
+  const localFlame = new THREE.Vector3(0, 0.42, -1).normalize();
   function paintKartFire(
     m: KartModel,
     view: { driftDir: number; level: number; spinning: boolean; boosting: boolean },
     time: number,
     dt: number,
   ) {
-    const grow = m.mood === "celebrate" ? 1.35 : 1;
+    const grow = m.mood === "celebrate" ? 1.25 : 1;
     const mode = view.boosting ? "boost" : view.driftDir !== 0 && view.level > 0 ? "drift" : "idle";
-    for (const a of m.exhausts) paintExhaust(fire, a.getWorldPosition(flameAt), mode, time, grow);
-    for (const a of m.ornaments) {
-      const p = a.getWorldPosition(flameAt);
-      const pulse = (0.9 + Math.sin(time * 16) * 0.1) * grow;
-      fire.flame(p, m.ornamentSpectral ? PALETTE.espectro : PALETTE.llama, 0.22 * pulse);
-      fire.flame(p, m.ornamentSpectral ? PALETTE.anima : PALETTE.brasa, 0.4 * pulse);
+    const reach = (mode === "boost" ? 1.2 : mode === "drift" ? 0.9 : 0.6) * (m.detail ? 1 : 0.45);
+    for (const a of m.exhausts) {
+      a.updateWorldMatrix(true, false);
+      flameDir.copy(localFlame).transformDirection(a.matrixWorld);
+      paintExhaust(fire, a.getWorldPosition(flameAt), flameDir, m.flameLength * reach * grow, mode, time, dt);
+    }
+    if (m.detail) {
+      for (const a of m.ornaments) paintHair(fire, a.getWorldPosition(flameAt), m.ornamentSpectral, time, grow);
     }
     if (view.driftDir !== 0 && view.level > 0) {
       const col = TURBO_COLORS[Math.min(2, view.level - 1)] ?? PALETTE.llama;
@@ -682,6 +686,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.body.rotation.y = r.driftVisual + r.spinVisual;
     m.body.rotation.z = -r.driftVisual * 0.15;
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
+    m.setDetail(camera.position.distanceTo(m.root.position) < 15);
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     paintKartFire(m, view, time, dt);
   }

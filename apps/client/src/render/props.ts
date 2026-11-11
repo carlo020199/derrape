@@ -63,7 +63,7 @@ class TintBatch {
 
 function clearOfTrack(track: Track, x: number, z: number) {
   const c = closestPoint(track, x, z);
-  return Math.abs(c.lateral) > c.width / 2 + track.verge + 1.4;
+  return Math.abs(c.lateral) > c.width / 2 + track.verge + 0.45;
 }
 
 /** Cápsula con la base en el suelo y aproximadamente 1×1×1 antes de escalar. */
@@ -93,9 +93,9 @@ export function dressTrack(scene: THREE.Object3D, track: Track, theme: ThemeId) 
   let n = 0;
 
   const place = (kind: Kind, x: number, y: number, z: number, rot: number) => {
-    if (kind === "tomb") posts.add(x, y, z, rot, 1.15, 1.7, 0.55, PALETTE.hueso);
+    if (kind === "tomb") posts.add(x, y, z, rot, 1.45, 2.3, 0.7, PALETTE.hueso);
     else if (kind === "pumpkin") {
-      soft.add(x, y + 0.35, z, rot, 0.85, 0.7, 0.85, 0xe07a2f);
+      soft.add(x, y + 0.45, z, rot, 1.2, 1, 1.2, 0xe07a2f);
       posts.add(x, y + 0.7, z, rot, 0.12, 0.35, 0.12, 0x3a5a28);
     } else if (kind === "tree") {
       posts.add(x, y, z, rot + 0.4, 0.28, 2.4, 0.28, 0x3a2a22);
@@ -103,12 +103,12 @@ export function dressTrack(scene: THREE.Object3D, track: Track, theme: ThemeId) 
       soft.add(x, y + 2.15, z, rot, 1.35, 1.05, 1.25, recipe.leaf);
       if (theme === "nieve") soft.add(x, y + 2.55, z, rot, 0.7, 0.45, 0.7, 0xe7eef8);
     } else if (kind === "skull") {
-      soft.add(x, y + 0.38, z, rot, 0.62, 0.58, 0.55, PALETTE.hueso);
-      soft.add(x - 0.12, y + 0.48, z + 0.2, rot, 0.12, 0.14, 0.08, PALETTE.noche);
-      soft.add(x + 0.12, y + 0.48, z + 0.2, rot, 0.12, 0.14, 0.08, PALETTE.noche);
+      soft.add(x, y + 0.55, z, rot, 0.95, 0.88, 0.85, PALETTE.hueso);
+      soft.add(x - 0.18, y + 0.7, z + 0.28, rot, 0.16, 0.2, 0.1, PALETTE.sombra);
+      soft.add(x + 0.18, y + 0.7, z + 0.28, rot, 0.16, 0.2, 0.1, PALETTE.sombra);
     } else if (kind === "lantern") {
-      posts.add(x, y, z, rot, 0.12, 2.3, 0.12, PALETTE.marfil);
-      glow.add(x, y + 2.15, z, rot, 0.28, 0.32, 0.28, flame);
+      posts.add(x, y, z, rot, 0.14, 2.6, 0.14, PALETTE.marfil);
+      glow.add(x, y + 2.45, z, rot, 0.42, 0.5, 0.42, flame);
     } else if (kind === "fence") {
       posts.add(x, y, z, rot, 0.16, 1.15, 0.16, PALETTE.hueso);
       soft.add(x, y + 1.15, z, rot, 0.32, 0.3, 0.3, PALETTE.hueso);
@@ -123,17 +123,35 @@ export function dressTrack(scene: THREE.Object3D, track: Track, theme: ThemeId) 
     }
   };
 
-  for (let i = 0; i < pts.length; i += 7) {
+  const nearKind = (i: number): Kind => {
+    const cycle: Kind[] = ["tomb", "pumpkin", "skull", "fence"];
+    return recipe.kinds.includes("cactus") ? (i % 2 === 0 ? "cactus" : "skull") : cycle[i % cycle.length]!;
+  };
+  // Faroles cada ~24 m (8 puntos × 3 m) a los dos lados, y piezas grandes en el arcén cercano.
+  for (let i = 0; i < pts.length; i += 8) {
     const p = pts[i]!;
     const l = left[i]!;
-    const side = n % 2 === 0 ? 1 : -1;
-    const edge = p.w / 2 + track.verge + 2.4;
-    const x = p.x + l.x * edge * side;
-    const z = p.z + l.z * edge * side;
-    if (!clearOfTrack(track, x, z)) continue;
-    const kind = recipe.kinds[n % recipe.kinds.length]!;
-    place(kind, x, p.y, z, Math.atan2(l.x, l.z));
-    n++;
+    const rot = Math.atan2(l.x, l.z);
+    for (const side of [-1, 1] as const) {
+      const edge = p.w / 2 + track.verge + 1.15;
+      const x = p.x + l.x * edge * side;
+      const z = p.z + l.z * edge * side;
+      if (!clearOfTrack(track, x, z)) continue;
+      place("lantern", x, p.y, z, rot);
+      if (side === 1 || i % 16 === 0) {
+        const kx = p.x + l.x * (edge + 1.6) * side;
+        const kz = p.z + l.z * (edge + 1.6) * side;
+        if (clearOfTrack(track, kx, kz)) place(nearKind(n), kx, p.y, kz, rot);
+      }
+      n++;
+    }
+    // Ventanas emisivas en el lado exterior, para que la noche tenga puntos de luz.
+    if (i % 16 === 0) {
+      const edge = p.w / 2 + track.verge + 6;
+      const x = p.x + l.x * edge;
+      const z = p.z + l.z * edge;
+      if (clearOfTrack(track, x, z)) glow.add(x, p.y + 2.4, z, rot, 0.55, 0.9, 0.12, PALETTE.llama);
+    }
   }
 
   for (const b of [soft, posts, ice, shades, glow]) b.build(scene);

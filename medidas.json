@@ -1,25 +1,26 @@
 {
   "fecha": "2026-11-11",
-  "metodo": "Conteo del grafo con el frustum de la cámara de persecución en vertical (390×844, fov de retrato, far 260), 8 karts delante de la cámara en la salida. Un InstancedMesh cuenta todos sus triángulos si su esfera toca el frustum, igual que el renderer. Sin WebGL: el resultado no depende de swiftshader. El antes es main con las fases 1–2 (toon, sin fuego nuevo ni kits).",
+  "metodo": "Conteo del grafo con el frustum de la cámara de persecución en vertical (390×844, far 260), 8 karts delante. Los que están a más de 15 m usan el modelo lejano, como en la carrera. Un InstancedMesh cuenta todos sus triángulos si su esfera toca el frustum. Sin WebGL. El antes es main con las fases 1–2.",
   "limites": {
     "llamadas": 120,
-    "triangulos": 150000
+    "triangulos": 150000,
+    "pilotoYkartCerca": 1800,
+    "pilotoYkartLejos": 600
   },
   "peor": {
     "llamadas": {
       "antes": 50,
-      "despues": 79
+      "despues": 46
     },
     "triangulos": {
       "antes": 78867,
-      "despues": 91521
+      "despues": 87732
     }
   },
   "pilotoYkart": {
-    "nota": "Geometría única, sin contar dos veces el contorno. Chasis ≤ 1200 y piloto ≤ 1500. La pareja más cara es Tocho + Tanque.",
-    "chasisMax": 959,
-    "pilotoMax": 672,
-    "parejaMax": 1631
+    "nota": "De cerca, sin contar el contorno. La pareja más cara es Toni + Tanque. Lejos, el modelo barato.",
+    "parejaMaxCerca": 1793,
+    "parejaMaxLejos": 442
   },
   "circuitos": [
     {
@@ -29,8 +30,8 @@
         "triangulos": 16485
       },
       "despues": {
-        "llamadas": 71,
-        "triangulos": 22863
+        "llamadas": 39,
+        "triangulos": 16726
       }
     },
     {
@@ -40,8 +41,8 @@
         "triangulos": 27122
       },
       "despues": {
-        "llamadas": 79,
-        "triangulos": 44908
+        "llamadas": 46,
+        "triangulos": 47409
       }
     },
     {
@@ -51,8 +52,8 @@
         "triangulos": 26661
       },
       "despues": {
-        "llamadas": 72,
-        "triangulos": 38197
+        "llamadas": 37,
+        "triangulos": 37478
       }
     },
     {
@@ -62,8 +63,8 @@
         "triangulos": 28173
       },
       "despues": {
-        "llamadas": 72,
-        "triangulos": 50869
+        "llamadas": 37,
+        "triangulos": 49434
       }
     },
     {
@@ -73,8 +74,8 @@
         "triangulos": 78867
       },
       "despues": {
-        "llamadas": 71,
-        "triangulos": 91521
+        "llamadas": 35,
+        "triangulos": 87732
       }
     },
     {
@@ -84,8 +85,8 @@
         "triangulos": 30937
       },
       "despues": {
-        "llamadas": 75,
-        "triangulos": 52271
+        "llamadas": 37,
+        "triangulos": 49250
       }
     },
     {
@@ -95,8 +96,8 @@
         "triangulos": 26133
       },
       "despues": {
-        "llamadas": 72,
-        "triangulos": 46755
+        "llamadas": 37,
+        "triangulos": 45734
       }
     },
     {
@@ -106,8 +107,8 @@
         "triangulos": 31623
       },
       "despues": {
-        "llamadas": 73,
-        "triangulos": 58683
+        "llamadas": 38,
+        "triangulos": 56556
       }
     },
     {
@@ -117,8 +118,8 @@
         "triangulos": 27177
       },
       "despues": {
-        "llamadas": 70,
-        "triangulos": 38595
+        "llamadas": 36,
+        "triangulos": 42514
       }
     },
     {
@@ -128,8 +129,8 @@
         "triangulos": 29709
       },
       "despues": {
-        "llamadas": 72,
-        "triangulos": 40857
+        "llamadas": 37,
+        "triangulos": 43774
       }
     },
     {
@@ -139,8 +140,8 @@
         "triangulos": 29907
       },
       "despues": {
-        "llamadas": 73,
-        "triangulos": 65291
+        "llamadas": 37,
+        "triangulos": 64728
       }
     }
   ]

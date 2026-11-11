@@ -55,7 +55,8 @@ function count(scene: THREE.Scene, camera: THREE.Camera) {
   const kinds: Record<string, number> = {};
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
-    if (!mesh.visible || !mesh.geometry) return;
+    if (!mesh.geometry) return;
+    for (let p: THREE.Object3D | null = mesh; p; p = p.parent) if (!p.visible) return;
     if (!(mesh as THREE.InstancedMesh).isInstancedMesh && !mesh.isMesh && !(mesh as unknown as THREE.Points).isPoints) return;
     if (mesh.frustumCulled !== false) {
       const inst = mesh as THREE.InstancedMesh;
@@ -113,6 +114,7 @@ async function one(id: string) {
     const ahead = pointAt(track, 8 + i * 6, (i % 2 === 0 ? 1 : -1) * 1.6);
     model.root.position.set(ahead.x, ahead.y, ahead.z);
     model.root.rotation.y = ahead.heading;
+    model.setDetail(cam.position.distanceTo(model.root.position) < 15);
     scene.add(model.root);
   }
   const fire = new Fire(scene);
