@@ -4,7 +4,7 @@
 Un juego de karts propio para echar carreras con los amigos desde el móvil, con iPhone y Android
 en la misma partida, sin depender de ninguna tienda de apps.
 
-**Versión 1.0 (la que jugaréis):** **10 circuitos, 5 personajes y 10 coches** disponibles desde el
+**Versión 1.0 (la que jugaréis):** **10 circuitos, 8 personajes y 10 coches** disponibles desde el
 principio, partidas de 2 a 8 amigos con código de sala, derrapes con turbo y objetos.
 Catálogo completo en `docs/CONTENIDO.md`.
 
@@ -41,7 +41,7 @@ pantalla de inicio" lo abre a pantalla completa como si fuera una app.
 - Rampas y saltos (los usan varios circuitos).
 
 ### Personajes y coches
-- 5 personajes (ligero / medio / pesado) y 10 coches con estadísticas distintas → 50 combinaciones.
+- 8 personajes (ligero / medio / pesado) y 10 coches con estadísticas distintas.
 - Pantalla de selección: personaje → coche (con barras de estadísticas) → color.
 - Detalle en `docs/CONTENIDO.md`.
 

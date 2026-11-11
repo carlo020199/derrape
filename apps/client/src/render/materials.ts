@@ -3,6 +3,28 @@ import * as THREE from "three";
 /** Noche: contornos, texto sobre botones claros y sombras. */
 export const NOCHE = 0x120f1e;
 
+/** Paleta de la propuesta (hex exactos). El fuego y los pilotos la comparten. */
+export const PALETTE = {
+  noche: NOCHE,
+  ciruela: 0x1e1830,
+  sombra: 0x2e2547,
+  niebla: 0x5b4e7a,
+  brasa: 0xff6a1f,
+  llama: 0xffb423,
+  ascua: 0xd9362b,
+  espectro: 0x3ff2c8,
+  anima: 0x9b6bff,
+  animaProfunda: 0x6b3fd6,
+  hueso: 0xf3e7d3,
+  huesoSombra: 0xc8b597,
+  marfil: 0x8c7b66,
+  texto: 0xfff7ea,
+  turbo1: 0x5cc8ff,
+  turbo2: 0xff9a1f,
+  turbo3: 0xb57bff,
+  nitro: 0xfff2c2,
+} as const;
+
 export function markShared<T extends { userData: { shared?: boolean } }>(resource: T): T {
   resource.userData.shared = true;
   return resource;
