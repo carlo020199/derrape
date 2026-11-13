@@ -17,14 +17,12 @@ import {
   SERVER_PORT,
   botInput,
   buildTrackFromDef,
-  collideKartWithTrack,
   createKart,
   findTrack,
   giveBoost,
   gridPose,
   normalizeRoomCode,
-  stepKart,
-  surfaceAt,
+  stepKartOnTrack,
   type CountdownMessage,
   type ItemEventsMessage,
   type StatesMessage,
@@ -99,8 +97,7 @@ room.onMessage(MSG.countdown, async (m: CountdownMessage) => {
     for (let i = 0; i < Math.round(1 / NET_SEND_HZ / PHYSICS_DT); i++) {
       clock += PHYSICS_DT;
       if (clock < m.seconds) continue; // parado en la cuenta atrás
-      stepKart(s, botInput({ lane, lookAhead: 12 }, s, track), PHYSICS_DT, tuning);
-      s.surface = surfaceAt(track, collideKartWithTrack(s, track, tuning));
+      stepKartOnTrack(s, botInput({ lane, lookAhead: 12 }, s, track), PHYSICS_DT, track, tuning);
     }
     const state: NetKartState = {
       x: s.x,
@@ -110,6 +107,8 @@ room.onMessage(MSG.countdown, async (m: CountdownMessage) => {
       driftDir: 0,
       driftLevel: 0,
       hop: 0,
+      y: s.airborne ? s.y : s.groundY + s.climb,
+      vy: s.vy,
       boosting: s.boostTime > 0,
       spinning: s.spinTime > 0,
       shield: s.shieldTime > 0,

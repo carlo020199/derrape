@@ -11,11 +11,14 @@ export function readInput(): KartInput {
 
   // En móvil se acelera siempre (como en los juegos de karts para móvil).
   const steer = settings.gyro ? readGyroSteer() : touch.steer;
+  const trick = touch.trick;
+  touch.trick = false;
   return {
     steer: Math.max(-1, Math.min(1, steer + kb.steer)),
     throttle: !kb.brake,
     brake: kb.brake,
     drift: touch.drift || kb.drift,
     driftSide: touch.driftSide,
+    trick,
   };
 }

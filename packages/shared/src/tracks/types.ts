@@ -1,6 +1,7 @@
 // Formato de un circuito como DATOS. Añadir un circuito = un archivo nuevo con un TrackDef.
 
 import { smoothTrack, type Track, type TrackHazard, type TrackPoint, type TrackZone, type ZoneType } from "../track";
+import type { RampSize } from "../tuning";
 
 /** Kits de tema disponibles (decoración, colores). El cliente sabe dibujar cada uno. */
 export type ThemeId =
@@ -14,7 +15,8 @@ export type ThemeId =
   | "nieve"
   | "canon"
   | "volcan"
-  | "neon";
+  | "neon"
+  | "animas";
 
 export interface ZoneDef {
   type: ZoneType;
@@ -24,6 +26,8 @@ export interface ZoneDef {
   /** Franja lateral en metros (por defecto todo el ancho, arcén incluido). */
   lateralMin?: number;
   lateralMax?: number;
+  /** Rampa S/M/L con vuelo real. Sin tamaño, el salto es el de siempre. */
+  size?: RampSize;
 }
 
 /** Obstáculo periódico (paso a nivel, etc.), en fracciones de vuelta. */
@@ -67,6 +71,7 @@ export interface TrackDef {
 
 export function buildTrackFromDef(def: TrackDef): Track {
   const track = smoothTrack(def.control, def.width, 3, def.verge);
+  track.relief = def.control.some((p) => p.bank !== undefined) || (def.zones ?? []).some((z) => z.size !== undefined);
   const outer = def.width / 2 + def.verge + 5;
   track.zones = (def.zones ?? []).map(
     (z): TrackZone => ({
@@ -75,6 +80,7 @@ export function buildTrackFromDef(def: TrackDef): Track {
       to: z.to * track.length,
       lateralMin: z.lateralMin ?? -outer,
       lateralMax: z.lateralMax ?? outer,
+      size: z.size,
     }),
   );
   track.hazards = (def.hazards ?? []).map(

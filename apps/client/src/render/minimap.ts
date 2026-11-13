@@ -27,7 +27,11 @@ export function projectMinimap(x: number, z: number, bounds: MapBounds, width: n
 /** Minimapa 2D del circuito (canvas HTML encima del juego). */
 export class Minimap {
   private readonly ctx: CanvasRenderingContext2D;
-  private path: { x: number; z: number }[] = [];
+  private path: { x: number; z: number; y: number }[] = [];
+  private ramps: { x: number; z: number; size: string }[] = [];
+  private relief = false;
+  private minY = 0;
+  private maxY = 1;
   private minX = 0;
   private maxX = 1;
   private minZ = 0;
@@ -41,10 +45,20 @@ export class Minimap {
   setTrack(track: Track) {
     const step = Math.max(4, Math.floor(track.points.length / 80));
     this.path = [];
+    this.relief = track.points.some((p) => Math.abs(p.bank) > 0.5);
     for (let i = 0; i < track.points.length; i += step) {
       const p = track.points[i]!;
-      this.path.push({ x: p.x, z: p.z });
+      this.path.push({ x: p.x, z: p.z, y: p.y });
     }
+    this.ramps = [];
+    for (const z of track.zones) {
+      if (z.type !== "ramp" || !z.size) continue;
+      const p = pointAt(track, z.to);
+      this.ramps.push({ x: p.x, z: p.z, size: z.size });
+    }
+    const ys = this.path.map((p) => p.y);
+    this.minY = Math.min(...ys);
+    this.maxY = Math.max(...ys);
     const xs = this.path.map((p) => p.x);
     const zs = this.path.map((p) => p.z);
     this.minX = Math.min(...xs);
@@ -64,17 +78,46 @@ export class Minimap {
     c.clearRect(0, 0, W, H);
 
     if (this.path.length < 2) return;
-    c.strokeStyle = "#F3E7D3";
     c.lineWidth = 3;
     c.lineJoin = "round";
-    c.beginPath();
-    this.path.forEach((p, i) => {
-      const [x, y] = this.project(p.x, p.z);
-      if (i === 0) c.moveTo(x, y);
-      else c.lineTo(x, y);
-    });
-    c.closePath();
-    c.stroke();
+    c.lineCap = "round";
+    if (!this.relief) {
+      c.strokeStyle = "#F3E7D3";
+      c.beginPath();
+      this.path.forEach((p, i) => {
+        const [x, y] = this.project(p.x, p.z);
+        if (i === 0) c.moveTo(x, y);
+        else c.lineTo(x, y);
+      });
+      c.closePath();
+      c.stroke();
+    } else {
+      const span = Math.max(1, this.maxY - this.minY);
+      for (let i = 0; i < this.path.length; i++) {
+        const a = this.path[i]!;
+        const b = this.path[(i + 1) % this.path.length]!;
+        const t = ((a.y + b.y) / 2 - this.minY) / span;
+        const shade = Math.round(90 + t * 150);
+        c.strokeStyle = `rgb(${shade}, ${Math.round(shade * 0.92)}, ${Math.round(80 + t * 140)})`;
+        c.beginPath();
+        const [x0, y0] = this.project(a.x, a.z);
+        const [x1, y1] = this.project(b.x, b.z);
+        c.moveTo(x0, y0);
+        c.lineTo(x1, y1);
+        c.stroke();
+      }
+      const rampColor: Record<string, string> = { S: "#3FF2C8", M: "#FFB423", L: "#FF6A1F" };
+      for (const r of this.ramps) {
+        const [x, y] = this.project(r.x, r.z);
+        c.fillStyle = rampColor[r.size] ?? "#FFB423";
+        c.beginPath();
+        c.moveTo(x, y - 5);
+        c.lineTo(x + 4, y + 3);
+        c.lineTo(x - 4, y + 3);
+        c.closePath();
+        c.fill();
+      }
+    }
 
     if (track) {
       const s = pointAt(track, startDist);

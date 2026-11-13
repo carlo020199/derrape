@@ -20,6 +20,7 @@ const MIX: Record<ThemeId, { kinds: Kind[]; spectral: boolean; leaf: number }> =
   canon: { kinds: ["cactus", "rock", "skull", "tomb"], spectral: false, leaf: 0x5a3028 },
   volcan: { kinds: ["rock", "skull", "lantern", "cactus"], spectral: false, leaf: 0x2a1814 },
   neon: { kinds: ["lantern", "skull", "fence", "crystal"], spectral: true, leaf: 0x241430 },
+  animas: { kinds: ["lantern", "skull", "tomb", "pumpkin"], spectral: true, leaf: 0x9b6bff },
 };
 
 function sharedGeo(g: THREE.BufferGeometry) {

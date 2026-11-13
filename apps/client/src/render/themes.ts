@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, type ThemeId, type Track, type TrackDef } from "@derrape/shared";
 import { PALETTE, sharedVertexToon, toonMaterial } from "./materials";
+import { decorateAnimas } from "./animas";
 import { dressTrack, unitSoft } from "./props";
 import { leftNormals, type TrackColors } from "./trackMesh";
 
@@ -1023,6 +1024,32 @@ function withDress(id: ThemeId, kit: ThemeKit): ThemeKit {
   };
 }
 
+const animas: ThemeKit = {
+  sky: 0x1a1430,
+  horizon: 0x2c2350,
+  // Un poco más lejos que 40 m: si no, el peralte de la siguiente curva se pierde en la niebla.
+  fog: [50, 190],
+  ground: 0x1a1430,
+  track: {
+    road: 0x3a3352,
+    curbA: 0xf3e7d3,
+    curbB: 0x3ff2c8,
+    innerCurbA: 0xf3e7d3,
+    innerCurbB: 0x1e1830,
+    verge: 0x2a2338,
+    wall: 0x2e2547,
+    groundY: -8,
+    curbWidth: 0.8,
+    racingLine: 0x433b5e,
+    centreDash: { color: 0xc8b597, opacity: 0.45, length: 3, period: 6 },
+    animasAsphalt: true,
+    bankEdge: true,
+  },
+  decorate(scene, track, def) {
+    decorateAnimas(scene, track, def);
+  },
+};
+
 export const THEMES: Record<ThemeId, ThemeKit> = {
   pruebas: withDress("pruebas", pruebas),
   puerto: withDress("puerto", puerto),
@@ -1035,4 +1062,5 @@ export const THEMES: Record<ThemeId, ThemeKit> = {
   canon: withDress("canon", canon),
   volcan: withDress("volcan", volcan),
   neon: withDress("neon", neon),
+  animas,
 };

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { ItemWorld } from "@derrape/shared";
+import { closestPoint, surfaceY, type ItemWorld } from "@derrape/shared";
 import { toonMaterial } from "./materials";
 
 // Dibuja cajas, manchas de aceite y cohetes. Las mallas se reutilizan (pool) para no crear objetos por frame.
@@ -86,11 +86,17 @@ export class ItemsView {
       const m = this.boxes[i]!;
       m.visible = b.respawn === 0;
       m.rotation.set(0.4, this.time * 1.5 + i, 0.2);
-      m.position.y = 1.1 + Math.sin(this.time * 2.5 + i) * 0.15;
+      const c = closestPoint(world.track, b.x, b.z);
+      const base = world.track.relief ? surfaceY(c) : 0;
+      m.position.y = base + 1.1 + Math.sin(this.time * 2.5 + i) * 0.15;
     });
 
     const oils = this.oils.show(world.oils.length);
-    world.oils.forEach((o, i) => oils[i]!.position.set(o.x, 0.04, o.z));
+    world.oils.forEach((o, i) => {
+      const c = closestPoint(world.track, o.x, o.z);
+      const base = world.track.relief ? surfaceY(c) : 0;
+      oils[i]!.position.set(o.x, base + 0.04, o.z);
+    });
 
     const rockets = this.rockets.show(world.rockets.length);
     this.tails = [];
@@ -99,7 +105,9 @@ export class ItemsView {
       const dx = r.x - g.position.x;
       const dz = r.z - g.position.z;
       if (dx * dx + dz * dz > 1e-4) g.rotation.y = Math.atan2(dx, dz);
-      g.position.set(r.x, 0.8, r.z);
+      const c = closestPoint(world.track, r.x, r.z);
+      const base = world.track.relief ? surfaceY(c) : 0;
+      g.position.set(r.x, base + 0.8, r.z);
       g.updateMatrixWorld();
       this.tails.push(new THREE.Vector3(0, 0.05, -0.95).applyMatrix4(g.matrixWorld));
     });

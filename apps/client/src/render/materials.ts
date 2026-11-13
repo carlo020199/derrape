@@ -86,6 +86,11 @@ function boneGradientMap(): THREE.DataTexture {
   return tex;
 }
 
+/** Toon de piezas de hueso: la sombra se queda en #C8B597, no en gris. */
+export function boneToonMaterial(): THREE.MeshToonMaterial {
+  return new THREE.MeshToonMaterial({ color: PALETTE.hueso, gradientMap: boneGradientMap() });
+}
+
 let boneToon: THREE.MeshToonMaterial | null = null;
 /** Toon de los pilotos: el hueso se queda hueso en la banda oscura. */
 export function sharedBoneToon(): THREE.MeshToonMaterial {
@@ -98,6 +103,58 @@ let vertexToonDouble: THREE.MeshToonMaterial | null = null;
 export function sharedVertexToonDouble(): THREE.MeshToonMaterial {
   if (!vertexToonDouble) vertexToonDouble = markShared(toonMaterial({ vertexColors: true, side: THREE.DoubleSide }));
   return vertexToonDouble;
+}
+
+let animasGradient: THREE.DataTexture | null = null;
+/**
+ * Sombra del asfalto de Ánimas: #3A3352 × 0,724 ≈ #2A2440.
+ * La rampa general (0,45) lo hunde en el cielo #120F1E.
+ */
+function animasAsphaltGradient(): THREE.DataTexture {
+  if (animasGradient) return animasGradient;
+  const data = new Uint8Array([Math.round(0.724 * 255), Math.round(0.86 * 255), 255]);
+  const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.needsUpdate = true;
+  animasGradient = markShared(tex);
+  return tex;
+}
+
+let animasRoad: THREE.MeshToonMaterial | null = null;
+/** Asfalto de Ánimas: base #3A3352, sombra #2A2440 y un emisivo bajo para no fundirse con el cielo. */
+export function animasAsphaltMaterial(): THREE.MeshToonMaterial {
+  if (!animasRoad) {
+    animasRoad = markShared(
+      new THREE.MeshToonMaterial({
+        color: 0x3a3352,
+        emissive: 0x3a3352,
+        emissiveIntensity: 0.12,
+        gradientMap: animasAsphaltGradient(),
+        side: THREE.DoubleSide,
+      }),
+    );
+  }
+  return animasRoad;
+}
+
+let animasLine: THREE.MeshToonMaterial | null = null;
+/** Misma luz que el asfalto, con el color en los vértices (línea y trazos). */
+export function animasAsphaltLineMaterial(): THREE.MeshToonMaterial {
+  if (!animasLine) {
+    animasLine = markShared(
+      new THREE.MeshToonMaterial({
+        vertexColors: true,
+        gradientMap: animasAsphaltGradient(),
+        side: THREE.DoubleSide,
+      }),
+    );
+  }
+  return animasLine;
 }
 
 let outline: THREE.MeshBasicMaterial | null = null;

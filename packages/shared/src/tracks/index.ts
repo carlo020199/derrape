@@ -30,6 +30,13 @@ export const TRACKS: TrackEntry[] = [
   { id: "canon-rojo", number: 8, name: "Cañón Rojo", cup: "luna", load: () => import("./08-canon-rojo").then((m) => m.default) },
   { id: "volcan-dormido", number: 9, name: "Volcán Dormido", cup: "luna", load: () => import("./09-volcan-dormido").then((m) => m.default) },
   { id: "ciudad-neon", number: 10, name: "Ciudad Neón", cup: "luna", load: () => import("./10-ciudad-neon").then((m) => m.default) },
+  {
+    id: "laguna-de-las-animas",
+    number: 11,
+    name: "Laguna de las Ánimas",
+    cup: null,
+    load: () => import("./11-laguna-de-las-animas").then((m) => m.default),
+  },
 ];
 
 export const DEFAULT_TRACK = "paseo-del-puerto";
@@ -56,7 +63,8 @@ export function playableTracks(): TrackEntry[] {
 }
 
 export function pickRandomTrack(random: () => number = Math.random): string {
-  const list = playableTracks();
+  // Los extras (sin copa) se eligen a mano. El aleatorio sigue siendo las dos copas.
+  const list = TRACKS.filter((t) => t.cup === "sol" || t.cup === "luna");
   return list[Math.floor(random() * list.length)]!.id;
 }
 

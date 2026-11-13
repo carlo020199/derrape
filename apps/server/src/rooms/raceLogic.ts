@@ -474,5 +474,13 @@ function isValidState(s: unknown): s is NetKartState {
   if (typeof s !== "object" || s === null) return false;
   const o = s as Record<string, unknown>;
   const finite = (k: string) => typeof o[k] === "number" && Number.isFinite(o[k]);
-  return ["x", "z", "heading", "speed", "driftDir", "driftLevel", "hop", "respawns"].every(finite) && Math.abs(o.speed as number) < 200;
+  const optional = (k: string) => o[k] === undefined || (typeof o[k] === "number" && Number.isFinite(o[k] as number));
+  return (
+    ["x", "z", "heading", "speed", "driftDir", "driftLevel", "hop", "respawns"].every(finite) &&
+    optional("y") &&
+    optional("vy") &&
+    Math.abs(o.speed as number) < 200 &&
+    Math.abs((o.y as number) ?? 0) < 500 &&
+    Math.abs((o.vy as number) ?? 0) < 80
+  );
 }

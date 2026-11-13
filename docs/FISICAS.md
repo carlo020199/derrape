@@ -44,6 +44,15 @@ Efecto: arranque muy fuerte y llegada suave a la punta.
 - Nuestro esquema es el manual: arrastrar lejos = salto + derrape; soltar el dedo = mini-turbo.
 - Tour también tiene "giro inteligente" (te impide salirte); no lo hemos puesto.
 
+## Relieve (solo Laguna de las Ánimas)
+
+El resto de circuitos sigue en 2D: si el punto no trae `bank` y la rampa no tiene tamaño, no cambia nada.
+
+- **Cuesta:** `speed += −0,35·14·sin(pendiente)·dt`, con tope ±3,5 m/s². No sube la velocidad punta.
+- **Peralte:** el giro hacia el lado alto va ×(1 + 0,35·sin|bank|). Parado, resbala hacia el borde bajo. En un peralte de 25° o más el derrape carga ×1,15. El muro exterior frena la mitad.
+- **Agarre** μ = 1,1 (g = 9,81): sin peralte hay que soltar en la curva cerrada; con 40° se puede ir a fondo. No se aplica en los otros circuitos.
+- **Rampas S/M/L:** vuelo de verdad (`vy = v·sin(ángulo + pendiente)`, g = 14). En el aire, 30 % de giro y los muros solo por debajo de 0,9 m (4 m en el salto L). Deslizar hacia arriba da un mini-turbo al aterrizar (0,4 / 0,6 / 0,9 s).
+
 ## Pendiente (cuando toque cada fase)
 | Mecánica | Cómo es en la referencia | Fase |
 |---|---|---|
