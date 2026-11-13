@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Track } from "@derrape/shared";
-import { PALETTE, markShared, sharedVertexToonDouble } from "./materials";
+import { PALETTE, animasAsphaltLineMaterial, animasAsphaltMaterial, markShared, sharedVertexToonDouble } from "./materials";
 
 // Malla de la pista generada a partir de la línea central: asfalto, bordillos, arcén,
 // muros y talud hasta el suelo (para los tramos elevados).
@@ -17,6 +17,13 @@ export interface TrackColors {
   curbWidth?: number;
   /** Línea central, un poco más clara que el asfalto. */
   racingLine?: number;
+  /** Trazos de hueso sobre la línea central. Van en esa misma malla: no añaden una llamada. */
+  centreDash?: { color: number; opacity: number; length: number; period: number };
+  /** Bordillo interior (lado bajo) en las curvas. El exterior sigue en curbA/curbB. */
+  innerCurbA?: number;
+  innerCurbB?: number;
+  /** Asfalto con su propia rampa de toon y un emisivo bajo. Solo Ánimas. */
+  animasAsphalt?: boolean;
   /** Filete emisivo en el borde alto de las curvas peraltadas. */
   bankEdge?: boolean;
 }
@@ -123,6 +130,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     groundOut = false,
     every = 1,
     mat: THREE.Material = sharedVertexToonDouble(),
+    colorOf?: (segment: number, bank: number) => THREE.Color,
   ) {
     const pos: number[] = [];
     const col: number[] = [];
@@ -141,7 +149,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
       const a1 = vert(i, outer(pts[i]!.w, bi), liftOf(liftOut, bi), groundOut);
       const b0 = vert(j, inner(pts[j]!.w, bj), liftOf(liftIn, bj), groundIn);
       const b1 = vert(j, outer(pts[j]!.w, bj), liftOf(liftOut, bj), groundOut);
-      const c = Math.floor(i / every) % 2 === 0 ? ca : cb;
+      const c = colorOf ? colorOf(i, bi) : Math.floor(i / every) % 2 === 0 ? ca : cb;
       for (const v of [a0, a1, b1, a0, b1, b0]) {
         pos.push(...v);
         col.push(c.r, c.g, c.b);
@@ -159,12 +167,42 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   const v = track.verge;
 
   // Asfalto y bordillos. En llano el realce es el de siempre (0,02 / 0,04).
-  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, 0.02, 0.02);
-  strip((w, b) => w / 2 - curb(b), (w) => w / 2, colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat);
-  strip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat);
+  const roadMat = colors.animasAsphalt ? animasAsphaltMaterial() : sharedVertexToonDouble();
+  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, 0.02, 0.02, false, false, 1, roadMat);
+  const innerA = colors.innerCurbA != null ? new THREE.Color(colors.innerCurbA) : null;
+  const innerB = colors.innerCurbB != null ? new THREE.Color(colors.innerCurbB) : null;
+  const curbColor = (side: number) => (segment: number, bank: number) => {
+    const high = bank >= 0 ? -1 : 1;
+    const outer = innerA == null || Math.abs(bank) < 8 || Math.sign(side) === high || Math.sign(bank) === 0;
+    const pair = outer ? [new THREE.Color(colors.curbA), new THREE.Color(colors.curbB)] : [innerA!, innerB ?? innerA!];
+    return pair[Math.floor(segment / curbEvery) % 2]!;
+  };
+  strip((w, b) => w / 2 - curb(b), (w) => w / 2, colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat, curbColor(1));
+  strip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat, curbColor(-1));
   if (colors.racingLine != null) {
-    // Misma luz que el asfalto: un básico sin iluminar se ve como una losa oscura.
-    strip(() => -0.14, () => 0.14, colors.racingLine, colors.racingLine, 0.04, 0.04);
+    const line = new THREE.Color(colors.racingLine);
+    const dash = colors.centreDash;
+    const dashColor = dash ? line.clone().lerp(new THREE.Color(dash.color), dash.opacity) : line;
+    const lineMat = colors.animasAsphalt ? animasAsphaltLineMaterial() : sharedVertexToonDouble();
+    strip(
+      () => -0.125,
+      () => 0.125,
+      colors.racingLine,
+      colors.racingLine,
+      0.045,
+      0.045,
+      false,
+      false,
+      1,
+      lineMat,
+      dash
+        ? (segment) => {
+            const d = track.lengths[segment] ?? 0;
+            const m = ((d % dash.period) + dash.period) % dash.period;
+            return m < dash.length ? dashColor : line;
+          }
+        : undefined,
+    );
   }
   if (colors.bankEdge) bankEdge(group, track, left, heightAt);
   // Arcén.

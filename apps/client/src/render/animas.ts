@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { closestPoint, pointAt, RAMP, surfaceY, type Track, type TrackDef } from "@derrape/shared";
+import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
 import { PALETTE, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
@@ -234,22 +234,68 @@ function stars() {
   return pts;
 }
 
+/** Brasa de fondo y chevrones Llama al 70 %, ya compuestos: el plano no necesita transparencia. */
+function chevronTexture() {
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#FF6A1F";
+  g.fillRect(0, 0, 128, 64);
+  g.fillStyle = "rgba(255, 180, 35, 0.7)";
+  for (let i = 0; i < 3; i++) {
+    const y = 6 + i * 20;
+    g.beginPath();
+    g.moveTo(0, y + 8);
+    g.lineTo(64, y);
+    g.lineTo(128, y + 8);
+    g.lineTo(128, y + 14);
+    g.lineTo(64, y + 6);
+    g.lineTo(0, y + 14);
+    g.closePath();
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * Paneles de turbo pegados a la calzada. Antes eran cajas horizontales de casi
+ * todo el ancho: en un peralte asomaban como losas amarillas.
+ */
 function boostMarks(track: Track) {
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  geo.translate(0, 0.5, 0);
-  const mat = toonMaterial({ color: LLAMA });
+  const geo = new THREE.PlaneGeometry(3, 2);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({ map: chevronTexture(), side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
   const spots: THREE.Matrix4[] = [];
+  const nrm = new THREE.Vector3();
+  const fwd = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const basis = new THREE.Matrix4();
   for (const z of track.zones) {
     if (z.type !== "boostPad") continue;
     const end = z.to < z.from ? z.to + track.length : z.to;
-    for (let d = z.from; d < end; d += 3) {
+    for (let d = z.from + 1; d < end - 0.4; d += 6) {
       const p = pointAt(track, d % track.length);
-      spots.push(M(p.x, p.y + 0.03, p.z, 0, p.heading, 0, p.width * 0.45, 0.05, 2));
+      const c = closestPoint(track, p.x, p.z);
+      const n = surfaceNormal(track, c);
+      nrm.set(n.x, n.y, n.z).normalize();
+      fwd.set(Math.sin(p.heading), 0, Math.cos(p.heading));
+      fwd.addScaledVector(nrm, -fwd.dot(nrm));
+      if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, 1);
+      fwd.normalize();
+      right.crossVectors(fwd, nrm).normalize();
+      basis.makeBasis(right, nrm, fwd);
+      basis.setPosition(p.x + nrm.x * 0.02, surfaceY(c) + nrm.y * 0.02, p.z + nrm.z * 0.02);
+      spots.push(basis.clone());
     }
   }
   if (spots.length === 0) return null;
   const mesh = new THREE.InstancedMesh(geo, mat, spots.length);
   spots.forEach((m, i) => mesh.setMatrixAt(i, m));
+  mesh.name = "paneles-turbo";
   return mesh;
 }
 
