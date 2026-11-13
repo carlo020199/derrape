@@ -30,6 +30,8 @@ export interface CameraCue {
   bigJump: boolean;
   /** Altura de la calzada en un punto del mundo. */
   floorAt: (x: number, z: number) => number;
+  /** Normal de la calzada bajo el kart (peralte y pendiente), no el arriba del coche. */
+  normal?: { x: number; y: number; z: number };
 }
 
 export class ChaseCamera {
@@ -40,6 +42,8 @@ export class ChaseCamera {
   private lookY = 0;
   private dip = 0;
   private wasAir = false;
+  private rollDeg = 0;
+  private readonly smoothedNormal = new THREE.Vector3(0, 1, 0);
   private readonly worldUp = new THREE.Vector3();
   private readonly invQuat = new THREE.Quaternion();
 
@@ -95,46 +99,47 @@ export class ChaseCamera {
     const portrait = this.camera.aspect < 1;
     const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * (portrait ? 0.35 : 1.2);
     const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
-    // La misma altura y el mismo cabeceo que en llano. El peralte no sube la cámara ni la inclina hacia el suelo.
-    let behindX = x - fx * dist;
-    let behindZ = z - fz * dist;
-    let camBase = y + height;
-    let lookX = x + fx * CAMERA.lookAhead;
-    let lookZ = z + fz * CAMERA.lookAhead;
-    const lookBase = y + (portrait ? 0.28 : 0.8);
-    if (!cue.airborne && cue.bankDeg !== 0) {
-      // Solo si ese punto cae dentro del lado alto: se corre hacia el interior, en paralelo al rumbo.
-      const inside = Math.sign(cue.bankDeg);
-      const leftX = fz;
-      const leftZ = -fx;
-      for (let step = 0; step < 8; step++) {
-        if (camBase >= cue.floorAt(behindX, behindZ) + 0.35) break;
-        behindX += leftX * inside * 0.45;
-        behindZ += leftZ * inside * 0.45;
-        lookX += leftX * inside * 0.45;
-        lookZ += leftZ * inside * 0.45;
-      }
-      const road = cue.floorAt(behindX, behindZ);
-      if (camBase < road + 0.15) camBase = road + 0.15;
-    }
+    const lookLift = portrait ? 0.28 : 0.8;
+    // ~0,1 por fotograma a 60 fps, igual para la normal y el alabeo.
+    const kSmooth = 1 - Math.pow(0.9, dt * 60);
+    const raw = cue.normal ?? { x: 0, y: 1, z: 0 };
+    const targetN = this.worldUp.set(raw.x, raw.y, raw.z);
+    if (targetN.lengthSq() < 1e-8) targetN.set(0, 1, 0);
+    else targetN.normalize();
+    if (!this.initialized) this.smoothedNormal.copy(targetN);
+    else this.smoothedNormal.lerp(targetN, kSmooth).normalize();
+
+    // En el suelo la cámara se apoya en la normal de la calzada (hacia el interior de la curva).
+    // En el aire sigue el arriba del mundo, como hasta ahora.
+    const n = cue.airborne ? this.worldUp.set(0, 1, 0) : this.smoothedNormal;
+    const behindX = x - fx * dist + n.x * height;
+    const behindZ = z - fz * dist + n.z * height;
+    let camBase = y + n.y * height;
+    const lookX = x + fx * CAMERA.lookAhead + n.x * lookLift;
+    const lookZ = z + fz * CAMERA.lookAhead + n.z * lookLift;
+    const lookBase = y + n.y * lookLift;
     const underCam = cue.floorAt(behindX, behindZ);
     const underLook = cue.floorAt(lookX, lookZ);
-    const desiredCam = cue.airborne ? Math.min(y + height, underCam + height + 0.6) : camBase;
-    const desiredLook = cue.airborne ? Math.min(y + 0.35, underLook + 0.8 + 0.6) : lookBase;
+    if (!cue.airborne && camBase < underCam + 0.15) camBase = underCam + 0.15;
+    const desiredCamY = cue.airborne ? Math.min(y + height, underCam + height + 0.6) : camBase;
+    const desiredLookY = cue.airborne ? Math.min(y + 0.35, underLook + 0.8 + 0.6) : lookBase;
     if (!this.initialized) {
-      this.camY = desiredCam;
-      this.lookY = desiredLook;
-      this.pos.set(behindX, desiredCam, behindZ);
-      this.look.set(lookX, desiredLook, lookZ);
+      this.camY = desiredCamY;
+      this.lookY = desiredLookY;
+      this.pos.set(behindX, desiredCamY, behindZ);
+      this.look.set(lookX, desiredLookY, lookZ);
+      this.rollDeg = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -32, 32);
       this.initialized = true;
     }
     if (this.wasAir && !cue.airborne) this.dip = -0.2;
     this.wasAir = cue.airborne;
     if (this.dip < 0) this.dip = Math.min(0, this.dip + (0.2 / 0.25) * dt);
     const kPos = 1 - Math.exp(-CAMERA.follow * dt);
-    const kY = cue.airborne ? 1 - Math.pow(0.85, dt * 60) : 1 - Math.exp(-5 * dt);
-    this.camY += (desiredCam - this.camY) * kY;
-    this.lookY += (desiredLook - this.lookY) * kY;
+    const kY = cue.airborne ? 1 - Math.pow(0.85, dt * 60) : kPos;
+    this.camY += (desiredCamY - this.camY) * kY;
+    this.lookY += (desiredLookY - this.lookY) * kY;
+    const targetRoll = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -32, 32);
+    this.rollDeg += (targetRoll - this.rollDeg) * kSmooth;
     const targetPos = new THREE.Vector3(behindX, this.camY + this.dip, behindZ);
     const floor = cue.floorAt(targetPos.x, targetPos.z) + 0.15;
     if (targetPos.y < floor) targetPos.y = floor;
@@ -147,12 +152,11 @@ export class ChaseCamera {
     this.camera.position.copy(this.pos);
     this.camera.up.set(0, 1, 0);
     this.camera.lookAt(this.look);
-    const roll = THREE.MathUtils.degToRad(Math.max(-18, Math.min(18, cue.bankDeg * 0.5)));
-    this.camera.rotateZ(roll);
-    // El peralte del kart no se suma: el horizonte (el arriba del mundo) no pasa de 18°.
+    this.camera.rotateZ(THREE.MathUtils.degToRad(this.rollDeg));
+    // El cabeceo de lookAt no puede llevar el horizonte más allá del tope.
     this.worldUp.set(0, 1, 0).applyQuaternion(this.invQuat.copy(this.camera.quaternion).invert());
     const tilt = Math.atan2(this.worldUp.x, this.worldUp.y);
-    const maxTilt = THREE.MathUtils.degToRad(18);
+    const maxTilt = THREE.MathUtils.degToRad(32);
     if (Math.abs(tilt) > maxTilt) this.camera.rotateZ(Math.sign(tilt) * maxTilt - tilt);
 
     const fov =

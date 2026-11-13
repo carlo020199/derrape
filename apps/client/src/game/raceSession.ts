@@ -38,6 +38,7 @@ import {
   SURFACE,
   gradeAlong,
   hazardActiveAt,
+  surfaceNormal,
   surfaceY,
   updateProgress,
   useItem,
@@ -914,6 +915,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
             airborne: me.airborne,
             groundY: surfaceY(closestPoint(track, me.x, me.z)),
             bigJump: me.airborne && me.flightRamp === "L",
+            normal: surfaceNormal(track, closestPoint(track, me.x, me.z)),
             floorAt: (x, z) => {
               const road = surfaceY(closestPoint(track, x, z));
               const lagoon = scene.getObjectByName("laguna");
@@ -989,6 +991,15 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       };
       return {
         kart: player.race.state,
+        view() {
+          const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion.clone().invert());
+          return {
+            bank: player.bank,
+            horizon: (Math.atan2(up.x, up.y) * 180) / Math.PI,
+            calls: renderer.info.render.calls,
+            triangles: renderer.info.render.triangles,
+          };
+        },
         stats: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
         boxes: world.boxes,
         length: track.length,
