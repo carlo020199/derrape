@@ -30,6 +30,19 @@ describe("calidad automática", () => {
     expect(q.pixelRatio).toBe(2);
   });
 
+  it("no toca el canvas al medir: el cambio se aplica antes del siguiente fotograma", () => {
+    const applied: number[] = [];
+    const q = new AutoQuality((ratio) => applied.push(ratio), 2);
+    expect(applied).toEqual([2]);
+    run(q, 30, 3);
+    expect(q.pixelRatio).toBe(1.5);
+    expect(applied).toEqual([2]);
+    q.flush();
+    expect(applied).toEqual([2, 1.5]);
+    q.flush();
+    expect(applied).toEqual([2, 1.5]);
+  });
+
   it("si al subir vuelve a ir lento, se queda en el paso que aguanta", () => {
     const q = new AutoQuality(() => {}, 2);
     run(q, 30, 3); // 2 → 1,5

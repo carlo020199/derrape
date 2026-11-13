@@ -834,6 +834,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       frames = 0;
       return;
     }
+    // Antes de dibujar: un cambio de resolución vacía el canvas.
+    quality.flush();
     time += dt;
 
     if (phase === "countdown") stepCountdown(dt);

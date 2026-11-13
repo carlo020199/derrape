@@ -29,6 +29,8 @@ export class AutoQuality {
   private slowTime = 0;
   private fastTime = 0;
   private sinceUpgrade = Infinity;
+  /** Último ratio que ya se aplicó al canvas. */
+  private applied: number;
 
   constructor(
     private readonly apply: (pixelRatio: number) => void,
@@ -38,6 +40,7 @@ export class AutoQuality {
     this.step = STEPS.findIndex((s) => s <= start);
     if (this.step < 0) this.step = STEPS.length - 1;
     this.ceiling = this.step;
+    this.applied = this.pixelRatio;
     apply(this.pixelRatio);
   }
 
@@ -56,7 +59,6 @@ export class AutoQuality {
         if (this.sinceUpgrade < RETRY_WINDOW) this.ceiling = this.step + 1;
         this.step++;
         this.slowTime = 0;
-        this.apply(this.pixelRatio);
       }
       return;
     }
@@ -66,8 +68,18 @@ export class AutoQuality {
       this.step--;
       this.fastTime = 0;
       this.sinceUpgrade = 0;
-      this.apply(this.pixelRatio);
     }
+  }
+
+  /**
+   * Aplica un cambio de resolución. Hay que llamarlo antes de dibujar:
+   * cambiar el tamaño del canvas lo vacía, y si se hace después de pintar
+   * el navegador presenta ese fotograma en blanco.
+   */
+  flush() {
+    if (this.pixelRatio === this.applied) return;
+    this.applied = this.pixelRatio;
+    this.apply(this.applied);
   }
 
   /** Tras una pausa, los fps del primer momento no cuentan. */
