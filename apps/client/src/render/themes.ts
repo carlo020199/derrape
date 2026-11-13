@@ -1040,7 +1040,7 @@ const animas: ThemeKit = {
     wall: 0x2e2547,
     groundY: -8,
     curbWidth: 0.8,
-    racingLine: 0x4a4166,
+    racingLine: 0x433b5e,
     centreDash: { color: 0xc8b597, opacity: 0.45, length: 3, period: 6 },
     animasAsphalt: true,
     bankEdge: true,

@@ -149,8 +149,6 @@ export function animasAsphaltLineMaterial(): THREE.MeshToonMaterial {
     animasLine = markShared(
       new THREE.MeshToonMaterial({
         vertexColors: true,
-        emissive: 0x3a3352,
-        emissiveIntensity: 0.12,
         gradientMap: animasAsphaltGradient(),
         side: THREE.DoubleSide,
       }),

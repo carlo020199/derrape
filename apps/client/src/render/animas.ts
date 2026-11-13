@@ -234,7 +234,7 @@ function stars() {
   return pts;
 }
 
-/** Brasa de fondo y chevrones Llama al 70 %, ya compuestos: el plano no necesita transparencia. */
+/** Brasa de fondo y chevrones Llama. El plano entero va al 55 % de opacidad. */
 function chevronTexture() {
   const c = document.createElement("canvas");
   c.width = 128;
@@ -266,9 +266,19 @@ function chevronTexture() {
  * todo el ancho: en un peralte asomaban como losas amarillas.
  */
 function boostMarks(track: Track) {
-  const geo = new THREE.PlaneGeometry(3, 2);
+  // 2 m a lo ancho de la pista y 3 m a lo largo. Un solo panel por salida, en la trazada.
+  const geo = new THREE.PlaneGeometry(2, 3);
   geo.rotateX(-Math.PI / 2);
-  const mat = new THREE.MeshBasicMaterial({ map: chevronTexture(), side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  const mat = new THREE.MeshBasicMaterial({
+    map: chevronTexture(),
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
   const spots: THREE.Matrix4[] = [];
   const nrm = new THREE.Vector3();
   const fwd = new THREE.Vector3();
@@ -277,20 +287,19 @@ function boostMarks(track: Track) {
   for (const z of track.zones) {
     if (z.type !== "boostPad") continue;
     const end = z.to < z.from ? z.to + track.length : z.to;
-    for (let d = z.from + 1; d < end - 0.4; d += 6) {
-      const p = pointAt(track, d % track.length);
-      const c = closestPoint(track, p.x, p.z);
-      const n = surfaceNormal(track, c);
-      nrm.set(n.x, n.y, n.z).normalize();
-      fwd.set(Math.sin(p.heading), 0, Math.cos(p.heading));
-      fwd.addScaledVector(nrm, -fwd.dot(nrm));
-      if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, 1);
-      fwd.normalize();
-      right.crossVectors(fwd, nrm).normalize();
-      basis.makeBasis(right, nrm, fwd);
-      basis.setPosition(p.x + nrm.x * 0.02, surfaceY(c) + nrm.y * 0.02, p.z + nrm.z * 0.02);
-      spots.push(basis.clone());
-    }
+    const d = (z.from + (end - z.from) / 2) % track.length;
+    const p = pointAt(track, d);
+    const c = closestPoint(track, p.x, p.z);
+    const n = surfaceNormal(track, c);
+    nrm.set(n.x, n.y, n.z).normalize();
+    fwd.set(Math.sin(p.heading), 0, Math.cos(p.heading));
+    fwd.addScaledVector(nrm, -fwd.dot(nrm));
+    if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, 1);
+    fwd.normalize();
+    right.crossVectors(fwd, nrm).normalize();
+    basis.makeBasis(right, nrm, fwd);
+    basis.setPosition(p.x + nrm.x * 0.02, surfaceY(c) + nrm.y * 0.02, p.z + nrm.z * 0.02);
+    spots.push(basis.clone());
   }
   if (spots.length === 0) return null;
   const mesh = new THREE.InstancedMesh(geo, mat, spots.length);
