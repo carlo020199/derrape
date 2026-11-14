@@ -32,6 +32,11 @@ export interface KartState {
   driftDir: number;
   /** Carga acumulada del mini-turbo (unidades: ver tuning). */
   driftCharge: number;
+  /** Giro suavizado durante el derrape (-1..1, como `steer`): el contravolante. */
+  driftSteer: number;
+  /** Último lado fuerte del contravolante (1 = cierra, -1 = abre, 0 = ninguno) y tiempo de zigzag restante (s). */
+  driftSwingSide: number;
+  driftZigzag: number;
   /** Tiempo de salto restante (s). Al aterrizar empieza el derrape si se sigue pidiendo. */
   hopTime: number;
   /** Duración total del salto en curso (para la curva de altura: derrape o rampa). */
@@ -91,6 +96,9 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     speed: 0,
     driftDir: 0,
     driftCharge: 0,
+    driftSteer: 0,
+    driftSwingSide: 0,
+    driftZigzag: 0,
     hopTime: 0,
     hopTotal: 0,
     driftHeld: false,
@@ -159,6 +167,9 @@ function endDrift(s: KartState, t: KartTuning, withBoost: boolean) {
   if (withBoost) giveBoost(s, boostForLevel(driftLevel(s, t), t), t.boostSpeedMult);
   s.driftDir = 0;
   s.driftCharge = 0;
+  s.driftSteer = 0;
+  s.driftSwingSide = 0;
+  s.driftZigzag = 0;
 }
 
 /** Avanza la simulación un paso de `dt` segundos. Modifica `s`. */
@@ -210,6 +221,9 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
           // Girar a la izquierda (steer < 0) es rumbo positivo.
           s.driftDir = side < 0 ? 1 : -1;
           s.driftCharge = 0;
+          s.driftSteer = steer;
+          s.driftSwingSide = 0;
+          s.driftZigzag = 0;
         }
       }
     }
@@ -259,10 +273,20 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   // --- Giro ---
   let turn: number;
   if (s.driftDir !== 0) {
-    // steer a favor del derrape lo cierra; en contra lo abre.
-    const inside = -steer * s.driftDir; // -1..1
-    turn = s.driftDir * (t.driftTurnBase + t.driftTurnRange * inside);
-    const rate = inside >= t.driftInsideThreshold ? t.driftChargeFast : t.driftChargeSlow;
+    // Contravolante: el giro suavizado a favor del derrape lo cierra; en contra lo abre.
+    // El lado nunca se invierte: driftTurnOpen < driftTurnBase.
+    s.driftSteer = approach(s.driftSteer, steer, t.driftSteerRate * dt);
+    const inside = -s.driftSteer * s.driftDir; // -1 (abre) .. 1 (cierra)
+    turn = s.driftDir * (t.driftTurnBase + (inside >= 0 ? t.driftTurnClose : t.driftTurnOpen) * inside);
+    // Cerrar y abrir alternadamente (zigzag) acelera la carga un rato.
+    const swing = inside >= t.driftZigzagThreshold ? 1 : inside <= -t.driftZigzagThreshold ? -1 : 0;
+    if (swing !== 0) {
+      if (s.driftSwingSide === -swing) s.driftZigzag = t.driftZigzagTime;
+      s.driftSwingSide = swing;
+    }
+    const zigzag = s.driftZigzag > 0 ? t.driftZigzagMult : 1;
+    s.driftZigzag = Math.max(0, s.driftZigzag - dt);
+    const rate = (inside >= t.driftInsideThreshold ? t.driftChargeFast : t.driftChargeSlow) * zigzag;
     const banked = Math.abs(s.bank) >= BANK.driftFrom ? BANK.driftCharge : 1;
     if (s.hopTime === 0 && !s.airborne) s.driftCharge += rate * t.driftChargeMult * banked * dt;
   } else {
