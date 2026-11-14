@@ -13,6 +13,8 @@ export interface ThemeKit {
   sky: number;
   /** Horizonte y color de la niebla. */
   horizon: number;
+  /** Horizonte del cielo si no coincide con la niebla (Ánimas: cielo #5B4E7A, niebla #4A3F66). */
+  skyHorizon?: number;
   /** Distancias de la niebla (cerca, lejos), en metros. */
   fog: [number, number];
   ground: number;
@@ -1025,8 +1027,9 @@ function withDress(id: ThemeId, kit: ThemeKit): ThemeKit {
 }
 
 const animas: ThemeKit = {
-  sky: 0x1a1430,
-  horizon: 0x2c2350,
+  sky: 0x1e1830,
+  horizon: 0x4a3f66,
+  skyHorizon: 0x5b4e7a,
   // Un poco más lejos que 40 m: si no, el peralte de la siguiente curva se pierde en la niebla.
   fog: [50, 190],
   ground: 0x1a1430,

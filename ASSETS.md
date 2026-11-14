@@ -17,3 +17,5 @@ Fuentes de la interfaz, alojadas en `apps/client/public/fonts/` para que la PWA 
 |---|---|---|---|
 | `fonts/lilita-one-latin.woff2` | [Lilita One](https://fonts.google.com/specimen/Lilita+One) | OFL (`fonts/LilitaOne-OFL.txt`) | Títulos y números |
 | `fonts/nunito-latin.woff2` | [Nunito](https://fonts.google.com/specimen/Nunito) (variable, pesos 600–900, subconjunto latino) | OFL (`fonts/Nunito-OFL.txt`) | Texto de la interfaz |
+
+El cielo de Ánimas (nubes, colinas lejanas, luna con halo) y la laguna con shader (`apps/client/src/render/sky.ts`, `animas.ts`) son geometría y GLSL propios generados en código, sin texturas externas.

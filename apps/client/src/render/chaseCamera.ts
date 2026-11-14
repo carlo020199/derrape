@@ -16,6 +16,16 @@ export const CAMERA = {
   portraitExtraFov: 4,
   portraitHeight: 2.45,
   portraitDistance: 4.2,
+  /**
+   * Circuitos con relieve (Ánimas): más baja y más cerca. En vertical el kart queda en el tercio
+   * inferior y el horizonte en el superior, con la calzada delante.
+   */
+  reliefDistance: 5.2,
+  reliefHeight: 2.2,
+  reliefPortraitDistance: 5.4,
+  reliefPortraitHeight: 2.0,
+  reliefPortraitLookAhead: 12,
+  reliefPortraitLookLift: 0.9,
 };
 
 export interface CameraCue {
@@ -97,9 +107,10 @@ export class ChaseCamera {
     const fx = Math.sin(heading);
     const fz = Math.cos(heading);
     const portrait = this.camera.aspect < 1;
-    const dist = (portrait ? CAMERA.portraitDistance : CAMERA.distance) + speedRatio * (portrait ? 0.35 : 1.2);
-    const height = portrait ? CAMERA.portraitHeight : CAMERA.height;
-    const lookLift = portrait ? 0.28 : 0.8;
+    const dist = (portrait ? CAMERA.reliefPortraitDistance : CAMERA.reliefDistance) + speedRatio * (portrait ? 0.35 : 1.2);
+    const height = portrait ? CAMERA.reliefPortraitHeight : CAMERA.reliefHeight;
+    const lookLift = portrait ? CAMERA.reliefPortraitLookLift : 0.8;
+    const lookAhead = portrait ? CAMERA.reliefPortraitLookAhead : CAMERA.lookAhead;
     // ~0,1 por fotograma a 60 fps, igual para la normal y el alabeo.
     const kSmooth = 1 - Math.pow(0.9, dt * 60);
     const raw = cue.normal ?? { x: 0, y: 1, z: 0 };
@@ -115,8 +126,8 @@ export class ChaseCamera {
     const behindX = x - fx * dist + n.x * height;
     const behindZ = z - fz * dist + n.z * height;
     let camBase = y + n.y * height;
-    const lookX = x + fx * CAMERA.lookAhead + n.x * lookLift;
-    const lookZ = z + fz * CAMERA.lookAhead + n.z * lookLift;
+    const lookX = x + fx * lookAhead + n.x * lookLift;
+    const lookZ = z + fz * lookAhead + n.z * lookLift;
     const lookBase = y + n.y * lookLift;
     const underCam = cue.floorAt(behindX, behindZ);
     const underLook = cue.floorAt(lookX, lookZ);

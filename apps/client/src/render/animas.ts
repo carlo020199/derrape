@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
+import { createAnimasMoon, createClouds, createHills } from "./sky";
 import { PALETTE, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
@@ -9,8 +10,9 @@ const HUESO = PALETTE.hueso;
 const BRASA = PALETTE.brasa;
 const LLAMA = PALETTE.llama;
 const ANIMA = PALETTE.anima;
-const ESPECTRO = PALETTE.espectro;
 const CIRUELA = PALETTE.ciruela;
+/** Suelo del tema (themes.ts, track.groundY). */
+const GROUND_Y = -8;
 
 function paint(geo: THREE.BufferGeometry, color: number) {
   const pos = geo.getAttribute("position");
@@ -308,16 +310,144 @@ function boostMarks(track: Track) {
   return mesh;
 }
 
+/**
+ * Cauce de la laguna: tira de triángulos con ancho variable a lo largo de una curva Catmull-Rom,
+ * más un óvalo bajo el salto. `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma).
+ * Las posiciones están en mundo (x, z); el mesh solo pone la altura.
+ */
+export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; z: number }): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const cen: number[] = [];
+  const idx: number[] = [];
+  // Óvalo (abanico) bajo el salto.
+  const rx = 26;
+  const rz = 22;
+  pos.push(mid.x, 0, mid.z);
+  cen.push(1);
+  const seg = 28;
+  for (let i = 0; i < seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    const k = 1 + 0.08 * Math.sin(a * 3);
+    pos.push(mid.x + Math.cos(a) * rx * k, 0, mid.z + Math.sin(a) * rz * k);
+    cen.push(0);
+    idx.push(0, 1 + i, 1 + ((i + 1) % seg));
+  }
+  // Cauce desde el óvalo hacia el campanario, con meandros.
+  const dx = end.x - mid.x;
+  const dz = end.z - mid.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const nx = -dz / len;
+  const nz = dx / len;
+  const curve = new THREE.CatmullRomCurve3(
+    [0, 0.14, 0.3, 0.46, 0.62, 0.78, 0.92].map((t, i) => {
+      const off = [0, 8, -9, 8, -6, 4, 0][i]! * 1;
+      return new THREE.Vector3(mid.x + dx * t + nx * off, 0, mid.z + dz * t + nz * off);
+    }),
+  );
+  const steps = 44;
+  const base = pos.length / 3;
+  const p = new THREE.Vector3();
+  const tg = new THREE.Vector3();
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    curve.getPoint(t, p);
+    curve.getTangent(t, tg);
+    const half = (11 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.35 * t) * Math.min(1, 0.4 + t * 6);
+    const lx = -tg.z;
+    const lz = tg.x;
+    pos.push(p.x + lx * half, 0, p.z + lz * half, p.x, 0, p.z, p.x - lx * half, 0, p.z - lz * half);
+    cen.push(0, 1, 0);
+    if (i < steps) {
+      const o = base + i * 3;
+      idx.push(o, o + 3, o + 1, o + 1, o + 3, o + 4, o + 1, o + 4, o + 2, o + 2, o + 4, o + 5);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
+  geo.setAttribute("aCentre", new THREE.BufferAttribute(new Float32Array(cen), 1));
+  geo.setIndex(idx);
+  return geo;
+}
+
+const WATER_VERT = /* glsl */ `
+attribute float aCentre;
+varying float vCentre;
+varying vec2 vXZ;
+#include <fog_pars_vertex>
+void main() {
+  vCentre = aCentre;
+  vXZ = position.xz;
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}
+`;
+
+// Color Espectro #3FF2C8 en el eje y #1FA896 en la orilla; ondas y espuma con ruido de valor barato.
+const WATER_FRAG = /* glsl */ `
+uniform float uTime;
+varying float vCentre;
+varying vec2 vXZ;
+#include <fog_pars_fragment>
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void main() {
+  vec2 q = vXZ * 0.16;
+  float n = vnoise(q + vec2(uTime * 0.12, uTime * 0.07)) * 0.6 + vnoise(q * 2.3 - vec2(uTime * 0.18, -uTime * 0.1)) * 0.4;
+  float c = clamp(vCentre + (n - 0.5) * 0.35, 0.0, 1.0);
+  vec3 deep = vec3(0.122, 0.659, 0.588);
+  vec3 light = vec3(0.247, 0.949, 0.784);
+  vec3 col = mix(deep, light, smoothstep(0.0, 0.85, c));
+  // Ondas: bandas de espuma que se desplazan, cortadas en escalones (toon).
+  float w = sin((vXZ.x * 0.35 + vXZ.y * 0.28) + n * 6.0 - uTime * 1.3);
+  float foam = step(0.82, w * 0.5 + 0.5) * smoothstep(0.1, 0.5, c);
+  col = mix(col, vec3(0.75, 1.0, 0.93), foam * 0.55);
+  // Orilla clara.
+  col = mix(col, vec3(0.80, 1.0, 0.94), (1.0 - smoothstep(0.0, 0.16, vCentre)) * 0.9);
+  gl_FragColor = vec4(col, 1.0);
+  #include <fog_fragment>
+}
+`;
+
+function lagoonMaterial() {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
+    vertexShader: WATER_VERT,
+    fragmentShader: WATER_FRAG,
+    fog: true,
+    side: THREE.DoubleSide,
+  });
+  return mat;
+}
+
 export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDef) {
-  const moon = scene.getObjectByName("luna");
-  if (moon) moon.scale.setScalar(1.55);
-  scene.getObjectByName("cielo")?.add(stars());
+  // Cielo de Ánimas: luna grande sobre la recta de salida, nubes en capas y colinas lejanas.
+  // Todo cuelga de la cúpula, así que sigue a la cámara y no cuenta como geometría de pista.
+  const dome = scene.getObjectByName("cielo");
+  const oldMoon = scene.getObjectByName("luna");
+  oldMoon?.parent?.remove(oldMoon);
+  if (dome) {
+    dome.add(stars());
+    dome.add(createClouds(0x5b4e7a, 0x2e2547));
+    dome.add(createHills());
+    const moon = createAnimasMoon(17);
+    // Delante del kart en la salida (la recta mira a +z), alta y a la izquierda.
+    moon.position.set(95, 72, 190).setLength(214);
+    moon.lookAt(0, 0, 0);
+    dome.add(moon);
+  }
 
   const bone = sharedBoneToon();
 
   // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
   const spot = pointAt(track, 42, 11);
   const road = pointAt(track, 42, 0);
+  const towerFoot = { x: spot.x, z: spot.z };
   const tower = new THREE.Mesh(campanarioGeometry(), bone);
   tower.position.set(spot.x, spot.y, spot.z);
   tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
@@ -330,6 +460,13 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   tower.add(bellRing);
   tower.name = "campanario";
   scene.add(tower);
+  // Cerro bajo el campanario: sin él la torre flotaría sobre el valle. Pendiente 1:1.1, por debajo de la calzada.
+  const hillTop = spot.y - 0.3;
+  const hillH = hillTop - GROUND_Y;
+  const hill = new THREE.Mesh(new THREE.CylinderGeometry(5, 5 + hillH / 1.1, hillH, 16, 1, true), toonMaterial({ color: 0x2e2547 }));
+  hill.position.set(spot.x, GROUND_Y + hillH / 2, spot.z);
+  hill.name = "cerro-campanario";
+  scene.add(hill);
 
   // Arco-calavera en la salida, en vez del arco genérico.
   const start = pointAt(track, 0);
@@ -398,8 +535,9 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     scene.add(paint);
   }
 
-  // Laguna bajo el salto, siempre por debajo del asfalto más bajo de la zona.
-  // Se dibuja antes que los karts y con depthTest, para no teñir la escena.
+  // Laguna bajo el salto, siempre por debajo del asfalto más bajo de la zona (1,8 m).
+  // Es un río de luz: óvalo bajo el salto y un cauce que serpentea hasta el pie del campanario.
+  // Una sola malla con ShaderMaterial barato (ruido en UV + tiempo), sin texturas.
   if (big) {
     let low = Infinity;
     for (let d = big.from - 6; d <= big.to + 50; d += 2) {
@@ -409,30 +547,22 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       low = Math.min(low, surfaceY({ y: p.y, lateral: -p.width / 2, bank: p.bank }));
     }
     const waterY = low - 1.8;
-    const mid = pointAt(track, big.to + 16);
-    const waterMat = new THREE.MeshBasicMaterial({
-      color: ESPECTRO,
-      transparent: true,
-      opacity: 0.85,
-      depthTest: true,
-      depthWrite: true,
-      side: THREE.FrontSide,
-    });
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(22, 28), waterMat);
-    disc.rotation.x = -Math.PI / 2;
-    disc.position.set(mid.x, waterY, mid.z);
-    disc.renderOrder = -2;
-    disc.name = "laguna";
-    scene.add(disc);
-    const rim = new THREE.Mesh(
-      new THREE.RingGeometry(20.2, 22, 28),
-      new THREE.MeshBasicMaterial({ color: ESPECTRO, depthTest: true, depthWrite: true, side: THREE.FrontSide }),
-    );
-    rim.rotation.x = -Math.PI / 2;
-    rim.position.set(mid.x, waterY + 0.04, mid.z);
-    rim.renderOrder = -2;
-    rim.name = "laguna-borde";
-    scene.add(rim);
+    // El óvalo se desplaza hacia el lado del campanario: debajo del eje quedaría tapado por la calzada.
+    const toward = (off: number) => {
+      const q = pointAt(track, big.to + 10, off);
+      return Math.hypot(q.x - towerFoot.x, q.z - towerFoot.z);
+    };
+    const mid = pointAt(track, big.to + 10, toward(30) < toward(-30) ? 30 : -30);
+    const lagoon = new THREE.Mesh(lagoonGeometry(mid, towerFoot), lagoonMaterial());
+    lagoon.position.y = waterY;
+    lagoon.renderOrder = -2;
+    lagoon.frustumCulled = false;
+    lagoon.name = "laguna";
+    const waterMat = lagoon.material as THREE.ShaderMaterial;
+    lagoon.onBeforeRender = () => {
+      waterMat.uniforms.uTime!.value = performance.now() / 1000;
+    };
+    scene.add(lagoon);
   }
 
   // Faroles flotantes, una sola malla.
