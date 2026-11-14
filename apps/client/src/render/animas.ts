@@ -437,7 +437,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     dome.add(createHills());
     const moon = createAnimasMoon(17);
     // Delante del kart en la salida (la recta mira a +z), alta y a la izquierda.
-    moon.position.set(-60, 66, 192).setLength(214);
+    moon.position.set(95, 72, 190).setLength(214);
     moon.lookAt(0, 0, 0);
     dome.add(moon);
   }

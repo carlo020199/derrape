@@ -374,6 +374,25 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   }
   resetLocals();
 
+  // ?foto=<metros>[,<lateral>]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
+  const foto = !online ? new URLSearchParams(location.search).get("foto") : null;
+  if (foto) {
+    const [d, lat] = foto.split(",").map(Number);
+    const at = pointAt(track, d ?? 0, lat ?? 0);
+    const s = createKart(at.x, at.z, at.heading);
+    player.race = createRaceKart(player.race.id, s, track);
+    player.prev = { ...s };
+    countdown = -1e6;
+    (window as unknown as { __escena: unknown }).__escena = { scene, camera, renderer };
+    // Los demás, detrás de la cámara.
+    locals.filter((r) => r !== player).forEach((r, i) => {
+      const b = pointAt(track, ((d ?? 0) - 40 - i * 8 + track.length) % track.length);
+      const bs = createKart(b.x, b.z, b.heading);
+      r.race = createRaceKart(r.race.id, bs, track);
+      r.prev = { ...bs };
+    });
+  }
+
   // Volver a una carrera ya empezada (tras recargar o un corte largo).
   if (online?.start.elapsed !== undefined) {
     countdown = online.start.elapsed;

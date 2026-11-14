@@ -75,15 +75,15 @@ function rng(seed: number) {
 }
 
 function flatColored(parts: { geo: THREE.BufferGeometry; color: number }[]) {
+  const flats = parts.map((p) => ({ geo: p.geo.index ? p.geo.toNonIndexed() : p.geo, color: p.color }));
   let total = 0;
-  for (const p of parts) total += p.geo.getAttribute("position").count;
+  for (const p of flats) total += p.geo.getAttribute("position").count;
   const pos = new Float32Array(total * 3);
   const col = new Float32Array(total * 3);
   let o = 0;
   const c = new THREE.Color();
-  for (const { geo, color } of parts) {
-    const flat = geo.index ? geo.toNonIndexed() : geo;
-    const p = flat.getAttribute("position");
+  for (const { geo, color } of flats) {
+    const p = geo.getAttribute("position");
     c.set(color);
     for (let i = 0; i < p.count; i++) {
       pos.set([p.getX(i), p.getY(i), p.getZ(i)], (o + i) * 3);
@@ -105,9 +105,9 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
   const r = rng(77);
   const parts: { geo: THREE.BufferGeometry; color: number }[] = [];
   const layers = [
-    { n: 9, elev: [0.05, 0.14], size: 16, mix: 0.55 },
-    { n: 8, elev: [0.14, 0.26], size: 22, mix: 0.3 },
-    { n: 5, elev: [0.26, 0.42], size: 28, mix: 0 },
+    { n: 16, elev: [0.04, 0.13], size: 26, mix: 0.55 },
+    { n: 12, elev: [0.13, 0.25], size: 34, mix: 0.3 },
+    { n: 8, elev: [0.25, 0.42], size: 40, mix: 0 },
   ];
   const base = new THREE.Color(niebla);
   const shade = new THREE.Color(sombra);
@@ -128,7 +128,8 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
         const rad = w * (0.16 + 0.1 * Math.cos((i / (puffs - 1) - 0.5) * Math.PI)) * (0.8 + r() * 0.4);
         for (const [color, dy, dz] of [[bot, -rad * 0.35, 0], [top, rad * 0.08, 0.05]] as const) {
           const g = new THREE.CircleGeometry(rad, 10);
-          g.applyMatrix4(new THREE.Matrix4().makeTranslation(u, dy, dz));
+          g.scale(1, 0.6, 1);
+          g.applyMatrix4(new THREE.Matrix4().makeTranslation(u, dy * 0.6, dz));
           g.applyMatrix4(place);
           parts.push({ geo: g, color });
         }
@@ -191,7 +192,7 @@ export function createAnimasMoon(radius = 17): THREE.Group {
   for (const [x, y, s] of [[-0.35, 0.3, 0.26], [0.3, 0.1, 0.18], [-0.05, -0.38, 0.22], [0.42, -0.35, 0.1], [-0.5, -0.1, 0.09]] as const) {
     const g = new THREE.CircleGeometry(radius * s, 14);
     g.translate(x * radius, y * radius, 0.05);
-    parts.push({ geo: g, color: 0xd8c9b2 });
+    parts.push({ geo: g, color: 0xe2d5bf });
   }
   const disc = new THREE.Mesh(
     flatColored(parts),
