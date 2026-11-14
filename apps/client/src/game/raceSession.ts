@@ -206,7 +206,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const moon = new THREE.DirectionalLight(0xcfc4ff, 1.05);
   moon.position.set(-50, 80, 30);
   scene.add(moon);
-  const sky = createGradientSky(theme.sky, theme.horizon, 230);
+  const sky = createGradientSky(theme.sky, theme.skyHorizon ?? theme.horizon, 230, theme.skyHorizon !== undefined ? 0x9b6bff : undefined);
   sky.add(createMoon());
   scene.add(sky);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), toonMaterial({ color: theme.ground }));
