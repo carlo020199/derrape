@@ -320,8 +320,8 @@ export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; 
   const cen: number[] = [];
   const idx: number[] = [];
   // Óvalo (abanico) bajo el salto.
-  const rx = 24;
-  const rz = 20;
+  const rx = 26;
+  const rz = 22;
   pos.push(mid.x, 0, mid.z);
   cen.push(1);
   const seg = 28;
@@ -340,7 +340,7 @@ export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; 
   const nz = dx / len;
   const curve = new THREE.CatmullRomCurve3(
     [0, 0.14, 0.3, 0.46, 0.62, 0.78, 0.92].map((t, i) => {
-      const off = [0, 14, -16, 15, -13, 9, 0][i]! * 1;
+      const off = [0, 8, -9, 8, -6, 4, 0][i]! * 1;
       return new THREE.Vector3(mid.x + dx * t + nx * off, 0, mid.z + dz * t + nz * off);
     }),
   );
@@ -352,7 +352,7 @@ export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; 
     const t = i / steps;
     curve.getPoint(t, p);
     curve.getTangent(t, tg);
-    const half = (9 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.35 * t) * Math.min(1, 0.4 + t * 6);
+    const half = (11 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.35 * t) * Math.min(1, 0.4 + t * 6);
     const lx = -tg.z;
     const lz = tg.x;
     pos.push(p.x + lx * half, 0, p.z + lz * half, p.x, 0, p.z, p.x - lx * half, 0, p.z - lz * half);
@@ -547,7 +547,12 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       low = Math.min(low, surfaceY({ y: p.y, lateral: -p.width / 2, bank: p.bank }));
     }
     const waterY = low - 1.8;
-    const mid = pointAt(track, big.to + 16);
+    // El óvalo se desplaza hacia el lado del campanario: debajo del eje quedaría tapado por la calzada.
+    const toward = (off: number) => {
+      const q = pointAt(track, big.to + 10, off);
+      return Math.hypot(q.x - towerFoot.x, q.z - towerFoot.z);
+    };
+    const mid = pointAt(track, big.to + 10, toward(30) < toward(-30) ? 30 : -30);
     const lagoon = new THREE.Mesh(lagoonGeometry(mid, towerFoot), lagoonMaterial());
     lagoon.position.y = waterY;
     lagoon.renderOrder = -2;

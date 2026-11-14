@@ -22,10 +22,10 @@ export const CAMERA = {
    */
   reliefDistance: 5.2,
   reliefHeight: 2.2,
-  reliefPortraitDistance: 4.0,
-  reliefPortraitHeight: 1.9,
+  reliefPortraitDistance: 5.4,
+  reliefPortraitHeight: 2.0,
   reliefPortraitLookAhead: 12,
-  reliefPortraitLookLift: 0.45,
+  reliefPortraitLookLift: 0.9,
 };
 
 export interface CameraCue {

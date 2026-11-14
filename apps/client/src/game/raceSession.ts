@@ -374,12 +374,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   }
   resetLocals();
 
-  // ?foto=<metros>[,<lateral>]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
+  // ?foto=<metros>[,<lateral>[,<giro en grados>]]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
   const foto = !online ? new URLSearchParams(location.search).get("foto") : null;
   if (foto) {
-    const [d, lat] = foto.split(",").map(Number);
+    const [d, lat, giro] = foto.split(",").map(Number);
     const at = pointAt(track, d ?? 0, lat ?? 0);
-    const s = createKart(at.x, at.z, at.heading);
+    const s = createKart(at.x, at.z, at.heading + ((giro ?? 0) * Math.PI) / 180);
     player.race = createRaceKart(player.race.id, s, track);
     player.prev = { ...s };
     countdown = -1e6;
