@@ -145,7 +145,8 @@ export function deriveTuning(base: KartTuning, stats: KartStats, driftChargeMult
     accelRelative: base.accelRelative * accel,
     turnRate: base.turnRate * turn,
     driftTurnBase: base.driftTurnBase * turn,
-    driftTurnRange: base.driftTurnRange * turn,
+    driftTurnClose: base.driftTurnClose * turn,
+    driftTurnOpen: base.driftTurnOpen * turn,
     driftChargeMult: base.driftChargeMult * driftChargeMult,
   };
 }

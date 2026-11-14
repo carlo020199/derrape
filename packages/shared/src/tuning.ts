@@ -52,8 +52,20 @@ export const KART = {
   driftMinSpeed: 10,
   /** Giro derrapando con el control neutro (rad/s): el derrape cierra más que el giro normal. */
   driftTurnBase: 2.0,
-  /** Giro extra/menos según cierres (hacia dentro) o abras (hacia fuera) el derrape (rad/s). */
-  driftTurnRange: 1.1,
+  /**
+   * Contravolante. Giro extra (rad/s) al cerrar el derrape (girar hacia su lado) y giro que se
+   * resta (rad/s) al abrirlo (girar al lado contrario). Mantener driftTurnOpen < driftTurnBase:
+   * así el kart nunca deja de curvar hacia el lado del derrape.
+   */
+  driftTurnClose: 1.1,
+  driftTurnOpen: 1.1,
+  /** Rapidez con la que el giro se acerca al input durante el derrape (unidades de giro/s). Teclado: ~0,25 s de lado a lado. */
+  driftSteerRate: 8,
+  /** Mínimo de giro (0–1) para que un cambio de lado cuente como zigzag. */
+  driftZigzagThreshold: 0.6,
+  /** Tras un zigzag, la carga va más rápida este tiempo (s) y este multiplicador. */
+  driftZigzagTime: 0.5,
+  driftZigzagMult: 1.25,
   /** Velocidad que se pierde derrapando (fracción de la punta). Casi nada. */
   driftSpeedLoss: 0.02,
   /** Carga por segundo girando hacia dentro de la curva / en neutro o hacia fuera (5 y 2 por fotograma a 60 fps). */
