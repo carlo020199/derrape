@@ -15,7 +15,7 @@
 Archivos:
 - `CLAUDE.md` → reglas del proyecto. Claude Code lo lee solo en cada sesión. No lo borres.
 - `docs/PLAN.md` → el plan completo: diseño del juego, fases y checklist de móvil.
-- `docs/CONTENIDO.md` → los 10 circuitos, 5 personajes y 10 coches (nombres y estadísticas editables).
+- `docs/CONTENIDO.md` → los 10 circuitos, 8 personajes y 10 coches (nombres y estadísticas editables).
 - `docs/PROMPTS.md` → un prompt listo para cada fase.
 
 Para retomar otro día: abre `claude` en la carpeta y escribe

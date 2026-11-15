@@ -1,0 +1,427 @@
+{
+  "pointer": {
+    "coarse": true,
+    "hover": true,
+    "touch": 1
+  },
+  "tracks": {
+    "pruebas": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 24,
+        "triangles": 7649
+      },
+      "samples": [
+        {
+          "calls": 24,
+          "triangles": 7649
+        },
+        {
+          "calls": 24,
+          "triangles": 7649
+        },
+        {
+          "calls": 24,
+          "triangles": 7649
+        },
+        {
+          "calls": 24,
+          "triangles": 7649
+        },
+        {
+          "calls": 24,
+          "triangles": 7649
+        },
+        {
+          "calls": 24,
+          "triangles": 7649
+        }
+      ]
+    },
+    "paseo-del-puerto": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 36,
+        "triangles": 18334
+      },
+      "samples": [
+        {
+          "calls": 36,
+          "triangles": 18334
+        },
+        {
+          "calls": 36,
+          "triangles": 18334
+        },
+        {
+          "calls": 36,
+          "triangles": 18334
+        },
+        {
+          "calls": 36,
+          "triangles": 18334
+        },
+        {
+          "calls": 36,
+          "triangles": 18334
+        },
+        {
+          "calls": 36,
+          "triangles": 18334
+        }
+      ]
+    },
+    "playa-dorada": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 26,
+        "triangles": 17825
+      },
+      "samples": [
+        {
+          "calls": 26,
+          "triangles": 17825
+        },
+        {
+          "calls": 26,
+          "triangles": 17825
+        },
+        {
+          "calls": 26,
+          "triangles": 17825
+        },
+        {
+          "calls": 26,
+          "triangles": 17825
+        },
+        {
+          "calls": 26,
+          "triangles": 17825
+        },
+        {
+          "calls": 26,
+          "triangles": 17825
+        }
+      ]
+    },
+    "mercado-central": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 25,
+        "triangles": 19337
+      },
+      "samples": [
+        {
+          "calls": 25,
+          "triangles": 19337
+        },
+        {
+          "calls": 25,
+          "triangles": 19337
+        },
+        {
+          "calls": 25,
+          "triangles": 19337
+        },
+        {
+          "calls": 25,
+          "triangles": 19337
+        },
+        {
+          "calls": 25,
+          "triangles": 19337
+        },
+        {
+          "calls": 25,
+          "triangles": 19337
+        }
+      ]
+    },
+    "vinedos": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 25,
+        "triangles": 70031
+      },
+      "samples": [
+        {
+          "calls": 25,
+          "triangles": 70031
+        },
+        {
+          "calls": 25,
+          "triangles": 70031
+        },
+        {
+          "calls": 25,
+          "triangles": 70031
+        },
+        {
+          "calls": 25,
+          "triangles": 70031
+        },
+        {
+          "calls": 25,
+          "triangles": 70031
+        },
+        {
+          "calls": 25,
+          "triangles": 70031
+        }
+      ]
+    },
+    "feria-loca": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 27,
+        "triangles": 22101
+      },
+      "samples": [
+        {
+          "calls": 27,
+          "triangles": 22101
+        },
+        {
+          "calls": 27,
+          "triangles": 22101
+        },
+        {
+          "calls": 27,
+          "triangles": 22101
+        },
+        {
+          "calls": 27,
+          "triangles": 22101
+        },
+        {
+          "calls": 27,
+          "triangles": 22101
+        },
+        {
+          "calls": 27,
+          "triangles": 22101
+        }
+      ]
+    },
+    "estacion-vieja": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 25,
+        "triangles": 17297
+      },
+      "samples": [
+        {
+          "calls": 25,
+          "triangles": 17297
+        },
+        {
+          "calls": 25,
+          "triangles": 17297
+        },
+        {
+          "calls": 25,
+          "triangles": 17297
+        },
+        {
+          "calls": 25,
+          "triangles": 17297
+        },
+        {
+          "calls": 25,
+          "triangles": 17297
+        },
+        {
+          "calls": 25,
+          "triangles": 17297
+        }
+      ]
+    },
+    "pico-nevado": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 26,
+        "triangles": 22787
+      },
+      "samples": [
+        {
+          "calls": 26,
+          "triangles": 22787
+        },
+        {
+          "calls": 26,
+          "triangles": 22787
+        },
+        {
+          "calls": 26,
+          "triangles": 22787
+        },
+        {
+          "calls": 26,
+          "triangles": 22787
+        },
+        {
+          "calls": 26,
+          "triangles": 22787
+        },
+        {
+          "calls": 26,
+          "triangles": 22787
+        }
+      ]
+    },
+    "canon-rojo": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 24,
+        "triangles": 18341
+      },
+      "samples": [
+        {
+          "calls": 24,
+          "triangles": 18341
+        },
+        {
+          "calls": 24,
+          "triangles": 18341
+        },
+        {
+          "calls": 24,
+          "triangles": 18341
+        },
+        {
+          "calls": 24,
+          "triangles": 18341
+        },
+        {
+          "calls": 24,
+          "triangles": 18341
+        },
+        {
+          "calls": 24,
+          "triangles": 18341
+        }
+      ]
+    },
+    "volcan-dormido": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 25,
+        "triangles": 20873
+      },
+      "samples": [
+        {
+          "calls": 25,
+          "triangles": 20873
+        },
+        {
+          "calls": 25,
+          "triangles": 20873
+        },
+        {
+          "calls": 25,
+          "triangles": 20873
+        },
+        {
+          "calls": 25,
+          "triangles": 20873
+        },
+        {
+          "calls": 25,
+          "triangles": 20873
+        },
+        {
+          "calls": 25,
+          "triangles": 20873
+        }
+      ]
+    },
+    "ciudad-neon": {
+      "help": {
+        "display": "block",
+        "text": "Flechas/WASD · Espacio = derrape · E = objeto adelante · Q = atrás · Esc = ajustes · F1 = tuning",
+        "touchClass": false
+      },
+      "hud": "0",
+      "calls": {
+        "calls": 25,
+        "triangles": 21071
+      },
+      "samples": [
+        {
+          "calls": 25,
+          "triangles": 21071
+        },
+        {
+          "calls": 25,
+          "triangles": 21071
+        },
+        {
+          "calls": 25,
+          "triangles": 21071
+        },
+        {
+          "calls": 25,
+          "triangles": 21071
+        },
+        {
+          "calls": 25,
+          "triangles": 21071
+        },
+        {
+          "calls": 25,
+          "triangles": 21071
+        }
+      ]
+    }
+  }
+}

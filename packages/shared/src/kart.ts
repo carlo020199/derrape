@@ -2,7 +2,7 @@
 // El comportamiento imita a los juegos de karts de referencia; ver docs/FISICAS.md.
 
 import type { Surface } from "./track";
-import { ITEMS, KART, RAMPS, SURFACE, type KartTuning, type RampSize } from "./tuning";
+import { BANK, ITEMS, KART, RAMP, SLOPE, SURFACE, type KartTuning, type RampSize } from "./tuning";
 
 export interface KartInput {
   /** -1 (izquierda) .. 1 (derecha). */
@@ -17,6 +17,8 @@ export interface KartInput {
    * Si viene, el derrape empieza al aterrizar aunque el giro esté centrado.
    */
   driftSide?: number;
+  /** Deslizar hacia arriba en el aire: mini-turbo al aterrizar. */
+  trick?: boolean;
 }
 
 export interface KartState {
@@ -30,8 +32,15 @@ export interface KartState {
   driftDir: number;
   /** Carga acumulada del mini-turbo (unidades: ver tuning). */
   driftCharge: number;
+  /** Giro suavizado durante el derrape (-1..1, como `steer`): el contravolante. */
+  driftSteer: number;
+  /** Último lado fuerte del contravolante (1 = cierra, -1 = abre, 0 = ninguno) y tiempo de zigzag restante (s). */
+  driftSwingSide: number;
+  driftZigzag: number;
   /** Tiempo de salto restante (s). Al aterrizar empieza el derrape si se sigue pidiendo. */
   hopTime: number;
+  /** Duración total del salto en curso (para la curva de altura: derrape o rampa). */
+  hopTotal: number;
   /** Si el derrape estaba pulsado el paso anterior (para detectar la pulsación). */
   driftHeld: boolean;
   /** Turbo restante (s) y su fuerza (multiplicador de velocidad punta). */
@@ -43,18 +52,38 @@ export interface KartState {
   shieldTime: number;
   /** Superficie bajo las ruedas (la pone quien conoce la pista antes de cada paso). */
   surface: Surface;
-  /**
-   * Peralte bajo el kart visto desde el propio kart (rad; positivo = su lado izquierdo más alto).
-   * Lo pone quien conoce la pista, igual que `surface`.
-   */
-  bank: number;
-  /** Vuelo tras una rampa: tiempo restante y total (s), altura máxima (m) y turbo al aterrizar (s). */
-  airTime: number;
-  airTotal: number;
-  airHeight: number;
-  airBoost: number;
   /** Peso (1–5, estadística del coche): el más pesado empuja más en los choques y pierde menos velocidad. */
   mass: number;
+  /**
+   * Altura absoluta del vuelo (m). En el suelo no se usa: se dibuja la superficie.
+   * `airborne` distingue un salto de estar apoyado.
+   */
+  y: number;
+  /** Velocidad vertical (m/s). Positiva hacia arriba. */
+  vy: number;
+  airborne: boolean;
+  /** Seno de la pendiente en el rumbo. 0 = llano (lo escribe la pista). */
+  grade: number;
+  /** Peralte en grados. + = curva a la izquierda. 0 = sin peralte. */
+  bank: number;
+  /** Metros que suma el lomo de una rampa S/M/L antes del labio. */
+  climb: number;
+  /** Altura de la superficie bajo el kart (m). */
+  groundY: number;
+  rampSize: RampSize | null;
+  /** Rampa que originó el vuelo, para el truco al aterrizar. */
+  flightRamp: RampSize | null;
+  /** El piloto pidió el truco durante este salto. */
+  trick: boolean;
+  /** El último choque fue contra el muro exterior de un peralte. */
+  outsideWall: boolean;
+  /** Distancia de pista del paso anterior, para saber cuándo se pisa un labio. -1 = aún no. */
+  along: number;
+  /**
+   * Tope de velocidad por agarre en la curva que viene (m/s).
+   * 0 = sin tope (circuitos sin relieve, y cualquier kart que no pase por la pista).
+   */
+  gripCap: number;
 }
 
 export const NO_INPUT: KartInput = { steer: 0, throttle: false, brake: false, drift: false };
@@ -67,19 +96,31 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     speed: 0,
     driftDir: 0,
     driftCharge: 0,
+    driftSteer: 0,
+    driftSwingSide: 0,
+    driftZigzag: 0,
     hopTime: 0,
+    hopTotal: 0,
     driftHeld: false,
     boostTime: 0,
     boostMult: 1,
     spinTime: 0,
     shieldTime: 0,
     surface: "road",
-    bank: 0,
-    airTime: 0,
-    airTotal: 0,
-    airHeight: 0,
-    airBoost: 0,
     mass: 3,
+    y: 0,
+    vy: 0,
+    airborne: false,
+    grade: 0,
+    bank: 0,
+    climb: 0,
+    groundY: 0,
+    rampSize: null,
+    flightRamp: null,
+    trick: false,
+    outsideWall: false,
+    along: -1,
+    gripCap: 0,
   };
 }
 
@@ -92,15 +133,18 @@ export function driftLevel(s: KartState, t: KartTuning = KART): number {
   return 0;
 }
 
-/** Altura del salto o del vuelo (m) para dibujarlo. */
+/** Altura del salto (m) para dibujarlo. */
 export function hopHeight(s: KartState, t: KartTuning = KART): number {
-  if (s.airTime > 0 && s.airTotal > 0) {
-    const u = 1 - s.airTime / s.airTotal;
-    return 4 * s.airHeight * u * (1 - u);
-  }
   if (s.hopTime <= 0) return 0;
-  const u = 1 - s.hopTime / t.hopTime; // 0..1
-  return 4 * t.hopHeight * u * (1 - u);
+  const total = s.hopTotal > 0 ? s.hopTotal : t.hopTime;
+  const height = total > t.hopTime + 0.05 ? SURFACE.rampHopHeight : t.hopHeight;
+  const u = 1 - s.hopTime / total; // 0..1
+  return 4 * height * Math.max(0, u) * (1 - Math.max(0, Math.min(1, u)));
+}
+
+function startHop(s: KartState, duration: number) {
+  s.hopTime = duration;
+  s.hopTotal = duration;
 }
 
 /** Da un turbo: dura al menos `time` s y se queda con la fuerza mayor. */
@@ -123,23 +167,9 @@ function endDrift(s: KartState, t: KartTuning, withBoost: boolean) {
   if (withBoost) giveBoost(s, boostForLevel(driftLevel(s, t), t), t.boostSpeedMult);
   s.driftDir = 0;
   s.driftCharge = 0;
-}
-
-/**
- * Despega por una rampa. Cuanto más rápido, más lejos y más alto. Devuelve true si ha despegado
- * (hace falta ir rápido, no estar ya en el aire ni haciendo un trompo).
- */
-export function launchKart(s: KartState, size: RampSize, t: KartTuning = KART): boolean {
-  if (s.airTime > 0 || s.spinTime > 0 || s.speed < RAMPS.minSpeed) return false;
-  const ramp = RAMPS.sizes[size];
-  const k = Math.min(1.15, s.speed / t.maxSpeed);
-  // Si venía derrapando, cobra el mini-turbo que llevara cargado.
-  if (s.driftDir !== 0) endDrift(s, t, true);
-  s.hopTime = 0;
-  s.airTime = s.airTotal = ramp.airTime * k;
-  s.airHeight = ramp.height * k;
-  s.airBoost = ramp.boost;
-  return true;
+  s.driftSteer = 0;
+  s.driftSwingSide = 0;
+  s.driftZigzag = 0;
 }
 
 /** Avanza la simulación un paso de `dt` segundos. Modifica `s`. */
@@ -154,37 +184,35 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
     s.driftDir = 0;
     s.driftCharge = 0;
     s.hopTime = 0;
-    s.airTime = 0;
+    s.hopTotal = 0;
     s.boostTime = 0;
     s.speed = approach(s.speed, 0, ITEMS.spinDecel * dt);
+    if (s.airborne) fly(s, dt);
     s.x += Math.sin(s.heading) * s.speed * dt;
     s.z += Math.cos(s.heading) * s.speed * dt;
     return;
   }
 
   const steer = Math.max(-1, Math.min(1, input.steer));
-
-  // --- En el aire tras una rampa: se conserva la velocidad y casi no se gira ---
-  if (s.airTime > 0) {
-    s.airTime = Math.max(0, s.airTime - dt);
-    s.boostTime = Math.max(0, s.boostTime - dt);
-    if (s.boostTime === 0) s.boostMult = 1;
-    s.heading += -steer * t.turnRate * RAMPS.airSteer * dt;
-    s.x += Math.sin(s.heading) * s.speed * dt;
-    s.z += Math.cos(s.heading) * s.speed * dt;
-    if (s.airTime === 0) {
-      giveBoost(s, s.airBoost, t.boostSpeedMult);
-      s.airBoost = 0;
-    }
-    return;
-  }
   const icy = s.surface === "lowGrip";
   if (s.surface === "boostPad") giveBoost(s, SURFACE.boostPadTime, SURFACE.boostPadMult);
+  // Rampa sin tamaño: salto de duración fija. Con tamaño, el vuelo lo dispara la pista en el labio.
+  if (
+    s.surface === "ramp" &&
+    !s.rampSize &&
+    !s.airborne &&
+    s.hopTime === 0 &&
+    s.speed >= SURFACE.rampMinSpeed &&
+    s.driftDir === 0
+  ) {
+    startHop(s, SURFACE.rampHopTime);
+  }
+  if (s.airborne && input.trick) s.trick = true;
 
   // --- Salto y derrape ---
   // Pulsar derrape = saltito. Al aterrizar, si se sigue pulsando y hay dirección, empieza el derrape.
   if (s.driftDir === 0) {
-    if (pressed && s.hopTime === 0 && s.speed > 0) s.hopTime = t.hopTime;
+    if (pressed && s.hopTime === 0 && s.speed > 0 && !s.airborne) startHop(s, t.hopTime);
     if (s.hopTime > 0) {
       s.hopTime = Math.max(0, s.hopTime - dt);
       if (s.hopTime === 0) {
@@ -193,6 +221,9 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
           // Girar a la izquierda (steer < 0) es rumbo positivo.
           s.driftDir = side < 0 ? 1 : -1;
           s.driftCharge = 0;
+          s.driftSteer = steer;
+          s.driftSwingSide = 0;
+          s.driftZigzag = 0;
         }
       }
     }
@@ -228,28 +259,64 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
     const decel = terrain < 1 ? SURFACE.roughDecel : t.coastDrag * 2;
     s.speed = approach(s.speed, topSpeed, decel * dt);
   }
+  // Cuesta: solo si la pista ha escrito una pendiente. En llano (grade 0) no cambia la punta.
+  if (!s.airborne && s.grade !== 0) {
+    const accel = Math.max(-SLOPE.maxAccel, Math.min(SLOPE.maxAccel, -SLOPE.k * SLOPE.gGame * s.grade));
+    s.speed += accel * dt;
+    if (!boosting && s.speed > topSpeed) s.speed = approach(s.speed, topSpeed, t.coastDrag * 2 * dt);
+  }
+  // Curva sin peralte suficiente: hay que soltar. El turbo no se recorta.
+  if (!s.airborne && !boosting && s.gripCap > 0 && s.speed > s.gripCap) {
+    s.speed = approach(s.speed, s.gripCap, t.brake * dt);
+  }
 
   // --- Giro ---
   let turn: number;
   if (s.driftDir !== 0) {
-    // steer a favor del derrape lo cierra; en contra lo abre.
-    const inside = -steer * s.driftDir; // -1..1
-    turn = s.driftDir * (t.driftTurnBase + t.driftTurnRange * inside);
-    const rate = inside >= t.driftInsideThreshold ? t.driftChargeFast : t.driftChargeSlow;
-    if (s.hopTime === 0) s.driftCharge += rate * t.driftChargeMult * dt;
+    // Contravolante: el giro suavizado a favor del derrape lo cierra; en contra lo abre.
+    // El lado nunca se invierte: driftTurnOpen < driftTurnBase.
+    s.driftSteer = approach(s.driftSteer, steer, t.driftSteerRate * dt);
+    const inside = -s.driftSteer * s.driftDir; // -1 (abre) .. 1 (cierra)
+    turn = s.driftDir * (t.driftTurnBase + (inside >= 0 ? t.driftTurnClose : t.driftTurnOpen) * inside);
+    // Cerrar y abrir alternadamente (zigzag) acelera la carga un rato.
+    const swing = inside >= t.driftZigzagThreshold ? 1 : inside <= -t.driftZigzagThreshold ? -1 : 0;
+    if (swing !== 0) {
+      if (s.driftSwingSide === -swing) s.driftZigzag = t.driftZigzagTime;
+      s.driftSwingSide = swing;
+    }
+    const zigzag = s.driftZigzag > 0 ? t.driftZigzagMult : 1;
+    s.driftZigzag = Math.max(0, s.driftZigzag - dt);
+    const rate = (inside >= t.driftInsideThreshold ? t.driftChargeFast : t.driftChargeSlow) * zigzag;
+    const banked = Math.abs(s.bank) >= BANK.driftFrom ? BANK.driftCharge : 1;
+    if (s.hopTime === 0 && !s.airborne) s.driftCharge += rate * t.driftChargeMult * banked * dt;
   } else {
     const abs = Math.abs(s.speed);
     const low = Math.min(1, abs / t.turnFullSpeed);
     const high = 1 - (1 - t.turnAtTopSpeed) * Math.min(1, abs / t.maxSpeed);
     turn = -steer * t.turnRate * low * high * Math.sign(s.speed);
   }
-  s.heading += turn * (icy ? SURFACE.lowGripTurnMult : 1) * dt;
-  // Peralte: la pista inclinada lleva el kart hacia su lado bajo (más cuanto más rápido).
-  if (s.bank !== 0) s.heading -= t.bankTurn * Math.sin(s.bank) * Math.min(1, Math.abs(s.speed) / t.maxSpeed) * dt;
+  if (!s.airborne && s.bank !== 0 && turn !== 0 && Math.sign(turn) === Math.sign(s.bank)) {
+    turn *= 1 + BANK.turnBonus * Math.sin(Math.abs((s.bank * Math.PI) / 180));
+  }
+  const air = s.airborne ? RAMP.airTurn : 1;
+  s.heading += turn * (icy ? SURFACE.lowGripTurnMult : 1) * air * dt;
+
+  if (s.airborne) fly(s, dt);
 
   // --- Posición ---
   s.x += Math.sin(s.heading) * s.speed * dt;
   s.z += Math.cos(s.heading) * s.speed * dt;
+  // Parado en un peralte, el kart resbala hacia el borde bajo. Con bank 0 no se mueve.
+  if (!s.airborne && s.bank !== 0 && Math.abs(s.speed) < BANK.slideSpeed) {
+    const push = SLOPE.gGame * Math.sin((s.bank * Math.PI) / 180) * BANK.slide * dt;
+    s.x += Math.cos(s.heading) * push;
+    s.z += -Math.sin(s.heading) * push;
+  }
+}
+
+function fly(s: KartState, dt: number) {
+  s.vy -= RAMP.gGame * dt;
+  s.y += s.vy * dt;
 }
 
 /**
@@ -267,7 +334,9 @@ export function bounceKart(s: KartState, nx: number, nz: number, push: number, t
 
   // Fracción de la velocidad que va contra el muro: 1 = de frente, 0 = rozando.
   const frontal = Math.min(1, -into / Math.max(Math.abs(s.speed), 1e-6));
-  const keep = t.wallScrapeKeep + (t.wallBounceKeep - t.wallScrapeKeep) * frontal;
+  let keep = t.wallScrapeKeep + (t.wallBounceKeep - t.wallScrapeKeep) * frontal;
+  // El peralte recoge: el muro exterior frena la mitad. Sin peralte, `outsideWall` queda a false.
+  if (s.outsideWall) keep = 1 - (1 - keep) * 0.5;
 
   // Quitar la componente hacia el muro y dejar un pequeño rebote.
   const rvx = vx - into * nx * 1.3;

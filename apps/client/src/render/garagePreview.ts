@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { DEFAULT_KART, KART_COLORS } from "@derrape/shared";
 import { createKartModel, type KartModel } from "./kartModel";
-import { PAL, addNightLights, backdropTexture, glowTexture, toon } from "./look";
-import { Sparks } from "./sparks";
+import { Fire, paintExhaust, paintHair } from "./flames";
+import { PALETTE, toonMaterial } from "./materials";
+import { createGradientSky } from "./sky";
 
 /**
  * Vista previa 3D del piloto y el coche elegidos, girando sobre una peana. Usa el mismo renderer que
@@ -12,7 +13,8 @@ export class GaragePreview {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
   private model: KartModel | null = null;
-  private sparks = new Sparks();
+  private fire: Fire;
+  private flameAt = new THREE.Vector3();
   private cheer = 0;
   private time = 0;
   private last = 0;
@@ -22,40 +24,30 @@ export class GaragePreview {
     private renderer: THREE.WebGLRenderer,
     private canvas: HTMLCanvasElement,
   ) {
-    this.scene.background = backdropTexture(0x3a2c6a, PAL.noche);
-    addNightLights(this.scene);
-    // Peana de hueso con calaveritas alrededor y un foco cálido detrás.
-    const bone = toon(PAL.hueso);
-    const shade = toon(PAL.huesoSombra);
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.25, 0.3, 36), bone);
-    top.position.y = -0.15;
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.7, 0.3, 36), shade);
-    base.position.y = -0.45;
-    this.scene.add(top, base);
-    const skullGeo = new THREE.SphereGeometry(0.2, 10, 8);
-    const eyeGeo = new THREE.SphereGeometry(0.05, 6, 5);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1326 });
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      const skull = new THREE.Mesh(skullGeo, bone);
-      skull.position.set(Math.sin(a) * 2.45, -0.3, Math.cos(a) * 2.45);
-      skull.rotation.y = a;
-      for (const s of [-1, 1]) {
-        const eye = new THREE.Mesh(eyeGeo, eyeMat);
-        eye.position.set(s * 0.08, 0.03, 0.17);
-        skull.add(eye);
-      }
-      this.scene.add(skull);
-    }
-    const spot = new THREE.Mesh(
-      new THREE.PlaneGeometry(13, 13),
-      new THREE.MeshBasicMaterial({ map: glowTexture(), color: PAL.brasa, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }),
+    this.scene.background = new THREE.Color(PALETTE.ciruela);
+    this.scene.add(createGradientSky(0x120f1e, 0x2e2547, 40));
+    this.scene.add(new THREE.HemisphereLight(0xfff7ea, PALETTE.ciruela, 0.55));
+    const key = new THREE.DirectionalLight(0xfff7ea, 1.25);
+    key.position.set(2.2, 3.4, 5);
+    this.scene.add(key);
+    const rim = new THREE.DirectionalLight(PALETTE.anima, 0.85);
+    rim.position.set(-3.5, 2.4, -4);
+    this.scene.add(rim);
+    const pedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.15, 2.35, 0.28, 28),
+      toonMaterial({ color: PALETTE.ciruela }),
     );
-    spot.position.set(-3.4, 2.4, -5.2);
-    spot.lookAt(3.4, 2.4, 5.2);
-    this.scene.add(spot, this.sparks.group);
+    pedestal.position.y = -0.14;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(2.05, 0.07, 8, 28),
+      new THREE.MeshBasicMaterial({ color: PALETTE.anima, toneMapped: false }),
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.02;
+    this.scene.add(pedestal, ring);
     this.camera.position.set(3.4, 2.4, 5.2);
     this.camera.lookAt(0, 0.7, 0);
+    this.fire = new Fire(this.scene);
   }
 
   /** Cambia lo que se ve. `cheer` hace que el piloto celebre un momento. */
@@ -77,13 +69,16 @@ export class GaragePreview {
    */
   portrait(character: string, size = 144): string {
     const scene = new THREE.Scene();
-    addNightLights(scene);
+    scene.add(new THREE.HemisphereLight(0xfff7ea, PALETTE.ciruela, 0.9));
+    const key = new THREE.DirectionalLight(0xfff7ea, 1.25);
+    key.position.set(2.2, 3.4, 5);
+    scene.add(key);
     const model = createKartModel(KART_COLORS[3], character, DEFAULT_KART);
     scene.add(model.root);
     model.root.updateMatrixWorld(true);
-    const head = model.body.localToWorld(model.head.clone());
+    const head = model.head.getWorldPosition(new THREE.Vector3());
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
-    camera.position.set(head.x + 0.8, head.y + 0.25, head.z + 2.2);
+    camera.position.set(head.x + 0.8, head.y + 0.25, head.z + 2.4);
     camera.lookAt(head.x, head.y + 0.06, head.z);
 
     const target = new THREE.WebGLRenderTarget(size, size);
@@ -135,21 +130,30 @@ export class GaragePreview {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // En vertical la pantalla es estrecha: se aleja la cámara para que quepa el coche entero.
-    const dist = Math.max(6.6, Math.min(16, 6.97 / this.camera.aspect));
-    this.camera.position.set(0.52, 0.36, 0.78).multiplyScalar(dist);
-    this.camera.lookAt(0, 0.7, 0);
-    // Sube el coche a la parte de arriba de la pantalla, que es la que no tapa el panel.
-    this.camera.setViewOffset(w, h, 0, h * 0.3, w, h);
+    // La hoja tapa desde ~34 % de alto. La cara entera (ojos, nariz y sonrisa) cabe en ese hueco.
+    this.camera.position.set(1.05, 1.28, 4.35);
+    this.camera.lookAt(0, 1.12, 0.1);
+    this.camera.setViewOffset(w, h, 0, h * 0.06, w, h);
     this.camera.updateProjectionMatrix();
 
+    this.fire.begin();
     if (this.model) {
-      this.model.root.rotation.y += dt * 0.7;
+      // Tres cuartos de frente, sin dar la espalda: la cara es lo que se elige.
+      const yaw = 0.62 + Math.sin(this.time * 0.6) * 0.12;
+      this.model.root.rotation.y = yaw;
       this.cheer = Math.max(0, this.cheer - dt);
       this.model.setMood(this.cheer > 0 ? "celebrate" : "idle", this.time);
-      this.model.root.updateMatrixWorld();
-      this.sparks.exhaust(this.model, this.model.root.rotation.y, 0);
+      const dir = this.flameAt;
+      const local = new THREE.Vector3(0, 0.28, -1).normalize();
+      for (const a of this.model.exhausts) {
+        a.updateWorldMatrix(true, false);
+        const at = a.getWorldPosition(new THREE.Vector3());
+        dir.copy(local).transformDirection(a.matrixWorld);
+        paintExhaust(this.fire, at, dir, this.model.flameLength * 0.35, "idle", this.time, dt);
+      }
+      for (const a of this.model.ornaments) paintHair(this.fire, a.getWorldPosition(new THREE.Vector3()), this.model.ornamentSpectral, this.time, 1.2);
     }
-    this.sparks.update(dt);
+    this.fire.end(dt);
     this.renderer.render(this.scene, this.camera);
   }
 }

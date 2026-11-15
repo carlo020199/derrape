@@ -52,8 +52,20 @@ export const KART = {
   driftMinSpeed: 10,
   /** Giro derrapando con el control neutro (rad/s): el derrape cierra más que el giro normal. */
   driftTurnBase: 2.0,
-  /** Giro extra/menos según cierres (hacia dentro) o abras (hacia fuera) el derrape (rad/s). */
-  driftTurnRange: 1.1,
+  /**
+   * Contravolante. Giro extra (rad/s) al cerrar el derrape (girar hacia su lado) y giro que se
+   * resta (rad/s) al abrirlo (girar al lado contrario). Mantener driftTurnOpen < driftTurnBase:
+   * así el kart nunca deja de curvar hacia el lado del derrape.
+   */
+  driftTurnClose: 1.1,
+  driftTurnOpen: 1.1,
+  /** Rapidez con la que el giro se acerca al input durante el derrape (unidades de giro/s). Teclado: ~0,25 s de lado a lado. */
+  driftSteerRate: 8,
+  /** Mínimo de giro (0–1) para que un cambio de lado cuente como zigzag. */
+  driftZigzagThreshold: 0.6,
+  /** Tras un zigzag, la carga va más rápida este tiempo (s) y este multiplicador. */
+  driftZigzagTime: 0.5,
+  driftZigzagMult: 1.25,
   /** Velocidad que se pierde derrapando (fracción de la punta). Casi nada. */
   driftSpeedLoss: 0.02,
   /** Carga por segundo girando hacia dentro de la curva / en neutro o hacia fuera (5 y 2 por fotograma a 60 fps). */
@@ -79,9 +91,6 @@ export const KART = {
   /** Aceleración durante cualquier turbo (m/s²). */
   boostAccel: 45,
 
-  /** Peralte: giro "gratis" hacia el lado bajo (rad/s con la pista de canto y a velocidad punta). */
-  bankTurn: 1.1,
-
   /** Velocidad que se conserva al chocar con un borde de frente (0–1). */
   wallBounceKeep: 0.45,
   /** Velocidad que se conserva rozando un borde en paralelo (0–1). */
@@ -93,24 +102,6 @@ export const KART = {
 };
 
 export type KartTuning = typeof KART;
-
-/**
- * Rampas. Al pisar una yendo rápido, el kart vuela `airTime` s (a velocidad punta; menos si va más
- * lento) hasta `height` m y al aterrizar recibe un turbo de `boost` s. En el aire casi no se gira.
- * `length` y `rise` son el tamaño de la cuña que se dibuja (m).
- */
-export const RAMPS = {
-  sizes: {
-    S: { airTime: 0.55, height: 1.3, boost: 0.35, length: 4, rise: 0.6 },
-    M: { airTime: 0.8, height: 2.3, boost: 0.6, length: 6, rise: 1.0 },
-    L: { airTime: 1.1, height: 3.6, boost: 0.9, length: 8, rise: 1.4 },
-  },
-  /** Velocidad mínima para despegar (m/s). */
-  minSpeed: 12,
-  /** Fracción del giro normal que queda en el aire. */
-  airSteer: 0.3,
-};
-export type RampSize = keyof typeof RAMPS.sizes;
 
 /** Reglas de la carrera. */
 export const RACE = {
@@ -153,6 +144,70 @@ export const SURFACE = {
   /** Panel de turbo: duración y fuerza. */
   boostPadTime: 1,
   boostPadMult: 1.3,
+  /** Rampa: salto largo si llegas con velocidad. Sin `size`, el salto dura `rampHopTime`. */
+  rampMinSpeed: 12,
+  rampHopTime: 0.55,
+  rampHopHeight: 1.4,
+  /** Choque con un obstáculo periódico (tren): trompo corto. */
+  hazardSpinTime: 0.9,
+};
+
+/**
+ * Cuestas. Solo en circuitos con relieve (`Track.relief`): en el resto la altura sigue siendo visual.
+ * `k·g·sin(pendiente)` empuja en las bajadas y frena en las subidas, con tope para no cambiar la punta.
+ */
+export const SLOPE = {
+  k: 0.35,
+  gGame: 14,
+  maxAccel: 3.5,
+};
+
+/**
+ * Agarre lateral en circuitos con relieve. Es el modelo de la simulación de diseño
+ * (μ = 1,1, g real): sin él el peralte no cambia la velocidad de paso.
+ * En el resto de circuitos no se aplica.
+ */
+export const GRIP = {
+  mu: 1.1,
+  g: 9.81,
+};
+
+/** Peralte. Con bank 0 todas las reglas quedan en el comportamiento de siempre. */
+export const BANK = {
+  /** El giro hacia el lado del peralte se multiplica por `1 + turnBonus·sin(|bank|)`. */
+  turnBonus: 0.35,
+  /** Por debajo de esta velocidad el kart resbala hacia el borde bajo (m/s). */
+  slideSpeed: 8,
+  /** Fracción de `g·sin(bank)` de ese resbalón. */
+  slide: 0.5,
+  /** A partir de este peralte (grados), derrapar carga un poco más. */
+  driftFrom: 25,
+  driftCharge: 1.15,
+};
+
+export type RampSize = "S" | "M" | "L";
+
+/** Vuelo balístico de las rampas con tamaño. `lip` alto del labio (m), `len` largo (m). */
+export const RAMP = {
+  S: { lip: 0.6, len: 4, trick: 0.4 },
+  M: { lip: 1.5, len: 8, trick: 0.6 },
+  L: { lip: 3, len: 12, trick: 0.9 },
+  gGame: 14,
+  /** Giro que se conserva en el aire. */
+  airTurn: 0.3,
+  /** Los muros miden esto (m). Por encima se pasa volando. */
+  wallHeight: 0.9,
+  /** En el salto L hay un muro invisible más alto, para no atajar por el aire. */
+  tallWall: 4,
+  /** Metros de vuelo tras el labio L en los que ese muro sigue contando. */
+  tallSpan: 50,
+};
+
+/** Puntos de copa por posición (1º…8º). */
+export const CUP = {
+  points: [10, 8, 6, 5, 4, 3, 2, 1] as const,
+  /** Segundos de pausa entre carreras de una copa antes de poder empezar la siguiente. */
+  betweenRaces: 4,
 };
 
 /** Objetos y cajas. Tiempos en s, distancias en m. */

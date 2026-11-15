@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CUP,
   KART,
   RACE,
   buildTrackFromDef,
@@ -138,6 +139,31 @@ describe("sala", () => {
     expect(room.setTrack("a", "no-existe")).not.toBeNull();
     expect(room.setTrack("a", "pruebas")).toBeNull();
     expect(room.lobby().trackId).toBe("pruebas");
+  });
+
+  it("copa sol prepara 5 circuitos y suma puntos", async () => {
+    const room = new RaceLogic("ABCD");
+    room.addPlayer("a", "Ana");
+    room.addPlayer("b", "Beto");
+    expect(room.setTrack("a", "cup-sol")).toBeNull();
+    expect(room.lobby().mode).toBe("cup-sol");
+    expect(room.lobby().cup).toMatchObject({ name: "Copa Sol", race: 1, total: 5 });
+    const start = await room.startRace("a", 0);
+    expect(start).toMatchObject({ trackId: "paseo-del-puerto" });
+    const now = RACE.countdown * 1000;
+    room.tick(now);
+    expect(room.phase).toBe("racing");
+    // Con el otro desconectado basta con que termine el anfitrión.
+    room.setConnected("b", false);
+    const track = await loadTrack("paseo-del-puerto");
+    const lapsTime = (track.length * 3 + 40) / KART.maxSpeed;
+    const end = drive(room, track, "a", 0, now, lapsTime, KART.maxSpeed);
+    const out = room.tick(end);
+    expect(out.results).not.toBeNull();
+    expect(out.results!.cup?.finished).toBe(false);
+    expect(out.results!.cup?.scores.find((s) => s.id === "a")?.points).toBe(CUP.points[0]);
+    expect(room.lobby().cup?.race).toBe(2);
+    expect(room.lobby().mode).toBe("cup-sol");
   });
 });
 

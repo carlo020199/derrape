@@ -50,6 +50,8 @@ export class SnapshotBuffer {
           heading: lerpAngle(a.s.heading, b.s.heading, u),
           speed: a.s.speed + (b.s.speed - a.s.speed) * u,
           hop: a.s.hop + (b.s.hop - a.s.hop) * u,
+          y: (a.s.y ?? 0) + ((b.s.y ?? 0) - (a.s.y ?? 0)) * u,
+          vy: (a.s.vy ?? 0) + ((b.s.vy ?? 0) - (a.s.vy ?? 0)) * u,
         };
       }
     }
@@ -60,6 +62,7 @@ export class SnapshotBuffer {
       ...last.s,
       x: last.s.x + Math.sin(last.s.heading) * last.s.speed * ahead,
       z: last.s.z + Math.cos(last.s.heading) * last.s.speed * ahead,
+      y: (last.s.y ?? 0) + (last.s.vy ?? 0) * ahead,
     };
   }
 }

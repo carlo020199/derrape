@@ -5,7 +5,7 @@
 ## Qué es
 Juego de carreras de karts arcade, 3D low-poly, para jugar con amigos desde el móvil
 (iPhone y Android) directamente en el navegador. Partidas privadas con código de sala, 2–8 jugadores.
-Versión 1.0: **10 circuitos, 5 personajes y 10 coches**, todo disponible desde el principio
+Versión 1.0: **10 circuitos, 8 personajes y 10 coches**, todo disponible desde el principio
 (catálogo en `docs/CONTENIDO.md`).
 
 ## Reglas de oro
@@ -52,7 +52,7 @@ packages/shared/src/
   kart.ts     simulación de un kart (paso fijo)
   track.ts    spline, checkpoints, progreso en pista
   messages.ts tipos de mensajes cliente/servidor
-  characters.ts  los 5 personajes (datos)
+  characters.ts  los 8 personajes (datos)
   karts.ts       los 10 coches y sus estadísticas (datos)
   tracks/        un archivo de datos por circuito + índice
 ```

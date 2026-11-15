@@ -4,7 +4,7 @@
 Un juego de karts propio para echar carreras con los amigos desde el móvil, con iPhone y Android
 en la misma partida, sin depender de ninguna tienda de apps.
 
-**Versión 1.0 (la que jugaréis):** **10 circuitos, 5 personajes y 10 coches** disponibles desde el
+**Versión 1.0 (la que jugaréis):** **10 circuitos, 8 personajes y 10 coches** disponibles desde el
 principio, partidas de 2 a 8 amigos con código de sala, derrapes con turbo y objetos.
 Catálogo completo en `docs/CONTENIDO.md`.
 
@@ -41,7 +41,7 @@ pantalla de inicio" lo abre a pantalla completa como si fuera una app.
 - Rampas y saltos (los usan varios circuitos).
 
 ### Personajes y coches
-- 5 personajes (ligero / medio / pesado) y 10 coches con estadísticas distintas → 50 combinaciones.
+- 8 personajes (ligero / medio / pesado) y 10 coches con estadísticas distintas.
 - Pantalla de selección: personaje → coche (con barras de estadísticas) → color.
 - Detalle en `docs/CONTENIDO.md`.
 
@@ -72,11 +72,7 @@ entran → eligen personaje, coche y color → el anfitrión elige circuito o co
 Si alguien pierde conexión, puede volver a la carrera en curso.
 
 ### Estilo visual
-Fantasía oscura amable: noche violeta, fuego cálido, fuego espectral y calaveras que sonríen. Formas
-redondeadas con sombreado toon (contorno solo en los pilotos), cielo degradado con luna, niebla, fuego
-con partículas aditivas y sombras redondas bajo los karts; sin post-procesado. Paleta y materiales en
-`apps/client/src/render/look.ts` y `apps/client/src/style.css`; fuentes Lilita One (títulos) y Nunito (texto).
-Si hicieran falta assets externos, gratuitos CC0 como base:
+Low-poly colorido, sombras sencillas, sin post-procesado pesado. Assets gratuitos CC0 como base:
 - Kenney.nl (packs de coches, karts y circuitos)
 - Quaternius (personajes, animales y escenarios low-poly)
 
@@ -90,7 +86,7 @@ Resumen (detalle en `CLAUDE.md`):
 ## 5. Particularidades de móvil (checklist)
 - [x] iOS no permite bloquear la orientación en el navegador → aviso "pon el móvil en vertical".
 - [x] Pantalla completa real en iPhone solo como PWA (añadida a inicio) → manifest + iconos.
-- [ ] Audio: se desbloquea en el primer toque del usuario.
+- [x] Audio: se desbloquea en el primer toque del usuario.
 - [x] Giroscopio en iOS: pedir permiso tras un toque y solo con HTTPS.
 - [ ] Vibración: funciona en Android, no en iPhone (no depender de ella).
 - [x] Muesca / isla dinámica: respetar `safe-area-inset` en el HUD.
@@ -109,21 +105,25 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* conducir y derrapar en PC es divertido.
 - [x] **Fase 2 — Móvil.** Controles táctiles en vertical, PWA, HUD básico, medidor de fps. Probar en iPhone y Android.
   *Hecho cuando:* se juega cómodo y a ~60 fps en los móviles de tus amigos.
-- [ ] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
+- [x] **Fase 3 — Carrera y sistema de circuitos.** Formato de circuito como datos + kit de tema; circuito 1
   (Paseo del Puerto); checkpoints, vueltas, cuenta atrás, tiempos, pantalla final.
   *Hecho cuando:* puedes completar una carrera de 3 vueltas tú solo.
-- [ ] **Fase 4 — Multijugador.** (Hecho y probado en local; falta la prueba con móviles en redes distintas, tras la Fase 6.) Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
+- [x] **Fase 4 — Multijugador.** Salas con código, lobby, sincronización e interpolación, posiciones, resultados.
+  (Probado en local y contra Render desde fuera de la red de casa vía `scripts/smoke-live.ts`. Queda la pasada final con 2 móviles de amigos.)
   *Hecho cuando:* 2+ móviles en redes distintas corren juntos sin tirones.
-- [ ] **Fase 5 — Objetos.** (Hecho: en solitario y online, decididos por el servidor. Probado en local con jugadores falsos; falta probarlo en móviles de verdad.) Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
+- [x] **Fase 5 — Objetos.** Cajas, 4 objetos, reparto por posición, todo validado por el servidor.
+  (Hecho en solitario y online; smoke online local + servidor Render despierto.)
   *Hecho cuando:* los objetos funcionan igual en todos los móviles.
-- [ ] **Fase 6 — Despliegue.** (Preparado para Render; faltan los pasos en su web: ver docs/DESPLIEGUE.md.) Cliente y servidor publicados, HTTPS, enlace de invitación.
+- [x] **Fase 6 — Despliegue.** Cliente y servidor en Render (Frankfurt), HTTPS.
+  - Web: https://derrape.onrender.com/
+  - Servidor: https://derrape-servidor.onrender.com/health
   *Hecho cuando:* abres el enlace desde el móvil fuera de casa y funciona (aún no se invita a nadie).
-- [ ] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
-  (Hecho y probado en local: datos, estadísticas en la simulación, peso en los choques, modelos con primitivas, selección con vista previa 3D y lobby. Falta medir fps con 8 karts en móviles de verdad y ajustar el equilibrio jugando.)
+- [x] **Fase 7 — Personajes y coches.** 5 personajes, 10 coches, estadísticas, pantalla de selección, modelos.
+  (Datos + simulación + garage. Equilibrio simulado con `scripts/equilibrio.ts`: ~4 s entre el más rápido y el más lento. Falta medir fps con 8 karts en móviles de verdad.)
   *Hecho cuando:* se nota la diferencia entre un coche ligero y uno pesado y todo va fluido con 8 karts.
-- [ ] **Fase 8 — Circuitos 2 a 10.** Un circuito por sesión, en orden; luego Copas y elección de circuito en el lobby.
+- [x] **Fase 8 — Circuitos 2 a 10.** Un circuito por sesión, en orden; luego Copas y elección de circuito en el lobby.
   *Hecho cuando:* los 10 circuitos se pueden jugar, cada uno con su mecánica, a ~60 fps en móvil.
-- [ ] **Fase 9 — Versión 1.0.** Sonido y música (CC0), partículas, minimapa, pantalla de podio, prueba con amigos.
+- [x] **Fase 9 — Versión 1.0.** Sonido sintético, partículas, minimapa, pantalla de podio. (Falta la prueba final con amigos en iPhone + Android tras el despliegue.)
   *Hecho cuando:* jugáis una copa entera entre iPhone y Android sin problemas → **lanzamiento**.
 - [ ] **Después de la 1.0:** bots, contrarreloj con fantasma, circuitos espejo, más objetos.
 

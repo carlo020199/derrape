@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { bounceKart, collideKarts, createKart, driftLevel, giveBoost, hopHeight, launchKart, stepKart, type KartInput } from "./kart";
+import { bounceKart, collideKarts, createKart, driftLevel, giveBoost, hopHeight, stepKart, type KartInput } from "./kart";
 import { closestPoint, collideKartWithTrack, createOvalTrack } from "./track";
-import { KART, PHYSICS_DT, RAMPS } from "./tuning";
+import { KART, PHYSICS_DT } from "./tuning";
 
 const GAS: KartInput = { steer: 0, throttle: true, brake: false, drift: false };
 
@@ -175,56 +175,99 @@ describe("choques entre karts", () => {
   });
 });
 
-describe("rampas y peralte", () => {
-  it("una rampa lanza el kart por el aire y al aterrizar da turbo", () => {
+describe("contravolante", () => {
+  /** Kart ya derrapando hacia la izquierda (rumbo positivo), a velocidad punta. */
+  function drifting(): ReturnType<typeof createKart> {
     const s = createKart();
-    s.speed = KART.maxSpeed;
-    expect(launchKart(s, "M")).toBe(true);
-    expect(s.airTime).toBeCloseTo(RAMPS.sizes.M.airTime, 5);
-    run(s, GAS, RAMPS.sizes.M.airTime / 2);
-    expect(hopHeight(s)).toBeGreaterThan(RAMPS.sizes.M.height * 0.9);
-    expect(s.speed).toBeCloseTo(KART.maxSpeed, 5); // en el aire no se acelera ni se frena
-    run(s, GAS, RAMPS.sizes.M.airTime / 2 + 0.05);
-    expect(s.airTime).toBe(0);
-    expect(hopHeight(s)).toBe(0);
-    expect(s.boostTime).toBeGreaterThan(0);
+    run(s, GAS, 4);
+    run(s, { steer: -1, throttle: true, brake: false, drift: true }, KART.hopTime + 0.05);
+    expect(s.driftDir).toBe(1);
+    return s;
+  }
+  const hold = (steer: number): KartInput => ({ steer, throttle: true, brake: false, drift: true });
+  /** Giro (rad/s) en régimen con ese input. */
+  function turnRate(steer: number): number {
+    const s = drifting();
+    run(s, hold(steer), 1);
+    const h = s.heading;
+    run(s, hold(steer), 0.5);
+    return (s.heading - h) / 0.5;
+  }
+
+  it("cerrar gira más que neutro y abrir gira menos", () => {
+    const close = turnRate(-1);
+    const neutral = turnRate(0);
+    const open = turnRate(1);
+    expect(close).toBeGreaterThan(neutral);
+    expect(neutral).toBeGreaterThan(open);
+    expect(neutral).toBeCloseTo(KART.driftTurnBase, 1);
   });
 
-  it("no despega yendo despacio ni dos veces seguidas", () => {
-    const slow = createKart();
-    slow.speed = RAMPS.minSpeed - 1;
-    expect(launchKart(slow, "L")).toBe(false);
-    const s = createKart();
-    s.speed = KART.maxSpeed;
-    expect(launchKart(s, "S")).toBe(true);
-    expect(launchKart(s, "L")).toBe(false);
+  it("contravolantear a tope no invierte el lado del derrape", () => {
+    const s = drifting();
+    run(s, hold(1), 2);
+    expect(s.driftDir).toBe(1);
+    expect(turnRate(1)).toBeGreaterThan(0);
+    expect(KART.driftTurnBase).toBeGreaterThan(KART.driftTurnOpen);
   });
 
-  it("la rampa grande vuela más que la pequeña, y en el aire casi no se gira", () => {
-    const a = createKart();
-    const b = createKart();
-    a.speed = b.speed = KART.maxSpeed;
-    launchKart(a, "S");
-    launchKart(b, "L");
-    expect(b.airTime).toBeGreaterThan(a.airTime);
-    expect(b.airHeight).toBeGreaterThan(a.airHeight);
-    const ground = createKart();
-    ground.speed = KART.maxSpeed;
-    const left: KartInput = { ...GAS, steer: -1 };
-    run(b, left, 0.5);
-    run(ground, left, 0.5);
-    expect(Math.abs(b.heading)).toBeLessThan(Math.abs(ground.heading) * 0.5);
+  it("funciona igual con el derrape a la derecha (simétrico)", () => {
+    const s = createKart();
+    run(s, GAS, 4);
+    run(s, hold(1), KART.hopTime + 0.05);
+    expect(s.driftDir).toBe(-1);
+    run(s, hold(1), 1);
+    const h = s.heading;
+    run(s, hold(1), 0.5);
+    const close = (s.heading - h) / 0.5;
+    run(s, hold(-1), 1);
+    const h2 = s.heading;
+    run(s, hold(-1), 0.5);
+    const open = (s.heading - h2) / 0.5;
+    expect(close).toBeLessThan(open); // rumbo negativo = derecha: cerrar es más negativo
+    expect(open).toBeLessThan(0);
   });
 
-  it("el peralte lleva el kart hacia el lado bajo", () => {
-    const s = createKart();
-    s.speed = KART.maxSpeed;
-    s.bank = -0.3; // borde derecho más alto: curva a la izquierda
-    run(s, GAS, 1);
-    expect(s.heading).toBeGreaterThan(0.2); // rumbo positivo = izquierda
-    const flat = createKart();
-    flat.speed = KART.maxSpeed;
-    run(flat, GAS, 1);
-    expect(flat.heading).toBe(0);
+  it("el giro se suaviza: no salta de golpe de cerrar a abrir", () => {
+    const s = drifting();
+    run(s, hold(-1), 1);
+    stepKart(s, hold(1), PHYSICS_DT);
+    expect(s.driftSteer).toBeGreaterThan(-1 + KART.driftSteerRate * PHYSICS_DT - 1e-9);
+    expect(s.driftSteer).toBeLessThan(-0.5);
+  });
+
+  it("el contravolante no pierde la carga del mini-turbo", () => {
+    const s = drifting();
+    run(s, hold(1), 3);
+    // Abriendo todo el rato se carga a la tasa lenta, pero se carga.
+    expect(s.driftCharge).toBeGreaterThan(KART.driftLevel1);
+    expect(s.driftCharge).toBeLessThan(KART.driftChargeFast * 3);
+    expect(s.driftDir).toBe(1);
+  });
+
+  it("alternar cerrar y abrir carga más rápido que mantener un lado", () => {
+    const steady = drifting();
+    run(steady, hold(-1), 2);
+    const zig = drifting();
+    for (let i = 0; i < 4; i++) {
+      run(zig, hold(-1), 0.5);
+      run(zig, hold(1), 0.5);
+    }
+    // Distinto tiempo (2 s vs 4 s): comparar por segundo.
+    const steadyRate = steady.driftCharge / 2;
+    const zigRate = zig.driftCharge / 4;
+    // Sin bonus, la mitad del tiempo cerrando y la mitad abriendo cargaría a la media de ambas tasas.
+    const noBonus = (KART.driftChargeFast + KART.driftChargeSlow) / 2;
+    expect(zigRate).toBeGreaterThan(noBonus);
+    expect(steadyRate).toBeCloseTo(KART.driftChargeFast, -2);
+  });
+
+  it("al terminar el derrape se reinicia el estado del contravolante", () => {
+    const s = drifting();
+    run(s, hold(1), 0.5);
+    run(s, GAS, 0.1);
+    expect(s.driftDir).toBe(0);
+    expect(s.driftSteer).toBe(0);
+    expect(s.driftZigzag).toBe(0);
   });
 });

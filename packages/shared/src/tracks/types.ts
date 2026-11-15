@@ -1,10 +1,22 @@
 // Formato de un circuito como DATOS. Añadir un circuito = un archivo nuevo con un TrackDef.
 
-import { smoothTrack, type Track, type TrackPoint, type TrackRamp, type TrackZone, type ZoneType } from "../track";
+import { smoothTrack, type Track, type TrackHazard, type TrackPoint, type TrackZone, type ZoneType } from "../track";
 import type { RampSize } from "../tuning";
 
 /** Kits de tema disponibles (decoración, colores). El cliente sabe dibujar cada uno. */
-export type ThemeId = "pruebas" | "puerto" | "laguna";
+export type ThemeId =
+  | "pruebas"
+  | "puerto"
+  | "playa"
+  | "mercado"
+  | "vinedos"
+  | "feria"
+  | "estacion"
+  | "nieve"
+  | "canon"
+  | "volcan"
+  | "neon"
+  | "animas";
 
 export interface ZoneDef {
   type: ZoneType;
@@ -14,14 +26,23 @@ export interface ZoneDef {
   /** Franja lateral en metros (por defecto todo el ancho, arcén incluido). */
   lateralMin?: number;
   lateralMax?: number;
+  /** Rampa S/M/L con vuelo real. Sin tamaño, el salto es el de siempre. */
+  size?: RampSize;
 }
 
-/** Rampa: dónde empieza (fracción de vuelta), tamaño y, si no ocupa todo el asfalto, su franja lateral. */
-export interface RampDef {
-  at: number;
-  size: RampSize;
+/** Obstáculo periódico (paso a nivel, etc.), en fracciones de vuelta. */
+export interface HazardDef {
+  type: "gate";
+  from: number;
+  to: number;
   lateralMin?: number;
   lateralMax?: number;
+  /** Periodo completo (s). */
+  period: number;
+  /** Segundos activo dentro del periodo. */
+  active: number;
+  /** Desfase inicial (s). */
+  phase?: number;
 }
 
 /** Elementos únicos del circuito (faro, puerto…). El kit de tema sabe dibujarlos. */
@@ -38,22 +59,19 @@ export interface TrackDef {
   name: string;
   theme: ThemeId;
   laps: number;
-  /** Ancho del asfalto por defecto y arcén a cada lado (m). */
   width: number;
   verge: number;
-  /** Puntos de control de la línea central (la curva pasa por ellos). El primero es la meta. */
   control: TrackPoint[];
-  /** Filas de cajas de objetos, en fracciones de vuelta. */
   itemRows: number[];
   zones?: ZoneDef[];
-  ramps?: RampDef[];
+  hazards?: HazardDef[];
   landmarks?: Landmark[];
-  /** Semilla para colocar la decoración siempre igual. */
   seed: number;
 }
 
 export function buildTrackFromDef(def: TrackDef): Track {
   const track = smoothTrack(def.control, def.width, 3, def.verge);
+  track.relief = def.control.some((p) => p.bank !== undefined) || (def.zones ?? []).some((z) => z.size !== undefined);
   const outer = def.width / 2 + def.verge + 5;
   track.zones = (def.zones ?? []).map(
     (z): TrackZone => ({
@@ -62,14 +80,19 @@ export function buildTrackFromDef(def: TrackDef): Track {
       to: z.to * track.length,
       lateralMin: z.lateralMin ?? -outer,
       lateralMax: z.lateralMax ?? outer,
+      size: z.size,
     }),
   );
-  track.ramps = (def.ramps ?? []).map(
-    (r): TrackRamp => ({
-      size: r.size,
-      distance: r.at * track.length,
-      lateralMin: r.lateralMin ?? -def.width / 2,
-      lateralMax: r.lateralMax ?? def.width / 2,
+  track.hazards = (def.hazards ?? []).map(
+    (h): TrackHazard => ({
+      type: h.type,
+      from: h.from * track.length,
+      to: h.to * track.length,
+      lateralMin: h.lateralMin ?? -outer,
+      lateralMax: h.lateralMax ?? outer,
+      period: h.period,
+      active: h.active,
+      phase: h.phase ?? 0,
     }),
   );
   return track;

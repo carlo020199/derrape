@@ -1,8 +1,8 @@
 // Simula una vuelta de cada combinación personaje + coche con el piloto automático (sin derrapar)
 // y muestra los tiempos. Sirve para ver desequilibrios: uso `npx tsx scripts/equilibrio.ts [circuito]`.
 import {
-  CHARACTERS, KART, KARTS, PHYSICS_DT, botInput, closestPoint, collideKartWithTrack, createKart, deriveTuning,
-  buildTrackFromDef, findTrack, gridPose, stepKart, statsFor, surfaceAt, type Track,
+  CHARACTERS, KART, KARTS, PHYSICS_DT, botInput, closestPoint, createKart, deriveTuning,
+  buildTrackFromDef, findTrack, gridPose, stepKartOnTrack, statsFor, type Track,
 } from "../packages/shared/src/index";
 
 async function lap(track: Track, char: string, kartId: string, lane: number, look: number): Promise<number> {
@@ -14,9 +14,7 @@ async function lap(track: Track, char: string, kartId: string, lane: number, loo
   let prev = closestPoint(track, s.x, s.z).distance;
   let travelled = 0;
   for (let i = 0; i < 60 * 600; i++) {
-    stepKart(s, botInput({ lane, lookAhead: look }, s, track), PHYSICS_DT, tuning);
-    const c = collideKartWithTrack(s, track, tuning);
-    s.surface = surfaceAt(track, c);
+    const c = stepKartOnTrack(s, botInput({ lane, lookAhead: look }, s, track), PHYSICS_DT, track, tuning);
     let d = c.distance - prev;
     if (d < -track.length / 2) d += track.length;
     if (d > track.length / 2) d -= track.length;

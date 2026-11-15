@@ -1,10 +1,12 @@
-// Los 5 personajes (datos). Dan una clase de peso que ajusta un poco las estadísticas del coche.
+// Los personajes (datos). Dan una clase de peso que ajusta un poco las estadísticas del coche.
+// Los 5 primeros conservan id y clase: solo cambian el nombre, el texto y los colores.
+// Los 3 últimos usan la misma fórmula de clase (no tienen estadísticas propias).
 // Todo ORIGINAL (ver CLAUDE.md). Añadir un personaje = una entrada nueva aquí + su aspecto en el cliente.
 
 export type WeightClass = "light" | "medium" | "heavy";
 
-/** Cómo se dibuja la cabeza/accesorios (el cliente sabe construir cada estilo con primitivas). */
-export type CharacterLook = "mechanic" | "ghost" | "blaze" | "aviator" | "hooded";
+/** Cómo se dibuja la cabeza y los accesorios (el cliente construye cada estilo con primitivas). */
+export type CharacterLook = "mechanic" | "robot" | "courier" | "bulldog" | "granny" | "mascot" | "sheet" | "dandy";
 
 export interface CharacterDef {
   id: string;
@@ -15,9 +17,9 @@ export interface CharacterDef {
   look: CharacterLook;
   /** Color principal de la ropa / cuerpo. */
   color: number;
-  /** Color del hueso (o de la sombra del cuerpo, en el fantasma). */
+  /** Hueso de la calavera. */
   skin: number;
-  /** Detalle: pelo, llamas, bufanda, brillo de los ojos… */
+  /** Detalle (gorra, bufanda, antena, fuego…). */
   accent: number;
 }
 
@@ -30,56 +32,88 @@ export const WEIGHT_CLASS_MOD: Record<WeightClass, { weight: number; accel: numb
   heavy: { weight: 1, accel: -1 },
 };
 
+const HUESO = 0xf3e7d3;
+
 export const CHARACTERS: readonly CharacterDef[] = [
   {
     id: "lia",
     name: "Lía Brasas",
-    blurb: "Calaverita mecánica con melena de fuego espectral y llave inglesa a la espalda.",
+    blurb: "Mecánica esqueleto, coleta de fuego espectral, llave de hueso y mono ciruela.",
     weightClass: "light",
     look: "mechanic",
-    color: 0x4a3a8c,
-    skin: 0xf3e7d3,
+    color: 0x6b3fd6,
+    skin: HUESO,
     accent: 0x3ff2c8,
   },
   {
     id: "kiko",
-    name: "Kiko Fatuo",
-    blurb: "Fantasmita redondo que se alumbra con un farol; no pesa casi nada.",
+    name: "Kiko Farolillo",
+    blurb: "Robot-farol redondo, con una calavera en la pantalla y una llama cian en la antena.",
     weightClass: "light",
-    look: "ghost",
-    color: 0xf6f1ff,
-    skin: 0xd9d0f2,
-    accent: 0xffb423,
+    look: "robot",
+    color: 0x2e2547,
+    skin: HUESO,
+    accent: 0x3ff2c8,
   },
   {
     id: "toni",
-    name: "Toni Ascuas",
-    blurb: "Calavera con la cabeza en llamas y chupa de cuero; siempre tiene prisa.",
+    name: "Toni Repartumbas",
+    blurb: "Repartidor esqueleto con gorra y mochila-ataúd térmica de esquinas redondas.",
     weightClass: "medium",
-    look: "blaze",
-    color: 0x2a2238,
-    skin: 0xf3e7d3,
-    accent: 0xff6a1f,
+    look: "courier",
+    color: 0xff6a1f,
+    skin: HUESO,
+    accent: 0xf3e7d3,
   },
   {
     id: "tocho",
-    name: "Capitán Tocho",
-    blurb: "Esqueleto aviador con gorro de cuero, gafas y bufanda.",
+    name: "Tocho del Más Allá",
+    blurb: "Bulldog fantasma con collar de pinchos romos, gafas de aviador y ojos espectrales.",
     weightClass: "medium",
-    look: "aviator",
-    color: 0x7a5236,
-    skin: 0xf3e7d3,
-    accent: 0xd9362b,
+    look: "bulldog",
+    color: 0xc8b597,
+    skin: HUESO,
+    accent: 0x3ff2c8,
   },
   {
     id: "nonna-pina",
-    name: "Nonna Pina",
-    blurb: "Abuela encapuchada, ex piloto de rallies del más allá.",
+    name: "Nonna Pina Calavera",
+    blurb: "Abuela esqueleto con casco vintage, gafas redondas y bufanda de fuego.",
     weightClass: "heavy",
-    look: "hooded",
+    look: "granny",
     color: 0x6b3fd6,
-    skin: 0xf3e7d3,
-    accent: 0x3ff2c8,
+    skin: HUESO,
+    accent: 0xff6a1f,
+  },
+  {
+    id: "brasa",
+    name: "Brasa",
+    blurb: "Calavera con melena de fuego y chaqueta de cuero. Fuego naranja amable.",
+    weightClass: "medium",
+    look: "mascot",
+    color: 0x3a241c,
+    skin: HUESO,
+    accent: 0xff6a1f,
+  },
+  {
+    id: "mimi",
+    name: "Mimí Sábana",
+    blurb: "Fantasmita de sábana con farol y mejillas violeta. Flota, no tiene piernas.",
+    weightClass: "light",
+    look: "sheet",
+    color: 0xf3e7d3,
+    skin: HUESO,
+    accent: 0x9b6bff,
+  },
+  {
+    id: "don-osario",
+    name: "Don Osario",
+    blurb: "Esqueleto grandullón con sombrero de copa y pajarita. Muy educado.",
+    weightClass: "heavy",
+    look: "dandy",
+    color: 0x2e2547,
+    skin: HUESO,
+    accent: 0xffb423,
   },
 ];
 

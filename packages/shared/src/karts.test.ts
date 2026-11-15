@@ -5,10 +5,10 @@ import { collideKarts, createKart, stepKart } from "./kart";
 import { KART } from "./tuning";
 
 describe("catálogo", () => {
-  it("hay 5 personajes y 10 coches con ids únicos", () => {
-    expect(CHARACTERS).toHaveLength(5);
+  it("hay 8 personajes y 10 coches con ids únicos", () => {
+    expect(CHARACTERS).toHaveLength(8);
     expect(KARTS).toHaveLength(10);
-    expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(5);
+    expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(8);
     expect(new Set(KARTS.map((k) => k.id)).size).toBe(10);
   });
 
@@ -25,9 +25,25 @@ describe("catálogo", () => {
     expect(KARTS.filter((k) => k.driftChargeMult !== undefined)).toHaveLength(1);
   });
 
-  it("las clases de peso son 2 ligeros, 2 medios y 1 pesado", () => {
+  it("los 5 de siempre conservan id y clase; los 3 nuevos usan la clase de la propuesta", () => {
+    expect(findCharacter("lia")).toMatchObject({ weightClass: "light", look: "mechanic" });
+    expect(findCharacter("kiko")).toMatchObject({ weightClass: "light", look: "robot" });
+    expect(findCharacter("toni")).toMatchObject({ weightClass: "medium", look: "courier" });
+    expect(findCharacter("tocho")).toMatchObject({ weightClass: "medium", look: "bulldog" });
+    expect(findCharacter("nonna-pina")).toMatchObject({ weightClass: "heavy", look: "granny" });
+    expect(findCharacter("brasa")).toMatchObject({ weightClass: "medium", look: "mascot" });
+    expect(findCharacter("mimi")).toMatchObject({ weightClass: "light", look: "sheet" });
+    expect(findCharacter("don-osario")).toMatchObject({ weightClass: "heavy", look: "dandy" });
     const n = (c: string) => CHARACTERS.filter((x) => x.weightClass === c).length;
-    expect([n("light"), n("medium"), n("heavy")]).toEqual([2, 2, 1]);
+    expect([n("light"), n("medium"), n("heavy")]).toEqual([3, 3, 2]);
+  });
+
+  it("las pieles nuevas no cambian las estadísticas ni las medidas del coche", () => {
+    const skins = KARTS.map((k) => k.look.skin);
+    expect(new Set(skins).size).toBe(10);
+    expect(findKart("pulga")!.look).toMatchObject({ length: 1.6, rearWheel: 0.4, skin: "pumpkin" });
+    expect(findKart("tanque")!.stats).toEqual({ speed: 3, accel: 2, handling: 2, weight: 5 });
+    expect(findKart("derrapin")!.look.rearWheelW).toBe(0.6);
   });
 });
 

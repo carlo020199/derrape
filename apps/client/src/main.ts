@@ -1,8 +1,5 @@
 // Arranque: menú de inicio → sala (online) o práctica en solitario → carrera → resultados.
 
-import "@fontsource/lilita-one/latin-400.css";
-import "@fontsource/nunito/latin-600.css";
-import "@fontsource/nunito/latin-800.css";
 import * as THREE from "three";
 import {
   DEFAULT_TRACK,
@@ -19,6 +16,7 @@ import {
   type CountdownMessage,
   type LobbyMessage,
 } from "@derrape/shared";
+import { unlockAudio } from "./audio/sfx";
 import { createRaceSession, type GameView, type RaceSession } from "./game/raceSession";
 import { releaseTouch, setupTouchControls } from "./input/touch";
 import { NET_DEBUG, Net, wakeServer } from "./net/net";
@@ -41,9 +39,18 @@ import {
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
+// Audio: se desbloquea con el primer toque/clic (requisito de móviles).
+const unlockOnce = () => {
+  void unlockAudio();
+  window.removeEventListener("pointerdown", unlockOnce);
+};
+window.addEventListener("pointerdown", unlockOnce);
+
 // --- Lo común a todas las carreras ---
 const canvas = $<HTMLCanvasElement>("#game");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
 const camera = new THREE.PerspectiveCamera(CAMERA.baseFov, 1, 0.1, 500);
 const view: GameView = {
   renderer,
@@ -79,7 +86,9 @@ createDebugPanel(
 let session: RaceSession | null = null;
 let net: Net | null = null;
 let lobby: LobbyMessage | null = null;
-let soloTrack = findTrack(new URLSearchParams(location.search).get("pista") ?? "")?.id ?? DEFAULT_TRACK;
+const query = new URLSearchParams(location.search);
+const queryTrack = query.get("track") ?? query.get("pista");
+let soloTrack = findTrack(queryTrack ?? "")?.id ?? DEFAULT_TRACK;
 
 setupMenu((paused) => {
   releaseTouch();
@@ -102,11 +111,15 @@ async function loadDef(trackId: string) {
 }
 
 // --- En solitario ---
+let soloToken = 0;
 async function startSolo(trackId: string) {
+  const token = ++soloToken;
   endSession();
   soloTrack = trackId;
   document.body.classList.remove("online");
   const def = await loadDef(trackId);
+  // Si se cambió de circuito mientras este cargaba, no se pinta el trazado viejo.
+  if (token !== soloToken) return;
   showScreen(null);
   session = createRaceSession(view, { def, look: { character: profile.character, kart: profile.kart, color: KART_COLORS[profile.color] ?? KART_COLORS[0] } });
 }
@@ -178,11 +191,17 @@ function backToLobby() {
 
 async function goHome() {
   endSession();
-  await net?.leave();
+  const n = net;
   net = null;
   lobby = null;
   document.body.classList.remove("online");
+  // Volver al menú al momento; la desconexión puede tardar o colgarse al despertar Render.
   showScreen("home");
+  try {
+    await Promise.race([n?.leave() ?? Promise.resolve(), new Promise<void>((r) => setTimeout(r, 2000))]);
+  } catch {
+    // Salir de la sala no debe bloquear el menú.
+  }
 }
 
 // --- Piloto y coche: la vista previa se dibuja con el mismo renderer, detrás de la pantalla ---
@@ -275,7 +294,13 @@ void wakeServer((status) => {
 });
 
 // Al recargar en mitad de una sala, se intenta volver a ella; si no, al inicio.
+// ?track=laguna-de-las-animas (o ?pista=) entra directo a ese circuito, para probar en el móvil.
 (async () => {
+  if (queryTrack && findTrack(queryTrack) && !query.get("sala")) {
+    document.body.classList.remove("online");
+    await startSolo(queryTrack);
+    return;
+  }
   const n = connectNet();
   if (await n.resume()) {
     net = n;

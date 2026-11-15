@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { closestPoint, surfaceHeight, type ItemWorld, type Track } from "@derrape/shared";
-import { PAL, toon } from "./look";
+import { closestPoint, surfaceY, type ItemWorld } from "@derrape/shared";
+import { toonMaterial } from "./materials";
 
 // Dibuja cajas, manchas de aceite y cohetes. Las mallas se reutilizan (pool) para no crear objetos por frame.
 
@@ -9,16 +9,13 @@ function questionTexture(): THREE.CanvasTexture {
   c.width = c.height = 64;
   const g = c.getContext("2d")!;
   const grad = g.createLinearGradient(0, 0, 64, 64);
-  grad.addColorStop(0, "#ffb423");
-  grad.addColorStop(0.5, "#ff6a1f");
-  grad.addColorStop(1, "#6b3fd6");
+  grad.addColorStop(0, "#ffd23f");
+  grad.addColorStop(0.5, "#ff6b35");
+  grad.addColorStop(1, "#b15cff");
   g.fillStyle = grad;
   g.fillRect(0, 0, 64, 64);
-  g.strokeStyle = "#1e1830";
-  g.lineWidth = 5;
-  g.strokeRect(2.5, 2.5, 59, 59);
-  g.fillStyle = "#fff7ea";
-  g.font = '46px "Lilita One", system-ui, sans-serif';
+  g.fillStyle = "#fff";
+  g.font = "bold 46px system-ui, sans-serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText("?", 32, 35);
@@ -26,9 +23,6 @@ function questionTexture(): THREE.CanvasTexture {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
-
-/** Altura de la pista (con peralte) bajo un punto. */
-const groundAt = (track: Track, x: number, z: number) => surfaceHeight(closestPoint(track, x, z));
 
 class Pool<T extends THREE.Object3D> {
   private items: T[] = [];
@@ -48,7 +42,6 @@ class Pool<T extends THREE.Object3D> {
 export class ItemsView {
   readonly group = new THREE.Group();
   private boxes: THREE.Mesh[] = [];
-  private boxY: number[] = [];
   private oils: Pool<THREE.Mesh>;
   private rockets: Pool<THREE.Group>;
   private time = 0;
@@ -58,14 +51,13 @@ export class ItemsView {
     const boxMat = new THREE.MeshBasicMaterial({ map: questionTexture(), transparent: true, opacity: 0.9 });
     for (const b of world.boxes) {
       const m = new THREE.Mesh(boxGeo, boxMat);
-      this.boxY.push(groundAt(world.track, b.x, b.z) + 1.1);
-      m.position.set(b.x, this.boxY.at(-1)!, b.z);
+      m.position.set(b.x, 1.1, b.z);
       this.group.add(m);
       this.boxes.push(m);
     }
 
     const oilGeo = new THREE.CircleGeometry(1.7, 20);
-    const oilMat = new THREE.MeshBasicMaterial({ color: 0x0c0714, transparent: true, opacity: 0.9 });
+    const oilMat = new THREE.MeshBasicMaterial({ color: 0x15121f, transparent: true, opacity: 0.85 });
     this.oils = new Pool(this.group, () => {
       const m = new THREE.Mesh(oilGeo, oilMat);
       m.rotation.x = -Math.PI / 2;
@@ -74,18 +66,18 @@ export class ItemsView {
 
     const bodyGeo = new THREE.ConeGeometry(0.35, 1.4, 8);
     bodyGeo.rotateX(Math.PI / 2);
-    const bodyMat = toon(PAL.hueso);
-    const flameGeo = new THREE.ConeGeometry(0.25, 0.7, 6);
-    flameGeo.rotateX(-Math.PI / 2);
-    const flameMat = new THREE.MeshBasicMaterial({ color: PAL.brasa });
+    const bodyMat = toonMaterial({ color: 0xd9362b });
     this.rockets = new Pool(this.group, () => {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(bodyGeo, bodyMat));
-      const flame = new THREE.Mesh(flameGeo, flameMat);
-      flame.position.z = -1;
-      g.add(flame);
       return g;
     });
+  }
+
+  private tails: THREE.Vector3[] = [];
+  /** Cola de cada cohete, para la llama aditiva compartida. */
+  flamePoints(): THREE.Vector3[] {
+    return this.tails;
   }
 
   update(world: ItemWorld, dt: number) {
@@ -94,19 +86,30 @@ export class ItemsView {
       const m = this.boxes[i]!;
       m.visible = b.respawn === 0;
       m.rotation.set(0.4, this.time * 1.5 + i, 0.2);
-      m.position.y = this.boxY[i]! + Math.sin(this.time * 2.5 + i) * 0.15;
+      const c = closestPoint(world.track, b.x, b.z);
+      const base = world.track.relief ? surfaceY(c) : 0;
+      m.position.y = base + 1.1 + Math.sin(this.time * 2.5 + i) * 0.15;
     });
 
     const oils = this.oils.show(world.oils.length);
-    world.oils.forEach((o, i) => oils[i]!.position.set(o.x, groundAt(world.track, o.x, o.z) + 0.08, o.z));
+    world.oils.forEach((o, i) => {
+      const c = closestPoint(world.track, o.x, o.z);
+      const base = world.track.relief ? surfaceY(c) : 0;
+      oils[i]!.position.set(o.x, base + 0.04, o.z);
+    });
 
     const rockets = this.rockets.show(world.rockets.length);
+    this.tails = [];
     world.rockets.forEach((r, i) => {
       const g = rockets[i]!;
       const dx = r.x - g.position.x;
       const dz = r.z - g.position.z;
       if (dx * dx + dz * dz > 1e-4) g.rotation.y = Math.atan2(dx, dz);
-      g.position.set(r.x, groundAt(world.track, r.x, r.z) + 0.8, r.z);
+      const c = closestPoint(world.track, r.x, r.z);
+      const base = world.track.relief ? surfaceY(c) : 0;
+      g.position.set(r.x, base + 0.8, r.z);
+      g.updateMatrixWorld();
+      this.tails.push(new THREE.Vector3(0, 0.05, -0.95).applyMatrix4(g.matrixWorld));
     });
   }
 }

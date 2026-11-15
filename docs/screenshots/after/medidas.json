@@ -1,0 +1,423 @@
+{
+  "ui": {
+    "primary": {
+      "color": "rgb(18, 15, 30)",
+      "background": "rgb(255, 106, 31)",
+      "font": "\"Lilita One\", system-ui, sans-serif",
+      "size": "26px"
+    },
+    "secondary": {
+      "color": "rgb(18, 15, 30)",
+      "background": "rgb(63, 242, 200)"
+    },
+    "card": "rgba(30, 24, 48, 0.92)",
+    "logo": {
+      "color": "rgb(255, 180, 35)",
+      "font": "\"Lilita One\", system-ui, sans-serif"
+    },
+    "bodyFont": "Nunito, system-ui, sans-serif",
+    "help": "none",
+    "touch": true,
+    "coarse": true,
+    "primaryContrast": 6.590062310094568,
+    "secondaryContrast": 13.251504993673379
+  },
+  "tracks": {
+    "pruebas": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "86",
+        "lap": "Vuelta 1/3",
+        "place": "2º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 24,
+          "triangles": 7253
+        },
+        "info": {
+          "calls": 24,
+          "triangles": 7160
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 21,
+          "triangles": 6787
+        },
+        "info": {
+          "calls": 21,
+          "triangles": 6694
+        },
+        "ratio": null
+      }
+    },
+    "paseo-del-puerto": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "88",
+        "lap": "Vuelta 1/3",
+        "place": "2º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 32,
+          "triangles": 17890
+        },
+        "info": {
+          "calls": 32,
+          "triangles": 17797
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 33,
+          "triangles": 17472
+        },
+        "info": {
+          "calls": 33,
+          "triangles": 17379
+        },
+        "ratio": null
+      }
+    },
+    "playa-dorada": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "88",
+        "lap": "Vuelta 1/3",
+        "place": "3º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 26,
+          "triangles": 17429
+        },
+        "info": {
+          "calls": 26,
+          "triangles": 17336
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 21,
+          "triangles": 15079
+        },
+        "info": {
+          "calls": 21,
+          "triangles": 14986
+        },
+        "ratio": null
+      }
+    },
+    "mercado-central": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "54",
+        "lap": "Vuelta 1/3",
+        "place": "3º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 25,
+          "triangles": 18941
+        },
+        "info": {
+          "calls": 25,
+          "triangles": 18848
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 23,
+          "triangles": 18383
+        },
+        "info": {
+          "calls": 23,
+          "triangles": 18290
+        },
+        "ratio": null
+      }
+    },
+    "vinedos": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "50",
+        "lap": "Vuelta 1/3",
+        "place": "2º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 25,
+          "triangles": 69635
+        },
+        "info": {
+          "calls": 25,
+          "triangles": 69542
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 15,
+          "triangles": 63953
+        },
+        "info": {
+          "calls": 15,
+          "triangles": 63860
+        },
+        "ratio": null
+      }
+    },
+    "feria-loca": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "87",
+        "lap": "Vuelta 1/3",
+        "place": "2º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 27,
+          "triangles": 21705
+        },
+        "info": {
+          "calls": 27,
+          "triangles": 21612
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 21,
+          "triangles": 18303
+        },
+        "info": {
+          "calls": 21,
+          "triangles": 18210
+        },
+        "ratio": null
+      }
+    },
+    "estacion-vieja": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "87",
+        "lap": "Vuelta 1/3",
+        "place": "1º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 25,
+          "triangles": 16901
+        },
+        "info": {
+          "calls": 25,
+          "triangles": 16808
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 22,
+          "triangles": 16435
+        },
+        "info": {
+          "calls": 22,
+          "triangles": 16342
+        },
+        "ratio": null
+      }
+    },
+    "pico-nevado": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "67",
+        "lap": "Vuelta 1/3",
+        "place": "2º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 26,
+          "triangles": 22391
+        },
+        "info": {
+          "calls": 26,
+          "triangles": 22298
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 19,
+          "triangles": 19089
+        },
+        "info": {
+          "calls": 19,
+          "triangles": 18996
+        },
+        "ratio": null
+      }
+    },
+    "canon-rojo": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "87",
+        "lap": "Vuelta 1/3",
+        "place": "4º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 24,
+          "triangles": 17945
+        },
+        "info": {
+          "calls": 24,
+          "triangles": 17852
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 24,
+          "triangles": 19227
+        },
+        "info": {
+          "calls": 24,
+          "triangles": 19134
+        },
+        "ratio": null
+      }
+    },
+    "volcan-dormido": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "83",
+        "lap": "Vuelta 1/3",
+        "place": "1º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 25,
+          "triangles": 20477
+        },
+        "info": {
+          "calls": 25,
+          "triangles": 20384
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 20,
+          "triangles": 18127
+        },
+        "info": {
+          "calls": 20,
+          "triangles": 18034
+        },
+        "ratio": null
+      }
+    },
+    "ciudad-neon": {
+      "help": {
+        "display": "none",
+        "touch": true
+      },
+      "hud": {
+        "speed": "83",
+        "lap": "Vuelta 1/3",
+        "place": "3º",
+        "total": "/4",
+        "help": "none"
+      },
+      "callsAtGrid": {
+        "gl": {
+          "calls": 25,
+          "triangles": 20675
+        },
+        "info": {
+          "calls": 25,
+          "triangles": 20582
+        },
+        "ratio": null
+      },
+      "calls": {
+        "gl": {
+          "calls": 20,
+          "triangles": 18333
+        },
+        "info": {
+          "calls": 20,
+          "triangles": 18240
+        },
+        "ratio": null
+      }
+    }
+  },
+  "errors": [],
+  "minimap": {
+    "pruebasVsVolcan": true,
+    "volcanVsPuerto": true,
+    "pruebasVsPuerto": true,
+    "bytes": {
+      "pruebas": 4206,
+      "volcan": 4102,
+      "puerto": 3910
+    }
+  }
+}

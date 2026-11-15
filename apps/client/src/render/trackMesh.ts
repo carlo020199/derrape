@@ -1,10 +1,9 @@
 import * as THREE from "three";
-import { RAMPS, pointAt, type RampSize, type Track } from "@derrape/shared";
-import { PAL, toon } from "./look";
+import type { Track } from "@derrape/shared";
+import { PALETTE, animasAsphaltLineMaterial, animasAsphaltMaterial, markShared, sharedVertexToonDouble } from "./materials";
 
 // Malla de la pista generada a partir de la línea central: asfalto, bordillos, arcén,
-// muros y talud hasta el suelo (para los tramos elevados). Las tiras siguen el peralte de cada punto
-// y las rampas se dibujan como cuñas con flechas.
+// muros y talud hasta el suelo (para los tramos elevados).
 
 export interface TrackColors {
   road: number;
@@ -14,6 +13,67 @@ export interface TrackColors {
   wall: number;
   /** Altura del suelo alrededor. */
   groundY: number;
+  /** Si viene, los bordillos miden esto (m) y se pintan sin apagarse. Si no, el ancho de siempre. */
+  curbWidth?: number;
+  /** Línea central, un poco más clara que el asfalto. */
+  racingLine?: number;
+  /** Trazos de hueso sobre la línea central. Van en esa misma malla: no añaden una llamada. */
+  centreDash?: { color: number; opacity: number; length: number; period: number };
+  /** Bordillo interior (lado bajo) en las curvas. El exterior sigue en curbA/curbB. */
+  innerCurbA?: number;
+  innerCurbB?: number;
+  /** Asfalto con su propia rampa de toon y un emisivo bajo. Solo Ánimas. */
+  animasAsphalt?: boolean;
+  /** Filete emisivo en el borde alto de las curvas peraltadas. */
+  bankEdge?: boolean;
+}
+
+let vivid: THREE.MeshBasicMaterial | null = null;
+/** Bordillos y filete que no se apagan con el toon: el color es el de la paleta. */
+function vividRoad() {
+  if (!vivid) vivid = markShared(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  return vivid;
+}
+
+/** Filete Espectro en el borde alto, solo donde hay peralte. */
+function bankEdge(
+  group: THREE.Group,
+  track: Track,
+  left: { x: number; z: number }[],
+  heightAt: (k: number, lateral: number, lift: number) => number,
+) {
+  const pts = track.points;
+  const pos: number[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    const bi = pts[i]!.bank ?? 0;
+    const bj = pts[j]!.bank ?? 0;
+    if (Math.abs(bi) < 12 && Math.abs(bj) < 12) continue;
+    const side = (b: number) => (b >= 0 ? -1 : 1);
+    const quad = (k: number, bank: number) => {
+      const w = pts[k]!.w;
+      const sign = side(bank);
+      const inner = sign * (w / 2 - 0.16);
+      const outer = sign * (w / 2 + 0.02);
+      return [
+        [pts[k]!.x + left[k]!.x * inner, heightAt(k, inner, 0.14), pts[k]!.z + left[k]!.z * inner],
+        [pts[k]!.x + left[k]!.x * outer, heightAt(k, outer, 0.14), pts[k]!.z + left[k]!.z * outer],
+      ];
+    };
+    const a = quad(i, bi);
+    const b = quad(j, bj || bi);
+    for (const v of [a[0], a[1], b[1], a[0], b[1], b[0]]) pos.push(...v!);
+  }
+  if (pos.length === 0) return;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ color: PALETTE.espectro, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+  );
+  mesh.name = "filete-peralte";
+  mesh.renderOrder = 1;
+  group.add(mesh);
 }
 
 /** Normal izquierda (dz, -dx) en cada punto, media de los segmentos vecinos. */
@@ -37,19 +97,40 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   const left = leftNormals(track);
 
   /**
-   * Una tira a lo largo de toda la pista. `inner`/`outer` = desplazamiento lateral en función del
-   * ancho del punto; `yIn`/`yOut` = altura relativa a la pista en cada borde.
+   * Altura de la calzada en un borde. Con peralte 0 es la línea central más el realce,
+   * igual que antes. El talud puede anclarse al suelo (`ground`).
+   */
+  const heightAt = (k: number, lateral: number, lift: number, ground = false) => {
+    if (ground) return colors.groundY;
+    const p = pts[k]!;
+    const bank = ((p.bank ?? 0) * Math.PI) / 180;
+    return p.y - lateral * Math.tan(bank) + lift;
+  };
+  /** Bordillo más ancho y más alto donde el peralte se lee en el móvil. En llano, 0,9 m y +0,04. */
+  const fixedCurb = colors.curbWidth;
+  const curb = (bank: number) => (fixedCurb != null ? fixedCurb : Math.abs(bank) >= 12 ? 1.45 : 0.9);
+  const curbLift = (bank: number) => (fixedCurb != null ? 0.08 : Math.abs(bank) >= 12 ? 0.1 : 0.04);
+  const curbMat = fixedCurb != null ? vividRoad() : sharedVertexToonDouble();
+  const curbEvery = fixedCurb != null ? 4 : 1;
+  type Lift = number | ((bank: number) => number);
+  const liftOf = (lift: Lift, bank: number) => (typeof lift === "number" ? lift : lift(bank));
+
+  /**
+   * Una tira a lo largo de toda la pista. `inner`/`outer` = desplazamiento lateral.
+   * `liftIn`/`liftOut` se suman a la superficie peraltada. `groundOut` ancla ese borde al suelo.
    */
   function strip(
-    inner: (w: number) => number,
-    outer: (w: number) => number,
+    inner: (w: number, bank: number) => number,
+    outer: (w: number, bank: number) => number,
     colorA: number,
     colorB = colorA,
-    yIn = (y: number) => y,
-    yOut = (y: number) => y,
+    liftIn: Lift = 0,
+    liftOut: Lift = 0,
+    groundIn = false,
+    groundOut = false,
     every = 1,
-    /** Borde que NO sigue el peralte (el pie del talud, que va al suelo). */
-    flat: "in" | "out" | null = null,
+    mat: THREE.Material = sharedVertexToonDouble(),
+    colorOf?: (segment: number, bank: number) => THREE.Color,
   ) {
     const pos: number[] = [];
     const col: number[] = [];
@@ -57,17 +138,18 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     const cb = new THREE.Color(colorB);
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
-      const vert = (k: number, off: number, y: number) => [pts[k]!.x + left[k]!.x * off, y, pts[k]!.z + left[k]!.z * off];
-      const tilt = (k: number, off: number, edge: "in" | "out") => (flat === edge ? 0 : off * Math.tan(pts[k]!.bank));
-      const corner = (k: number, edge: "in" | "out") => {
-        const off = (edge === "in" ? inner : outer)(pts[k]!.w);
-        return vert(k, off, (edge === "in" ? yIn : yOut)(pts[k]!.y) + tilt(k, off, edge));
-      };
-      const a0 = corner(i, "in");
-      const a1 = corner(i, "out");
-      const b0 = corner(j, "in");
-      const b1 = corner(j, "out");
-      const c = Math.floor(i / every) % 2 === 0 ? ca : cb;
+      const vert = (k: number, off: number, lift: number, ground: boolean) => [
+        pts[k]!.x + left[k]!.x * off,
+        heightAt(k, off, lift, ground),
+        pts[k]!.z + left[k]!.z * off,
+      ];
+      const bi = pts[i]!.bank ?? 0;
+      const bj = pts[j]!.bank ?? 0;
+      const a0 = vert(i, inner(pts[i]!.w, bi), liftOf(liftIn, bi), groundIn);
+      const a1 = vert(i, outer(pts[i]!.w, bi), liftOf(liftOut, bi), groundOut);
+      const b0 = vert(j, inner(pts[j]!.w, bj), liftOf(liftIn, bj), groundIn);
+      const b1 = vert(j, outer(pts[j]!.w, bj), liftOf(liftOut, bj), groundOut);
+      const c = colorOf ? colorOf(i, bi) : Math.floor(i / every) % 2 === 0 ? ca : cb;
       for (const v of [a0, a1, b1, a0, b1, b0]) {
         pos.push(...v);
         col.push(c.r, c.g, c.b);
@@ -77,30 +159,65 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
     geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(geo, mat);
     group.add(mesh);
     return mesh;
   }
 
   const v = track.verge;
-  const lift = (h: number) => (y: number) => y + h;
-  const ground = () => colors.groundY;
 
-  // Asfalto y bordillos.
-  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, lift(0.02), lift(0.02));
-  strip((w) => w / 2 - 0.9, (w) => w / 2, colors.curbA, colors.curbB, lift(0.04), lift(0.04));
-  strip((w) => -w / 2, (w) => -w / 2 + 0.9, colors.curbA, colors.curbB, lift(0.04), lift(0.04));
+  // Asfalto y bordillos. En llano el realce es el de siempre (0,02 / 0,04).
+  const roadMat = colors.animasAsphalt ? animasAsphaltMaterial() : sharedVertexToonDouble();
+  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, 0.02, 0.02, false, false, 1, roadMat);
+  const innerA = colors.innerCurbA != null ? new THREE.Color(colors.innerCurbA) : null;
+  const innerB = colors.innerCurbB != null ? new THREE.Color(colors.innerCurbB) : null;
+  const curbColor = (side: number) => (segment: number, bank: number) => {
+    const high = bank >= 0 ? -1 : 1;
+    const outer = innerA == null || Math.abs(bank) < 8 || Math.sign(side) === high || Math.sign(bank) === 0;
+    const pair = outer ? [new THREE.Color(colors.curbA), new THREE.Color(colors.curbB)] : [innerA!, innerB ?? innerA!];
+    return pair[Math.floor(segment / curbEvery) % 2]!;
+  };
+  strip((w, b) => w / 2 - curb(b), (w) => w / 2, colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat, curbColor(1));
+  strip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat, curbColor(-1));
+  if (colors.racingLine != null) {
+    const line = new THREE.Color(colors.racingLine);
+    const dash = colors.centreDash;
+    const dashColor = dash ? line.clone().lerp(new THREE.Color(dash.color), dash.opacity) : line;
+    const lineMat = colors.animasAsphalt ? animasAsphaltLineMaterial() : sharedVertexToonDouble();
+    strip(
+      () => -0.125,
+      () => 0.125,
+      colors.racingLine,
+      colors.racingLine,
+      0.045,
+      0.045,
+      false,
+      false,
+      1,
+      lineMat,
+      dash
+        ? (segment) => {
+            const d = track.lengths[segment] ?? 0;
+            const m = ((d % dash.period) + dash.period) % dash.period;
+            return m < dash.length ? dashColor : line;
+          }
+        : undefined,
+    );
+  }
+  if (colors.bankEdge) bankEdge(group, track, left, heightAt);
   // Arcén.
   if (v > 0) {
     strip((w) => w / 2, (w) => w / 2 + v, colors.verge);
     strip((w) => -w / 2 - v, (w) => -w / 2, colors.verge);
   }
-  // Muros bajos en el borde exterior del arcén.
-  strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, lift(0.9), lift(0));
-  strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, lift(0.9), lift(0));
-  // Talud desde el muro hasta el suelo (solo se nota donde la pista está elevada).
-  strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, (y) => y, ground, 1, "out");
-  strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, ground, (y) => y, 1, "in");
+  // Muros bajos en el borde exterior del arcén, con tapa de hueso.
+  strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, 0.9, 0);
+  strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, 0.9, 0);
+  strip((w) => w / 2 + v - 0.16, (w) => w / 2 + v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+  strip((w) => -w / 2 - v - 0.16, (w) => -w / 2 - v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+  // Talud desde el borde (ya peraltado) hasta el suelo.
+  strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, 0, 0, false, true);
+  strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, 0, 0, true, false);
 
   // Línea de salida a cuadros.
   const checker = document.createElement("canvas");
@@ -109,7 +226,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   const g = checker.getContext("2d")!;
   for (let x = 0; x < 16; x++) {
     for (let y = 0; y < 2; y++) {
-      g.fillStyle = (x + y) % 2 === 0 ? "#ffffff" : "#1b1b1b";
+      g.fillStyle = (x + y) % 2 === 0 ? "#F3E7D3" : "#120F1E";
       g.fillRect(x, y, 1, 1);
     }
   }
@@ -121,74 +238,5 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   start.position.set(pts[0]!.x, pts[0]!.y + 0.05, pts[0]!.z);
   group.add(start);
 
-  addRamps(group, track);
   return group;
-}
-
-const RAMP_COLORS: Record<RampSize, number> = { S: PAL.espectro, M: PAL.brasa, L: PAL.anima };
-
-/** Flechas hacia delante sobre fondo oscuro, del color del tamaño de la rampa. */
-function chevronTexture(color: number): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const g = c.getContext("2d")!;
-  g.fillStyle = "#1e1830";
-  g.fillRect(0, 0, 64, 64);
-  g.strokeStyle = `#${color.toString(16).padStart(6, "0")}`;
-  g.lineWidth = 9;
-  g.lineJoin = "miter";
-  for (const y of [30, 58]) {
-    g.beginPath();
-    g.moveTo(8, y);
-    g.lineTo(32, y - 22);
-    g.lineTo(56, y);
-    g.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.RepeatWrapping;
-  return tex;
-}
-
-/** Una cuña por rampa: empieza a ras de asfalto y sube hasta `rise` en `length` metros. */
-function addRamps(group: THREE.Group, track: Track) {
-  const side = toon(PAL.ciruela);
-  side.side = THREE.DoubleSide;
-  for (const ramp of track.ramps) {
-    const { length, rise } = RAMPS.sizes[ramp.size];
-    const at = (d: number, lateral: number, lift: number) => {
-      const p = pointAt(track, d, lateral);
-      return [p.x, p.y + lateral * Math.tan(p.bank) + lift, p.z];
-    };
-    const d0 = ramp.distance;
-    const d1 = ramp.distance + length;
-    const [l, r] = [ramp.lateralMax, ramp.lateralMin];
-    const a = at(d0, l, 0.05);
-    const b = at(d0, r, 0.05);
-    const c = at(d1, r, rise);
-    const d = at(d1, l, rise);
-    const cFoot = at(d1, r, 0.02);
-    const dFoot = at(d1, l, 0.02);
-
-    const top = new THREE.BufferGeometry();
-    top.setAttribute("position", new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3));
-    const repeat = Math.max(1, Math.round((l - r) / 4));
-    top.setAttribute("uv", new THREE.Float32BufferAttribute([0, 0, repeat, 0, repeat, 1, 0, 0, repeat, 1, 0, 1], 2));
-    const tex = chevronTexture(RAMP_COLORS[ramp.size]);
-    group.add(new THREE.Mesh(top, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })));
-
-    // Cara de atrás y los dos costados.
-    const body = new THREE.BufferGeometry();
-    body.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute([...d, ...c, ...cFoot, ...d, ...cFoot, ...dFoot, ...a, ...d, ...dFoot, ...b, ...cFoot, ...c], 3),
-    );
-    body.computeVertexNormals();
-    group.add(new THREE.Mesh(body, side));
-
-    // Borde luminoso en el labio de la rampa.
-    const lip = new THREE.BufferGeometry();
-    lip.setAttribute("position", new THREE.Float32BufferAttribute([...c, ...d], 3));
-    group.add(new THREE.Line(lip, new THREE.LineBasicMaterial({ color: RAMP_COLORS[ramp.size] })));
-  }
 }
