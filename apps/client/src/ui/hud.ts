@@ -49,6 +49,8 @@ export function updateItemSlot(item: ItemType | null, rolling: boolean, time: nu
 export function updatePosition(position: number, total: number) {
   const text = `${position}º/${total}`;
   if (text === lastPosition) return;
-  positionEl.textContent = text;
+  const small = document.createElement("small");
+  small.textContent = `/${total}`;
+  positionEl.replaceChildren(`${position}º`, small);
   lastPosition = text;
 }

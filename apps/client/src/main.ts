@@ -1,5 +1,8 @@
 // Arranque: menú de inicio → sala (online) o práctica en solitario → carrera → resultados.
 
+import "@fontsource/lilita-one/latin-400.css";
+import "@fontsource/nunito/latin-600.css";
+import "@fontsource/nunito/latin-800.css";
 import * as THREE from "three";
 import {
   DEFAULT_TRACK,

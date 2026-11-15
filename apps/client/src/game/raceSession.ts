@@ -66,6 +66,7 @@ import { ItemsView } from "../render/itemsView";
 import { createKartModel, type KartModel } from "../render/kartModel";
 import { createNameTag } from "../render/nameTag";
 import type { AutoQuality } from "../render/quality";
+import { addNightLights, createSky } from "../render/look";
 import { Sparks } from "../render/sparks";
 import { THEMES } from "../render/themes";
 import { createTrackMesh } from "../render/trackMesh";
@@ -151,8 +152,8 @@ interface RemoteRacer {
 }
 
 const BOT_SETUP = [
-  { name: "Kiko", color: 0x2e86de, lane: 3, speed: 0.9, character: "kiko", kart: "pulga" },
-  { name: "Tocho", color: 0x2ecc71, lane: -3, speed: 0.93, character: "tocho", kart: "tanque" },
+  { name: "Kiko", color: 0x00b4d8, lane: 3, speed: 0.9, character: "kiko", kart: "pulga" },
+  { name: "Tocho", color: 0xe63946, lane: -3, speed: 0.93, character: "tocho", kart: "tanque" },
   { name: "Nonna", color: 0x9b5de5, lane: 0, speed: 0.95, character: "nonna-pina", kart: "furgo" },
 ];
 
@@ -174,10 +175,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(theme.sky);
   scene.fog = new THREE.Fog(theme.sky, theme.fog[0], theme.fog[1]);
-  scene.add(new THREE.HemisphereLight(0xffffff, theme.ground, 1.4));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.3);
-  sun.position.set(30, 60, 20);
-  scene.add(sun);
+  const sky = createSky(theme.skyTop, theme.sky, theme.glow);
+  scene.add(sky);
+  addNightLights(scene);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshLambertMaterial({ color: theme.ground }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = theme.track.groundY;
@@ -274,7 +274,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const itemsView = new ItemsView(world);
   scene.add(itemsView.group);
   const sparks = new Sparks();
-  scene.add(sparks.points);
+  scene.add(sparks.group);
 
   // --- Estado de la carrera ---
   let phase: "countdown" | "racing" | "finished" = "countdown";
@@ -551,6 +551,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       level: number;
       spinning: boolean;
       boosting: boolean;
+      speed: number;
       shield: boolean;
       shieldLeft: number;
       finished: boolean;
@@ -569,6 +570,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     if (view.driftDir !== 0 && view.level > 0) emitFromWheels(m, view.level, 2);
     if (view.boosting) emitFromWheels(m, 2, 1);
+    sparks.exhaust(m, heading + m.body.rotation.y, view.boosting ? 2 : Math.abs(view.speed) > 4 ? 1 : 0);
   }
 
   function drawRemotes(dt: number, time: number) {
@@ -587,7 +589,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         rem.y + s.hop,
         s.z,
         s.heading,
-        { driftDir: s.driftDir, level: s.driftLevel, spinning: s.spinning, boosting: s.boosting, shield: s.shield, shieldLeft: 8, finished: rem.finished },
+        { driftDir: s.driftDir, level: s.driftLevel, spinning: s.spinning, boosting: s.boosting, speed: s.speed, shield: s.shield, shieldLeft: 8, finished: rem.finished },
         dt,
         time,
       );
@@ -688,6 +690,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           level: driftLevel(s),
           spinning: s.spinTime > 0,
           boosting: s.boostTime > 0,
+          speed: s.speed,
           shield: s.shieldTime > 0,
           shieldLeft: s.shieldTime,
           finished: r.progress.finishTime !== null,
@@ -704,6 +707,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     const me = player.race.state;
     const root = player.model.root;
     chase.update(root.position.x, player.y, root.position.z, root.rotation.y, me.speed / KART.maxSpeed, dt);
+    sky.position.copy(camera.position);
     renderer.render(scene, camera);
 
     updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), me.boostTime > 0);

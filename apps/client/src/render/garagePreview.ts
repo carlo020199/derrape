@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { KART_COLORS } from "@derrape/shared";
 import { createKartModel, type KartModel } from "./kartModel";
+import { PAL, addNightLights, backdropTexture, glowTexture, toon } from "./look";
+import { Sparks } from "./sparks";
 
 /**
  * Vista previa 3D del piloto y el coche elegidos, girando sobre una peana. Usa el mismo renderer que
@@ -10,6 +12,7 @@ export class GaragePreview {
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
   private model: KartModel | null = null;
+  private sparks = new Sparks();
   private cheer = 0;
   private time = 0;
   private last = 0;
@@ -19,17 +22,38 @@ export class GaragePreview {
     private renderer: THREE.WebGLRenderer,
     private canvas: HTMLCanvasElement,
   ) {
-    this.scene.background = new THREE.Color(0x2a3170);
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4488, 1.5));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-    sun.position.set(4, 8, 6);
-    this.scene.add(sun);
-    const pedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.4, 2.6, 0.2, 32),
-      new THREE.MeshLambertMaterial({ color: 0x1b1f3a }),
+    this.scene.background = backdropTexture(0x3a2c6a, PAL.noche);
+    addNightLights(this.scene);
+    // Peana de hueso con calaveritas alrededor y un foco cálido detrás.
+    const bone = toon(PAL.hueso);
+    const shade = toon(PAL.huesoSombra);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.25, 0.3, 36), bone);
+    top.position.y = -0.15;
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.7, 0.3, 36), shade);
+    base.position.y = -0.45;
+    this.scene.add(top, base);
+    const skullGeo = new THREE.SphereGeometry(0.2, 10, 8);
+    const eyeGeo = new THREE.SphereGeometry(0.05, 6, 5);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1326 });
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const skull = new THREE.Mesh(skullGeo, bone);
+      skull.position.set(Math.sin(a) * 2.45, -0.3, Math.cos(a) * 2.45);
+      skull.rotation.y = a;
+      for (const s of [-1, 1]) {
+        const eye = new THREE.Mesh(eyeGeo, eyeMat);
+        eye.position.set(s * 0.08, 0.03, 0.17);
+        skull.add(eye);
+      }
+      this.scene.add(skull);
+    }
+    const spot = new THREE.Mesh(
+      new THREE.PlaneGeometry(13, 13),
+      new THREE.MeshBasicMaterial({ map: glowTexture(), color: PAL.brasa, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
-    pedestal.position.y = -0.1;
-    this.scene.add(pedestal);
+    spot.position.set(-3.4, 2.4, -5.2);
+    spot.lookAt(3.4, 2.4, 5.2);
+    this.scene.add(spot, this.sparks.group);
     this.camera.position.set(3.4, 2.4, 5.2);
     this.camera.lookAt(0, 0.7, 0);
   }
@@ -80,7 +104,10 @@ export class GaragePreview {
       this.model.root.rotation.y += dt * 0.7;
       this.cheer = Math.max(0, this.cheer - dt);
       this.model.setMood(this.cheer > 0 ? "celebrate" : "idle", this.time);
+      this.model.root.updateMatrixWorld();
+      this.sparks.exhaust(this.model, this.model.root.rotation.y, 0);
     }
+    this.sparks.update(dt);
     this.renderer.render(this.scene, this.camera);
   }
 }

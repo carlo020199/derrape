@@ -4,7 +4,7 @@
 export type WeightClass = "light" | "medium" | "heavy";
 
 /** Cómo se dibuja la cabeza/accesorios (el cliente sabe construir cada estilo con primitivas). */
-export type CharacterLook = "mechanic" | "robot" | "courier" | "bulldog" | "granny";
+export type CharacterLook = "mechanic" | "ghost" | "blaze" | "aviator" | "hooded";
 
 export interface CharacterDef {
   id: string;
@@ -15,9 +15,9 @@ export interface CharacterDef {
   look: CharacterLook;
   /** Color principal de la ropa / cuerpo. */
   color: number;
-  /** Color de la piel / pelo / carcasa. */
+  /** Color del hueso (o de la sombra del cuerpo, en el fantasma). */
   skin: number;
-  /** Detalle (gorra, bufanda, antena…). */
+  /** Detalle: pelo, llamas, bufanda, brillo de los ojos… */
   accent: number;
 }
 
@@ -33,53 +33,53 @@ export const WEIGHT_CLASS_MOD: Record<WeightClass, { weight: number; accel: numb
 export const CHARACTERS: readonly CharacterDef[] = [
   {
     id: "lia",
-    name: "Lia",
-    blurb: "Mecánica joven, mono azul y llave inglesa a la espalda.",
+    name: "Lía Brasas",
+    blurb: "Calaverita mecánica con melena de fuego espectral y llave inglesa a la espalda.",
     weightClass: "light",
     look: "mechanic",
-    color: 0x2e86de,
-    skin: 0xf1c27d,
-    accent: 0xffd23f,
+    color: 0x4a3a8c,
+    skin: 0xf3e7d3,
+    accent: 0x3ff2c8,
   },
   {
     id: "kiko",
-    name: "Kiko",
-    blurb: "Robot ayudante pequeño y redondo, con antena y una pantalla por cara.",
+    name: "Kiko Fatuo",
+    blurb: "Fantasmita redondo que se alumbra con un farol; no pesa casi nada.",
     weightClass: "light",
-    look: "robot",
-    color: 0xb8c4d6,
-    skin: 0x6c7a90,
-    accent: 0x4cc9f0,
+    look: "ghost",
+    color: 0xf6f1ff,
+    skin: 0xd9d0f2,
+    accent: 0xffb423,
   },
   {
     id: "toni",
-    name: "Toni",
-    blurb: "Repartidor con gorra y mochila térmica; siempre tiene prisa.",
+    name: "Toni Ascuas",
+    blurb: "Calavera con la cabeza en llamas y chupa de cuero; siempre tiene prisa.",
     weightClass: "medium",
-    look: "courier",
-    color: 0xff6b35,
-    skin: 0xd9a066,
-    accent: 0xf4f4f4,
+    look: "blaze",
+    color: 0x2a2238,
+    skin: 0xf3e7d3,
+    accent: 0xff6a1f,
   },
   {
     id: "tocho",
-    name: "Tocho",
-    blurb: "Bulldog con gafas de aviador y bufanda.",
+    name: "Capitán Tocho",
+    blurb: "Esqueleto aviador con gorro de cuero, gafas y bufanda.",
     weightClass: "medium",
-    look: "bulldog",
-    color: 0xc8a36b,
-    skin: 0xd9b98a,
-    accent: 0xe63946,
+    look: "aviator",
+    color: 0x7a5236,
+    skin: 0xf3e7d3,
+    accent: 0xd9362b,
   },
   {
     id: "nonna-pina",
     name: "Nonna Pina",
-    blurb: "Abuela, ex piloto de rallies, con casco vintage y gafas de sol.",
+    blurb: "Abuela encapuchada, ex piloto de rallies del más allá.",
     weightClass: "heavy",
-    look: "granny",
-    color: 0x9b5de5,
-    skin: 0xe8b894,
-    accent: 0xf2e8cf,
+    look: "hooded",
+    color: 0x6b3fd6,
+    skin: 0xf3e7d3,
+    accent: 0x3ff2c8,
   },
 ];
 

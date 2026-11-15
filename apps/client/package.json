@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@derrape/shared": "*",
+    "@fontsource/lilita-one": "^5.3.0",
+    "@fontsource/nunito": "^5.3.0",
     "colyseus.js": "^0.16.22",
     "three": "^0.170.0"
   },

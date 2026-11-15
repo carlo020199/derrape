@@ -72,7 +72,11 @@ entran → eligen personaje, coche y color → el anfitrión elige circuito o co
 Si alguien pierde conexión, puede volver a la carrera en curso.
 
 ### Estilo visual
-Low-poly colorido, sombras sencillas, sin post-procesado pesado. Assets gratuitos CC0 como base:
+Fantasía oscura amable: noche violeta, fuego cálido, fuego espectral y calaveras que sonríen. Formas
+redondeadas con sombreado toon (contorno solo en los pilotos), cielo degradado con luna, niebla, fuego
+con partículas aditivas y sombras redondas bajo los karts; sin post-procesado. Paleta y materiales en
+`apps/client/src/render/look.ts` y `apps/client/src/style.css`; fuentes Lilita One (títulos) y Nunito (texto).
+Si hicieran falta assets externos, gratuitos CC0 como base:
 - Kenney.nl (packs de coches, karts y circuitos)
 - Quaternius (personajes, animales y escenarios low-poly)
 

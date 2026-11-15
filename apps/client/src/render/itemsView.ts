@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { ItemWorld } from "@derrape/shared";
+import { PAL, toon } from "./look";
 
 // Dibuja cajas, manchas de aceite y cohetes. Las mallas se reutilizan (pool) para no crear objetos por frame.
 
@@ -8,13 +9,16 @@ function questionTexture(): THREE.CanvasTexture {
   c.width = c.height = 64;
   const g = c.getContext("2d")!;
   const grad = g.createLinearGradient(0, 0, 64, 64);
-  grad.addColorStop(0, "#ffd23f");
-  grad.addColorStop(0.5, "#ff6b35");
-  grad.addColorStop(1, "#b15cff");
+  grad.addColorStop(0, "#ffb423");
+  grad.addColorStop(0.5, "#ff6a1f");
+  grad.addColorStop(1, "#6b3fd6");
   g.fillStyle = grad;
   g.fillRect(0, 0, 64, 64);
-  g.fillStyle = "#fff";
-  g.font = "bold 46px system-ui, sans-serif";
+  g.strokeStyle = "#1e1830";
+  g.lineWidth = 5;
+  g.strokeRect(2.5, 2.5, 59, 59);
+  g.fillStyle = "#fff7ea";
+  g.font = '46px "Lilita One", system-ui, sans-serif';
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText("?", 32, 35);
@@ -56,7 +60,7 @@ export class ItemsView {
     }
 
     const oilGeo = new THREE.CircleGeometry(1.7, 20);
-    const oilMat = new THREE.MeshBasicMaterial({ color: 0x15121f, transparent: true, opacity: 0.85 });
+    const oilMat = new THREE.MeshBasicMaterial({ color: 0x0c0714, transparent: true, opacity: 0.9 });
     this.oils = new Pool(this.group, () => {
       const m = new THREE.Mesh(oilGeo, oilMat);
       m.rotation.x = -Math.PI / 2;
@@ -65,10 +69,10 @@ export class ItemsView {
 
     const bodyGeo = new THREE.ConeGeometry(0.35, 1.4, 8);
     bodyGeo.rotateX(Math.PI / 2);
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe63946 });
+    const bodyMat = toon(PAL.hueso);
     const flameGeo = new THREE.ConeGeometry(0.25, 0.7, 6);
     flameGeo.rotateX(-Math.PI / 2);
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffd23f });
+    const flameMat = new THREE.MeshBasicMaterial({ color: PAL.brasa });
     this.rockets = new Pool(this.group, () => {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(bodyGeo, bodyMat));

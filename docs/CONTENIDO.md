@@ -22,13 +22,13 @@ Los nombres son provisionales: cámbialos libremente.
 
 | # | Nombre | Quién es | Clase |
 |---|---|---|---|
-| 1 | **Lia** | Mecánica joven, mono azul y llave inglesa a la espalda | Ligera |
-| 2 | **Kiko** | Robot ayudante pequeño y redondo, con antena y una pantalla por cara | Ligero |
-| 3 | **Toni** | Repartidor con gorra y mochila térmica; siempre tiene prisa | Medio |
-| 4 | **Tocho** | Bulldog con gafas de aviador y bufanda | Medio |
-| 5 | **Nonna Pina** | Abuela, ex piloto de rallies, con casco vintage y gafas de sol | Pesada |
+| 1 | **Lía Brasas** | Calaverita mecánica con melena de fuego espectral y llave inglesa a la espalda | Ligera |
+| 2 | **Kiko Fatuo** | Fantasmita redondo que se alumbra con un farol | Ligero |
+| 3 | **Toni Ascuas** | Calavera con la cabeza en llamas y chupa de cuero; siempre tiene prisa | Medio |
+| 4 | **Capitán Tocho** | Esqueleto aviador con gorro de cuero, gafas y bufanda | Medio |
+| 5 | **Nonna Pina** | Abuela encapuchada, ex piloto de rallies del más allá | Pesada |
 
-Cada uno tiene un color principal, una animación de celebración y otra de enfado (al recibir un golpe), con estilo low-poly.
+Cada uno tiene un color principal, una animación de celebración y otra de enfado (al recibir un golpe), con estilo cabezón y redondeado (fantasía oscura amable: calaveras que sonríen, noche violeta y fuego).
 
 ## Coches (10)
 
@@ -45,7 +45,7 @@ Cada uno tiene un color principal, una animación de celebración y otra de enfa
 | 9 | **Grillo** | Buggy de playa | 2 | 4 | 3 | 3 | Salidas y remontadas |
 | 10 | **Derrapín** | Kart bajo con ruedas traseras anchas | 3 | 3 | 4 | 2 | **Extra:** el turbo de derrape carga un 15 % más rápido |
 
-Todos con color elegible. Base de modelos: packs CC0 de Kenney (coches y karts), modificados.
+Todos con color elegible. Modelos propios hechos con primitivas redondeadas (parachoques de hueso, llantas naranjas, escapes con fuego).
 
 ## Circuitos (10) en 2 copas
 
