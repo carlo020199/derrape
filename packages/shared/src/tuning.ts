@@ -79,6 +79,9 @@ export const KART = {
   /** Aceleración durante cualquier turbo (m/s²). */
   boostAccel: 45,
 
+  /** Peralte: giro "gratis" hacia el lado bajo (rad/s con la pista de canto y a velocidad punta). */
+  bankTurn: 1.1,
+
   /** Velocidad que se conserva al chocar con un borde de frente (0–1). */
   wallBounceKeep: 0.45,
   /** Velocidad que se conserva rozando un borde en paralelo (0–1). */
@@ -90,6 +93,24 @@ export const KART = {
 };
 
 export type KartTuning = typeof KART;
+
+/**
+ * Rampas. Al pisar una yendo rápido, el kart vuela `airTime` s (a velocidad punta; menos si va más
+ * lento) hasta `height` m y al aterrizar recibe un turbo de `boost` s. En el aire casi no se gira.
+ * `length` y `rise` son el tamaño de la cuña que se dibuja (m).
+ */
+export const RAMPS = {
+  sizes: {
+    S: { airTime: 0.55, height: 1.3, boost: 0.35, length: 4, rise: 0.6 },
+    M: { airTime: 0.8, height: 2.3, boost: 0.6, length: 6, rise: 1.0 },
+    L: { airTime: 1.1, height: 3.6, boost: 0.9, length: 8, rise: 1.4 },
+  },
+  /** Velocidad mínima para despegar (m/s). */
+  minSpeed: 12,
+  /** Fracción del giro normal que queda en el aire. */
+  airSteer: 0.3,
+};
+export type RampSize = keyof typeof RAMPS.sizes;
 
 /** Reglas de la carrera. */
 export const RACE = {

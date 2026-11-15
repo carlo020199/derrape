@@ -44,8 +44,12 @@ export function setupGarage(preview: GaragePreview, actions: GarageActions) {
     parent.append(b);
   };
 
-  for (const c of CHARACTERS)
-    pick(chars, c.name, WEIGHT_CLASS_NAMES[c.weightClass], () => select({ character: c.id }), c.color);
+  for (const c of CHARACTERS) {
+    pick(chars, c.name, WEIGHT_CLASS_NAMES[c.weightClass], () => select({ character: c.id }));
+    // Hueco para el retrato: se dibuja la primera vez que se abre la pantalla.
+    chars.lastElementChild!.prepend(Object.assign(document.createElement("img"), { alt: "", width: 48, height: 48 }));
+  }
+  let portraits = false;
   for (const k of KARTS) pick(karts, k.name, k.style, () => select({ kart: k.id }));
   KART_COLORS.forEach((c, i) => {
     const b = document.createElement("button");
@@ -64,6 +68,10 @@ export function setupGarage(preview: GaragePreview, actions: GarageActions) {
 
   /** Dibuja la selección actual. `cheer` = el piloto celebra en la vista previa. */
   function render(cheer = false) {
+    if (!portraits) {
+      portraits = true;
+      chars.querySelectorAll("img").forEach((img, i) => (img.src = preview.portrait(CHARACTERS[i]!.id)));
+    }
     const c = findCharacter(profile.character)!;
     const k = findKart(profile.kart)!;
     [...chars.children].forEach((b, i) => b.classList.toggle("sel", CHARACTERS[i]!.id === c.id));

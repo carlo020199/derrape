@@ -69,10 +69,16 @@ Cada circuito tiene **una mecánica propia** para que se sienta distinto. Vuelta
 | 9 | **Volcán Dormido** | Selva y lava | ★★★ | Atajo arriesgado junto a la lava (caer = respawn) |
 | 10 | **Ciudad Neón** | Ciudad de noche con rascacielos | ★★★ | Túneles, rampas entre azoteas y luces de neón |
 
+### Extra
+| # | Circuito | Tema | Dificultad | Mecánica propia |
+|---|---|---|---|---|
+| 11 | **Laguna de las Ánimas** | Laguna espectral de noche, bosque morado y cementerio | ★★ | Curvas peraltadas que ayudan a girar y tres rampas (S, M, L) con turbo al aterrizar. 1.466 m, ~67 s por vuelta, sentido antihorario |
+
 Cómo hacer 10 circuitos sin volverse loco:
 - Cada circuito es **un archivo de datos** (`packages/shared/src/tracks/NN-nombre.ts`): puntos de la spline,
   ancho, cajas de objetos, salida, tema y mecánica. El asfalto, los bordillos y los muros se generan solos.
 - Cada tema usa un **kit de piezas** reutilizable (edificios, árboles, rocas, vallas…) que decoran los bordes.
-- Las mecánicas son "módulos" reutilizables: zona de bajo agarre, panel de turbo, rampa, obstáculo que se mueve, caída al vacío.
+- Las mecánicas son "módulos" reutilizables: zona de bajo agarre, panel de turbo, rampa (`ramps` en el circuito, tamaños en `RAMPS`),
+  peralte (`bank` por punto de control), obstáculo que se mueve, caída al vacío.
 - Solo se descarga el circuito que se va a jugar (no los 10 a la vez), para que cargue rápido en móvil.
 - Circuitos espejo como bonus futuro (gratis: invertir la spline).

@@ -5,7 +5,7 @@ import type { TrackDef } from "./types";
 
 export interface TrackEntry {
   id: string;
-  /** Número en la 1.0 (1–10) o 0 para los de pruebas. */
+  /** Número en la 1.0 (1–10), 11 en adelante para los extra, o 0 para los de pruebas. */
   number: number;
   name: string;
   cup: "sol" | "luna" | null;
@@ -22,6 +22,13 @@ export const TRACKS: TrackEntry[] = [
     load: () => import("./01-paseo-del-puerto").then((m) => m.default),
   },
   // Circuitos 2–10: Fase 8 (ver docs/CONTENIDO.md).
+  {
+    id: "laguna-de-las-animas",
+    number: 11,
+    name: "Laguna de las Ánimas",
+    cup: null,
+    load: () => import("./11-laguna-de-las-animas").then((m) => m.default),
+  },
 ];
 
 export const DEFAULT_TRACK = "paseo-del-puerto";

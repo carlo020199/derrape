@@ -1,8 +1,9 @@
 // Pista: línea central cerrada con altura y ancho por punto, arcén y zonas especiales.
-// La física es 2D (x, z); la altura solo se usa para dibujar.
+// La física es 2D (x, z); la altura solo se usa para dibujar. El peralte ayuda a girar y las rampas
+// lanzan el kart por el aire (ver `launchKart`).
 
 import { bounceKart, type KartState } from "./kart";
-import { KART, type KartTuning } from "./tuning";
+import { KART, type KartTuning, type RampSize } from "./tuning";
 
 export interface TrackPoint {
   x: number;
@@ -11,6 +12,18 @@ export interface TrackPoint {
   y?: number;
   /** Ancho del asfalto en este punto (m). Si falta, el de la pista. */
   w?: number;
+  /** Peralte (rad). Positivo = borde izquierdo más alto, o sea, curva a la derecha. */
+  bank?: number;
+}
+
+/** Rampa que cruza la pista. */
+export interface TrackRamp {
+  size: RampSize;
+  /** Dónde empieza (m desde la salida). */
+  distance: number;
+  /** Franja lateral que ocupa (m a la izquierda del centro). */
+  lateralMin: number;
+  lateralMax: number;
 }
 
 /** Tipos de zona especial reutilizables por cualquier circuito. */
@@ -38,6 +51,7 @@ export interface Track {
   /** Arcén a cada lado del asfalto antes del muro (m). En el arcén se va lento. */
   verge: number;
   zones: TrackZone[];
+  ramps: TrackRamp[];
 }
 
 export type Surface = "road" | "offroad" | ZoneType;
@@ -48,6 +62,9 @@ export interface ClosestPoint {
   y: number;
   /** Ancho del asfalto en ese punto. */
   width: number;
+  /** Peralte de la pista en ese punto y rumbo de la pista (rad). */
+  bank: number;
+  heading: number;
   /** Distancia con signo al centro: positiva a la izquierda según el sentido de la pista. */
   lateral: number;
   /** Índice del segmento. */
@@ -57,7 +74,7 @@ export interface ClosestPoint {
 }
 
 export function buildTrack(points: TrackPoint[], width: number, verge = 0, zones: TrackZone[] = []): Track {
-  const full = points.map((p) => ({ x: p.x, z: p.z, y: p.y ?? 0, w: p.w ?? width }));
+  const full = points.map((p) => ({ x: p.x, z: p.z, y: p.y ?? 0, w: p.w ?? width, bank: p.bank ?? 0 }));
   const lengths: number[] = [0];
   for (let i = 1; i <= full.length; i++) {
     const a = full[i - 1]!;
@@ -65,7 +82,7 @@ export function buildTrack(points: TrackPoint[], width: number, verge = 0, zones
     lengths.push(lengths[i - 1]! + Math.hypot(b.x - a.x, b.z - a.z));
   }
   const length = lengths.pop()!;
-  return { points: full, lengths, length, width, verge, zones };
+  return { points: full, lengths, length, width, verge, zones, ramps: [] };
 }
 
 /** Óvalo de prueba: dos rectas unidas por semicírculos. */
@@ -90,7 +107,7 @@ export function createOvalTrack(straight = 120, radius = 45, width = 16, segment
  */
 export function smoothTrack(control: TrackPoint[], width: number, spacing = 3, verge = 0): Track {
   const n = control.length;
-  const c = control.map((p) => ({ x: p.x, z: p.z, y: p.y ?? 0, w: p.w ?? width }));
+  const c = control.map((p) => ({ x: p.x, z: p.z, y: p.y ?? 0, w: p.w ?? width, bank: p.bank ?? 0 }));
   const dense: Required<TrackPoint>[] = [];
   for (let i = 0; i < n; i++) {
     const p0 = c[(i - 1 + n) % n]!;
@@ -109,6 +126,8 @@ export function smoothTrack(control: TrackPoint[], width: number, spacing = 3, v
         z: f(p0.z, p1.z, p2.z, p3.z),
         y: f(p0.y, p1.y, p2.y, p3.y),
         w: p1.w + (p2.w - p1.w) * t,
+        // Entrada y salida suaves del peralte.
+        bank: p1.bank + (p2.bank - p1.bank) * (t * t * (3 - 2 * t)),
       });
     }
   }
@@ -118,7 +137,7 @@ export function smoothTrack(control: TrackPoint[], width: number, spacing = 3, v
   const points: TrackPoint[] = [];
   for (let i = 0; i < count; i++) {
     const p = pointAt(fine, (i / count) * fine.length);
-    points.push({ x: p.x, z: p.z, y: p.y, w: p.width });
+    points.push({ x: p.x, z: p.z, y: p.y, w: p.width, bank: p.bank });
   }
   return buildTrack(points, width, verge);
 }
@@ -133,7 +152,7 @@ export function pointAt(
   track: Track,
   distance: number,
   lateral = 0,
-): { x: number; z: number; y: number; width: number; heading: number } {
+): { x: number; z: number; y: number; width: number; heading: number; bank: number } {
   const d = wrapDistance(track, distance);
   const { points, lengths } = track;
   // Búsqueda binaria del segmento.
@@ -157,6 +176,7 @@ export function pointAt(
     y: a.y + (b.y - a.y) * u,
     width: a.w + (b.w - a.w) * u,
     heading: Math.atan2(dx, dz),
+    bank: a.bank + (b.bank - a.bank) * u,
   };
 }
 
@@ -192,6 +212,8 @@ export function closestPoint(track: Track, x: number, z: number): ClosestPoint {
     z: pz,
     y: a.y + (b.y - a.y) * bestU,
     width: a.w + (b.w - a.w) * bestU,
+    bank: a.bank + (b.bank - a.bank) * bestU,
+    heading: Math.atan2(dx, dz),
     lateral: Math.sqrt(bestD2) * side,
     segment: best,
     distance: track.lengths[best]! + Math.hypot(dx, dz) * bestU,
@@ -209,6 +231,23 @@ function inZone(zone: TrackZone, c: ClosestPoint): boolean {
 export function surfaceAt(track: Track, c: ClosestPoint): Surface {
   for (const z of track.zones) if (inZone(z, c)) return z.type;
   return Math.abs(c.lateral) <= c.width / 2 ? "road" : "offroad";
+}
+
+/** Altura de la pista bajo un punto, contando el peralte. */
+export function surfaceHeight(c: ClosestPoint): number {
+  return c.y + c.lateral * Math.tan(c.bank);
+}
+
+/**
+ * ¿Ha pasado el kart por el inicio de una rampa entre el paso anterior (`prevDistance`) y este?
+ * Solo cuenta yendo hacia delante.
+ */
+export function rampCrossed(track: Track, prevDistance: number, c: ClosestPoint): TrackRamp | null {
+  if (!(c.distance > prevDistance) || c.distance - prevDistance > 15) return null;
+  for (const r of track.ramps) {
+    if (prevDistance < r.distance && c.distance >= r.distance && c.lateral >= r.lateralMin && c.lateral <= r.lateralMax) return r;
+  }
+  return null;
 }
 
 /**

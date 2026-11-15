@@ -1,9 +1,10 @@
 // Formato de un circuito como DATOS. Añadir un circuito = un archivo nuevo con un TrackDef.
 
-import { smoothTrack, type Track, type TrackPoint, type TrackZone, type ZoneType } from "../track";
+import { smoothTrack, type Track, type TrackPoint, type TrackRamp, type TrackZone, type ZoneType } from "../track";
+import type { RampSize } from "../tuning";
 
 /** Kits de tema disponibles (decoración, colores). El cliente sabe dibujar cada uno. */
-export type ThemeId = "pruebas" | "puerto";
+export type ThemeId = "pruebas" | "puerto" | "laguna";
 
 export interface ZoneDef {
   type: ZoneType;
@@ -11,6 +12,14 @@ export interface ZoneDef {
   from: number;
   to: number;
   /** Franja lateral en metros (por defecto todo el ancho, arcén incluido). */
+  lateralMin?: number;
+  lateralMax?: number;
+}
+
+/** Rampa: dónde empieza (fracción de vuelta), tamaño y, si no ocupa todo el asfalto, su franja lateral. */
+export interface RampDef {
+  at: number;
+  size: RampSize;
   lateralMin?: number;
   lateralMax?: number;
 }
@@ -37,6 +46,7 @@ export interface TrackDef {
   /** Filas de cajas de objetos, en fracciones de vuelta. */
   itemRows: number[];
   zones?: ZoneDef[];
+  ramps?: RampDef[];
   landmarks?: Landmark[];
   /** Semilla para colocar la decoración siempre igual. */
   seed: number;
@@ -52,6 +62,14 @@ export function buildTrackFromDef(def: TrackDef): Track {
       to: z.to * track.length,
       lateralMin: z.lateralMin ?? -outer,
       lateralMax: z.lateralMax ?? outer,
+    }),
+  );
+  track.ramps = (def.ramps ?? []).map(
+    (r): TrackRamp => ({
+      size: r.size,
+      distance: r.at * track.length,
+      lateralMin: r.lateralMin ?? -def.width / 2,
+      lateralMax: r.lateralMax ?? def.width / 2,
     }),
   );
   return track;

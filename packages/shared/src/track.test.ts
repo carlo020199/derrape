@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closestPoint, createOvalTrack, pointAt, type Track } from "./track";
+import { closestPoint, createOvalTrack, pointAt, rampCrossed, surfaceHeight, type Track } from "./track";
 import { KART } from "./tuning";
 import { TRACKS } from "./tracks/index";
 import { buildTrackFromDef } from "./tracks/types";
@@ -72,5 +72,62 @@ describe("pista", () => {
     const lx = Math.sin(p.heading + Math.PI / 2);
     const lz = Math.cos(p.heading + Math.PI / 2);
     expect((left.x - p.x) * lx + (left.z - p.z) * lz).toBeCloseTo(3, 3);
+  });
+});
+
+describe("Laguna de las Ánimas", () => {
+  const load = async () => buildTrackFromDef(await TRACKS.find((t) => t.id === "laguna-de-las-animas")!.load());
+
+  it("mide unos 1.450 m y se recorre en sentido antihorario", async () => {
+    const track = await load();
+    expect(track.length).toBeGreaterThan(1380);
+    expect(track.length).toBeLessThan(1520);
+    // Rumbo positivo = izquierda: una vuelta antihoraria suma +360º.
+    let turned = 0;
+    for (let d = 0; d < track.length; d += 3) {
+      let diff = pointAt(track, d + 3).heading - pointAt(track, d).heading;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      turned += diff;
+    }
+    expect(turned).toBeCloseTo(Math.PI * 2, 1);
+  });
+
+  it("los peraltes inclinan la pista hacia el interior de cada curva", async () => {
+    const track = await load();
+    let banked = 0;
+    for (let d = 0; d < track.length; d += 6) {
+      const here = pointAt(track, d);
+      if (Math.abs(here.bank) < 0.15) continue;
+      banked++;
+      let turn = pointAt(track, d + 12).heading - pointAt(track, d - 12).heading;
+      while (turn > Math.PI) turn -= Math.PI * 2;
+      while (turn < -Math.PI) turn += Math.PI * 2;
+      // Curva a la izquierda (turn > 0) → peralte negativo (borde derecho alto), y al revés.
+      expect(Math.sign(turn), `peralte al revés en ${d} m`).toBe(-Math.sign(here.bank));
+      // Y el borde exterior queda más alto que el centro.
+      const outside = pointAt(track, d, -Math.sign(turn) * 5);
+      const c = closestPoint(track, outside.x, outside.z);
+      expect(surfaceHeight(c)).toBeGreaterThan(c.y);
+    }
+    expect(banked).toBeGreaterThan(30);
+  });
+
+  it("tiene tres rampas (S, M, L) en recta y se detectan al cruzarlas hacia delante", async () => {
+    const track = await load();
+    expect(track.ramps.map((r) => r.size)).toEqual(["S", "M", "L"]);
+    for (const ramp of track.ramps) {
+      // En recta: el rumbo casi no cambia en 30 m alrededor.
+      let turn = pointAt(track, ramp.distance + 20).heading - pointAt(track, ramp.distance - 10).heading;
+      while (turn > Math.PI) turn -= Math.PI * 2;
+      while (turn < -Math.PI) turn += Math.PI * 2;
+      expect(Math.abs(turn), `rampa ${ramp.size} en curva`).toBeLessThan(0.25);
+      const after = pointAt(track, ramp.distance + 0.3);
+      const c = closestPoint(track, after.x, after.z);
+      expect(rampCrossed(track, ramp.distance - 0.2, c)?.size).toBe(ramp.size);
+      expect(rampCrossed(track, ramp.distance + 0.1, c)).toBeNull(); // ya la había pasado
+      const beside = pointAt(track, ramp.distance + 0.3, track.width / 2 + 3);
+      expect(rampCrossed(track, ramp.distance - 0.2, closestPoint(track, beside.x, beside.z))).toBeNull(); // por el arcén
+    }
   });
 });

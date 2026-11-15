@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { bounceKart, collideKarts, createKart, driftLevel, giveBoost, hopHeight, stepKart, type KartInput } from "./kart";
+import { bounceKart, collideKarts, createKart, driftLevel, giveBoost, hopHeight, launchKart, stepKart, type KartInput } from "./kart";
 import { closestPoint, collideKartWithTrack, createOvalTrack } from "./track";
-import { KART, PHYSICS_DT } from "./tuning";
+import { KART, PHYSICS_DT, RAMPS } from "./tuning";
 
 const GAS: KartInput = { steer: 0, throttle: true, brake: false, drift: false };
 
@@ -172,5 +172,59 @@ describe("choques entre karts", () => {
     collideKarts(me, other, false);
     expect(other.x).toBe(0);
     expect(me.x).toBeGreaterThan(0.5);
+  });
+});
+
+describe("rampas y peralte", () => {
+  it("una rampa lanza el kart por el aire y al aterrizar da turbo", () => {
+    const s = createKart();
+    s.speed = KART.maxSpeed;
+    expect(launchKart(s, "M")).toBe(true);
+    expect(s.airTime).toBeCloseTo(RAMPS.sizes.M.airTime, 5);
+    run(s, GAS, RAMPS.sizes.M.airTime / 2);
+    expect(hopHeight(s)).toBeGreaterThan(RAMPS.sizes.M.height * 0.9);
+    expect(s.speed).toBeCloseTo(KART.maxSpeed, 5); // en el aire no se acelera ni se frena
+    run(s, GAS, RAMPS.sizes.M.airTime / 2 + 0.05);
+    expect(s.airTime).toBe(0);
+    expect(hopHeight(s)).toBe(0);
+    expect(s.boostTime).toBeGreaterThan(0);
+  });
+
+  it("no despega yendo despacio ni dos veces seguidas", () => {
+    const slow = createKart();
+    slow.speed = RAMPS.minSpeed - 1;
+    expect(launchKart(slow, "L")).toBe(false);
+    const s = createKart();
+    s.speed = KART.maxSpeed;
+    expect(launchKart(s, "S")).toBe(true);
+    expect(launchKart(s, "L")).toBe(false);
+  });
+
+  it("la rampa grande vuela más que la pequeña, y en el aire casi no se gira", () => {
+    const a = createKart();
+    const b = createKart();
+    a.speed = b.speed = KART.maxSpeed;
+    launchKart(a, "S");
+    launchKart(b, "L");
+    expect(b.airTime).toBeGreaterThan(a.airTime);
+    expect(b.airHeight).toBeGreaterThan(a.airHeight);
+    const ground = createKart();
+    ground.speed = KART.maxSpeed;
+    const left: KartInput = { ...GAS, steer: -1 };
+    run(b, left, 0.5);
+    run(ground, left, 0.5);
+    expect(Math.abs(b.heading)).toBeLessThan(Math.abs(ground.heading) * 0.5);
+  });
+
+  it("el peralte lleva el kart hacia el lado bajo", () => {
+    const s = createKart();
+    s.speed = KART.maxSpeed;
+    s.bank = -0.3; // borde derecho más alto: curva a la izquierda
+    run(s, GAS, 1);
+    expect(s.heading).toBeGreaterThan(0.2); // rumbo positivo = izquierda
+    const flat = createKart();
+    flat.speed = KART.maxSpeed;
+    run(flat, GAS, 1);
+    expect(flat.heading).toBe(0);
   });
 });

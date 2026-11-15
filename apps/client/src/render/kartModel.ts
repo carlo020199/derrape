@@ -27,10 +27,14 @@ export interface KartModel {
   rearWheels: THREE.Vector3[];
   /** Bocas de los escapes (locales de `body`), para el fuego. */
   exhausts: THREE.Vector3[];
+  /** Centro de la cabeza del piloto (local de `body`), para los retratos. */
+  head: THREE.Vector3;
   /** Coronilla del piloto si le arde la cabeza (local de `body`). */
   headFlame: THREE.Vector3 | null;
   /** Burbuja del escudo (oculta si no hay escudo). */
   shield: THREE.Mesh;
+  /** Sombra redonda (hija de `root`): quien dibuja la baja al suelo durante los saltos. */
+  shadow: THREE.Mesh;
   /** Cambia el gesto del piloto (celebrar, enfadado). `time` en segundos. */
   setMood(mood: Mood, time: number): void;
 }
@@ -442,8 +446,10 @@ export function createKartModel(color = 0xff6b35, characterId: string = DEFAULT_
     root,
     body,
     shield,
+    shadow,
     rearWheels: parts.rear,
     exhausts: parts.exhausts,
+    head: parts.seat.clone().add(new THREE.Vector3(0, HY * scale, 0)),
     headFlame,
     setMood(mood, time) {
       if (mood === "celebrate") {

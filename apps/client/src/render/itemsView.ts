@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { ItemWorld } from "@derrape/shared";
+import { closestPoint, surfaceHeight, type ItemWorld, type Track } from "@derrape/shared";
 import { PAL, toon } from "./look";
 
 // Dibuja cajas, manchas de aceite y cohetes. Las mallas se reutilizan (pool) para no crear objetos por frame.
@@ -27,6 +27,9 @@ function questionTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** Altura de la pista (con peralte) bajo un punto. */
+const groundAt = (track: Track, x: number, z: number) => surfaceHeight(closestPoint(track, x, z));
+
 class Pool<T extends THREE.Object3D> {
   private items: T[] = [];
   constructor(private readonly parent: THREE.Object3D, private readonly make: () => T) {}
@@ -45,6 +48,7 @@ class Pool<T extends THREE.Object3D> {
 export class ItemsView {
   readonly group = new THREE.Group();
   private boxes: THREE.Mesh[] = [];
+  private boxY: number[] = [];
   private oils: Pool<THREE.Mesh>;
   private rockets: Pool<THREE.Group>;
   private time = 0;
@@ -54,7 +58,8 @@ export class ItemsView {
     const boxMat = new THREE.MeshBasicMaterial({ map: questionTexture(), transparent: true, opacity: 0.9 });
     for (const b of world.boxes) {
       const m = new THREE.Mesh(boxGeo, boxMat);
-      m.position.set(b.x, 1.1, b.z);
+      this.boxY.push(groundAt(world.track, b.x, b.z) + 1.1);
+      m.position.set(b.x, this.boxY.at(-1)!, b.z);
       this.group.add(m);
       this.boxes.push(m);
     }
@@ -89,11 +94,11 @@ export class ItemsView {
       const m = this.boxes[i]!;
       m.visible = b.respawn === 0;
       m.rotation.set(0.4, this.time * 1.5 + i, 0.2);
-      m.position.y = 1.1 + Math.sin(this.time * 2.5 + i) * 0.15;
+      m.position.y = this.boxY[i]! + Math.sin(this.time * 2.5 + i) * 0.15;
     });
 
     const oils = this.oils.show(world.oils.length);
-    world.oils.forEach((o, i) => oils[i]!.position.set(o.x, 0.04, o.z));
+    world.oils.forEach((o, i) => oils[i]!.position.set(o.x, groundAt(world.track, o.x, o.z) + 0.08, o.z));
 
     const rockets = this.rockets.show(world.rockets.length);
     world.rockets.forEach((r, i) => {
@@ -101,7 +106,7 @@ export class ItemsView {
       const dx = r.x - g.position.x;
       const dz = r.z - g.position.z;
       if (dx * dx + dz * dz > 1e-4) g.rotation.y = Math.atan2(dx, dz);
-      g.position.set(r.x, 0.8, r.z);
+      g.position.set(r.x, groundAt(world.track, r.x, r.z) + 0.8, r.z);
     });
   }
 }

@@ -28,8 +28,10 @@ import {
   giveBoost,
   gridPose,
   hopHeight,
+  launchKart,
   needsRespawn,
   pointAt,
+  rampCrossed,
   respawnKart,
   standings,
   startResult,
@@ -37,6 +39,7 @@ import {
   stepKart,
   statsFor,
   surfaceAt,
+  surfaceHeight,
   updateProgress,
   useItem,
   type BotDriver,
@@ -130,6 +133,9 @@ interface LocalRacer {
   tuning: typeof KART;
   driftVisual: number;
   spinVisual: number;
+  /** Inclinación por el peralte y distancia en la pista del paso anterior (para las rampas). */
+  roll: number;
+  lastDistance: number;
   y: number;
   stall: number;
   wrongWay: number;
@@ -147,6 +153,7 @@ interface RemoteRacer {
   y: number;
   driftVisual: number;
   spinVisual: number;
+  roll: number;
   finished: boolean;
   stats: KartStats;
 }
@@ -215,6 +222,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       tuning: bot ? deriveTuning({ ...KART, maxSpeed: KART.maxSpeed * speed }, stats, driftMult) : deriveTuning(KART, stats, driftMult),
       driftVisual: 0,
       spinVisual: 0,
+      roll: 0,
+      lastDistance: NaN,
       y: 0,
       stall: 0,
       wrongWay: 0,
@@ -246,6 +255,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         y: 0,
         driftVisual: 0,
         spinVisual: 0,
+        roll: 0,
         finished: false,
         stats: statsFor(p.character, p.kart),
       });
@@ -307,6 +317,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       r.stall = 0;
       r.wrongWay = 0;
       r.respawns = 0;
+      r.lastDistance = NaN;
       if (r === player) r.bot = undefined;
     });
     world.karts = locals.map((r) => r.race);
@@ -490,7 +501,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       stepKart(s, r.bot ? botInput(r.bot, s, track) : input, PHYSICS_DT, tuning);
       const c = collideKartWithTrack(s, track, tuning);
       s.surface = surfaceAt(track, c);
-      r.y = c.y;
+      r.y = surfaceHeight(c);
+      // Peralte visto desde el kart (cambia de signo si va en dirección contraria) y rampas.
+      s.bank = c.bank * Math.cos(s.heading - c.heading);
+      r.roll = s.bank;
+      const ramp = rampCrossed(track, r.lastDistance, c);
+      r.lastDistance = c.distance;
+      if (ramp && launchKart(s, ramp.size, tuning) && r === player) showFlash("¡Salto!");
 
       const event = updateProgress(r.progress, track, c.distance, raceTime, laps);
       if (r === player) {
@@ -507,6 +524,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       }
       if (needsRespawn(s, r.progress, PHYSICS_DT)) {
         respawnKart(s, r.progress, track);
+        r.lastDistance = NaN;
         r.respawns++;
         Object.assign(r.prev, s);
         if (r === player) chase.snap();
@@ -541,7 +559,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
   function drawKart(
     m: KartModel,
-    r: { driftVisual: number; spinVisual: number },
+    r: { driftVisual: number; spinVisual: number; roll: number },
     x: number,
     y: number,
     z: number,
@@ -554,6 +572,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       speed: number;
       shield: boolean;
       shieldLeft: number;
+      hop: number;
       finished: boolean;
     },
     dt: number,
@@ -561,6 +580,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   ) {
     m.root.position.set(x, y, z);
     m.root.rotation.y = heading;
+    // Inclinarse con el peralte (suavizado) y dejar la sombra en el suelo durante los saltos.
+    m.root.rotation.z += ((view.hop > 0.5 ? 0 : r.roll) - m.root.rotation.z) * Math.min(1, dt * 8);
+    m.shadow.position.y = 0.07 - view.hop;
     r.driftVisual += (view.driftDir * KART.driftVisualAngle - r.driftVisual) * Math.min(1, dt * 10);
     // Trompo: dos vueltas completas mientras dura.
     r.spinVisual = view.spinning ? r.spinVisual + dt * Math.PI * 4 : 0;
@@ -580,7 +602,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       const s = rem.buffer.sample(serverNow - INTERP_DELAY);
       rem.model.root.visible = s !== null;
       if (!s) continue;
-      rem.y = closestPoint(track, s.x, s.z).y;
+      const c = closestPoint(track, s.x, s.z);
+      rem.y = surfaceHeight(c);
+      rem.roll = c.bank * Math.cos(s.heading - c.heading);
       rem.shown = { ...createKart(s.x, s.z, s.heading), speed: s.speed, mass: rem.stats.weight };
       drawKart(
         rem.model,
@@ -589,7 +613,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         rem.y + s.hop,
         s.z,
         s.heading,
-        { driftDir: s.driftDir, level: s.driftLevel, spinning: s.spinning, boosting: s.boosting, speed: s.speed, shield: s.shield, shieldLeft: 8, finished: rem.finished },
+        { driftDir: s.driftDir, level: s.driftLevel, spinning: s.spinning, boosting: s.boosting, speed: s.speed, shield: s.shield, shieldLeft: 8, hop: s.hop, finished: rem.finished },
         dt,
         time,
       );
@@ -693,6 +717,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           speed: s.speed,
           shield: s.shieldTime > 0,
           shieldLeft: s.shieldTime,
+          hop: hopHeight(s),
           finished: r.progress.finishTime !== null,
         },
         dt,

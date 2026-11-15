@@ -555,11 +555,19 @@ body.in-menu #help { display: none !important; }
   box-shadow: none;
   line-height: 1.15;
 }
+.picker button img {
+  grid-row: span 2;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 35%, var(--niebla), var(--ciruela));
+}
+#garage-chars { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .picker button i { grid-row: span 2; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--noche); }
 .picker button b { grid-column: 2; font-size: 14px; font-weight: 800; }
-.picker button:not(:has(i)) b { grid-column: 1 / -1; }
+.picker button:not(:has(i, img)) b { grid-column: 1 / -1; }
 .picker button small { grid-column: 2; font-size: 11px; font-weight: 600; color: var(--hueso-sombra); }
-.picker button:not(:has(i)) small { grid-column: 1 / -1; }
+.picker button:not(:has(i, img)) small { grid-column: 1 / -1; }
 .screen .picker button.sel {
   border-color: var(--brasa);
   background: rgb(255 106 31 / 0.2);

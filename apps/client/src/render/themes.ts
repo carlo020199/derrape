@@ -122,7 +122,10 @@ function roadLights(scene: THREE.Object3D, track: Track, every = 3) {
     if (i % every !== 0) return;
     const off = p.w / 2 + track.verge;
     const color = (i / every) % 2 === 0 ? PAL.llama : PAL.brasa;
-    for (const side of [-1, 1]) dots.add(p.x + left[i]!.x * off * side, p.y + 0.95, p.z + left[i]!.z * off * side, 0, 1, 1, 1, color);
+    for (const side of [-1, 1]) {
+      const y = p.y + 0.95 + off * side * Math.tan(p.bank);
+      dots.add(p.x + left[i]!.x * off * side, y, p.z + left[i]!.z * off * side, 0, 1, 1, 1, color);
+    }
   });
   dots.build(scene);
 }
@@ -193,6 +196,9 @@ const puerto: ThemeKit = {
     // Recorrer la pista colocando decoración a los lados.
     const pts = track.points;
     const edge = (i: number) => pts[i]!.w / 2 + track.verge;
+    // El puerto es un pueblo; la laguna, más bosque y cementerio.
+    const town = def.theme === "puerto" ? 0.6 : 0.25;
+    const woods = def.theme === "puerto" ? 0.82 : 0.65;
     for (let i = 0; i < pts.length; i += 4) {
       const p = pts[i]!;
       const l = left[i]!;
@@ -201,7 +207,7 @@ const puerto: ThemeKit = {
       const outerSide = -inner;
       const kind = rand();
 
-      if (kind < 0.6) {
+      if (kind < town) {
         // Casas con tejado puntiagudo y ventanas encendidas hacia la pista.
         const w = 4 + rand() * 5;
         const h = 3.5 + rand() * 6;
@@ -225,7 +231,7 @@ const puerto: ThemeKit = {
             glows.add(wx, wy + 0.6, wz, lightColor, 0.35);
           }
         }
-      } else if (kind < 0.82) {
+      } else if (kind < woods) {
         // Árbol morado de copa redonda.
         const off = edge(i) + 2.8 + rand() * 2;
         const x = p.x + l.x * off * outerSide;
@@ -272,7 +278,7 @@ const puerto: ThemeKit = {
     }
 
     // Dársena: laguna espectral dentro del circuito, con barcas y fuegos fatuos.
-    if (def.landmarks?.some((m) => m.kind === "darsena")) {
+    if (def.landmarks?.some((m) => m.kind === "darsena" || m.kind === "laguna")) {
       const poly = pts
         .filter((_, i) => i % 2 === 0)
         .map((p, k) => {
@@ -307,6 +313,7 @@ const puerto: ThemeKit = {
     }
 
     // Mar abierto al norte y al este, más allá del espigón.
+    if (def.theme === "puerto") {
     const xs = pts.map((p) => p.x);
     const zs = pts.map((p) => p.z);
     const maxX = Math.max(...xs) + track.width / 2 + track.verge + 8;
@@ -319,6 +326,7 @@ const puerto: ThemeKit = {
     east.rotation.x = -Math.PI / 2;
     east.position.set(maxX + 400, -0.1, 0);
     scene.add(north, east);
+    }
 
     // Faro sobre una roca: franjas de hueso y morado, con luz espectral.
     for (const m of def.landmarks ?? []) {
@@ -355,4 +363,15 @@ const puerto: ThemeKit = {
   },
 };
 
-export const THEMES: Record<ThemeId, ThemeKit> = { pruebas, puerto };
+// --- Tema laguna: el mismo kit, con cielo más frío, resplandor espectral y bordillos turquesa ---
+const laguna: ThemeKit = {
+  ...puerto,
+  sky: 0x2c3a7a,
+  skyTop: 0x0c0d2a,
+  glow: 0x2fb7a4,
+  fog: [70, 300],
+  ground: 0x231d44,
+  track: { road: 0x35304f, curbA: PAL.hueso, curbB: 0x1fae9c, verge: 0x3a2f63, wall: PAL.huesoSombra, groundY: -0.2 },
+};
+
+export const THEMES: Record<ThemeId, ThemeKit> = { pruebas, puerto, laguna };
