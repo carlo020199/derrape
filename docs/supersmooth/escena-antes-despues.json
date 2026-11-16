@@ -1,0 +1,15 @@
+{
+  "metodo": "renderer.info de WebGL (SwiftShader, Chrome headless, 390×844) en Laguna de las Ánimas con el kart quieto, vía session.debug().stats(). Los ms por fotograma son de render por software: solo sirven para comparar entre sí, NO son fps de iPhone.",
+  "antes": {
+    "tramo-23-26-codo": { "calls": 36, "triangles": 26802, "msPorFrame": 40.2 },
+    "tramo-33-35-valle": { "calls": 32, "triangles": 26746, "msPorFrame": 23.4 },
+    "tramo-38-44-linternas": { "calls": 28, "triangles": 22704, "msPorFrame": 19.4 },
+    "horquilla-sepulturero": { "calls": 24, "triangles": 20682, "msPorFrame": 24.8 }
+  },
+  "despues": {
+    "tramo-23-26-codo": { "calls": 36, "triangles": 44058, "msPorFrame": 54.7 },
+    "tramo-33-35-valle": { "calls": 32, "triangles": 44042, "msPorFrame": 35.9 },
+    "tramo-38-44-linternas": { "calls": 28, "triangles": 39974, "msPorFrame": 32.6 },
+    "horquilla-sepulturero": { "calls": 24, "triangles": 32442, "msPorFrame": 22.6 }
+  }
+}
