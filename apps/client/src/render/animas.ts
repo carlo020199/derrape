@@ -315,24 +315,19 @@ function boostMarks(track: Track) {
  * más un óvalo bajo el salto. `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma).
  * Las posiciones están en mundo (x, z); el mesh solo pone la altura.
  */
-export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; z: number }): THREE.BufferGeometry {
-  const pos: number[] = [];
-  const cen: number[] = [];
-  const idx: number[] = [];
-  // Óvalo (abanico) bajo el salto.
-  const rx = 26;
-  const rz = 22;
-  pos.push(mid.x, 0, mid.z);
-  cen.push(1);
-  const seg = 28;
-  for (let i = 0; i < seg; i++) {
-    const a = (i / seg) * Math.PI * 2;
-    const k = 1 + 0.08 * Math.sin(a * 3);
-    pos.push(mid.x + Math.cos(a) * rx * k, 0, mid.z + Math.sin(a) * rz * k);
-    cen.push(0);
-    idx.push(0, 1 + i, 1 + ((i + 1) % seg));
-  }
-  // Cauce desde el óvalo hacia el campanario, con meandros.
+const FAR_LIFT = 22;
+
+export interface LagoonShape {
+  mid: { x: number; z: number };
+  rx: number;
+  rz: number;
+  /** Ejes de cauce con su semiancho: del óvalo al campanario y el río lejano que cruza el valle de cara a la salida. */
+  rivers: { x: number; z: number; half: number; lift: number }[][];
+}
+
+export function lagoonShape(mid: { x: number; z: number }, end: { x: number; z: number }): LagoonShape {
+  const rx = 48;
+  const rz = 24;
   const dx = end.x - mid.x;
   const dz = end.z - mid.z;
   const len = Math.hypot(dx, dz) || 1;
@@ -340,32 +335,177 @@ export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; 
   const nz = dx / len;
   const curve = new THREE.CatmullRomCurve3(
     [0, 0.14, 0.3, 0.46, 0.62, 0.78, 0.92].map((t, i) => {
-      const off = [0, 8, -9, 8, -6, 4, 0][i]! * 1;
+      const off = [0, 8, -9, 8, -6, 4, 0][i]!;
       return new THREE.Vector3(mid.x + dx * t + nx * off, 0, mid.z + dz * t + nz * off);
     }),
   );
   const steps = 44;
-  const base = pos.length / 3;
+  const river: LagoonShape["rivers"][number] = [];
   const p = new THREE.Vector3();
-  const tg = new THREE.Vector3();
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     curve.getPoint(t, p);
-    curve.getTangent(t, tg);
-    const half = (11 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.35 * t) * Math.min(1, 0.4 + t * 6);
-    const lx = -tg.z;
-    const lz = tg.x;
-    pos.push(p.x + lx * half, 0, p.z + lz * half, p.x, 0, p.z, p.x - lx * half, 0, p.z - lz * half);
-    cen.push(0, 1, 0);
-    if (i < steps) {
-      const o = base + i * 3;
-      idx.push(o, o + 3, o + 1, o + 1, o + 3, o + 4, o + 1, o + 4, o + 2, o + 2, o + 4, o + 5);
+    const half = (13 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.3 * t) * Math.min(1, 0.4 + t * 6);
+    river.push({ x: p.x, z: p.z, half, lift: 0 });
+  }
+  // Río lejano: cruza el valle por detrás del gancho de la pista, justo en la línea de mirada desde la
+  // salida, y entra en el óvalo por debajo de la calzada (el talud lo tapa).
+  const far = new THREE.CatmullRomCurve3(
+    [
+      [-300, 440, 45],
+      [-170, 400, 50],
+      [-60, 382, 56],
+      [40, 376, 52],
+      [60, 300, 36],
+      [mid.x + 6, 250, 24],
+      [mid.x, mid.z + rz * 0.6, 14],
+    ].map(([x, z]) => new THREE.Vector3(x, 0, z)),
+  );
+  const halfs = [60, 68, 76, 70, 44, 26, 14];
+  const arm: LagoonShape["rivers"][number] = [];
+  for (let i = 0; i <= 40; i++) {
+    const t = i / 40;
+    far.getPoint(t, p);
+    const f = t * (halfs.length - 1);
+    const k = Math.min(halfs.length - 2, Math.floor(f));
+    // El río lejano queda más alto que la laguna para que asome por encima del final de la pista vista desde la salida.
+    arm.push({ x: p.x, z: p.z, half: halfs[k]! + (halfs[k + 1]! - halfs[k]!) * (f - k), lift: FAR_LIFT * (1 - THREE.MathUtils.smoothstep(t, 0.6, 1)) });
+  }
+  return { mid, rx, rz, rivers: [river, arm] };
+}
+
+/** Distancia aproximada a la orilla (negativa dentro del agua), para excavar el terreno. */
+export function lagoonDistance(shape: LagoonShape, x: number, z: number): { d: number; lift: number } {
+  const ex = (x - shape.mid.x) / shape.rx;
+  const ez = (z - shape.mid.z) / shape.rz;
+  let d = (Math.hypot(ex, ez) - 1) * Math.min(shape.rx, shape.rz);
+  let lift = 0;
+  for (const river of shape.rivers) {
+    for (const r of river) {
+      const e = Math.hypot(x - r.x, z - r.z) - r.half;
+      if (e < d) {
+        d = e;
+        lift = r.lift;
+      }
+    }
+  }
+  return { d, lift };
+}
+
+/**
+ * Cauce de la laguna: tira de triángulos con ancho variable más un óvalo.
+ * `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma). Posiciones en mundo (x, z).
+ */
+export function lagoonGeometry(shape: LagoonShape): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const cen: number[] = [];
+  const idx: number[] = [];
+  const { mid, rx, rz, rivers } = shape;
+  pos.push(mid.x, 0, mid.z);
+  cen.push(1);
+  const seg = 32;
+  for (let i = 0; i < seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    const k = 1 + 0.08 * Math.sin(a * 3);
+    pos.push(mid.x + Math.cos(a) * rx * k, 0, mid.z + Math.sin(a) * rz * k);
+    cen.push(0);
+    idx.push(0, 1 + i, 1 + ((i + 1) % seg));
+  }
+  for (const river of rivers) {
+    const base = pos.length / 3;
+    for (let i = 0; i < river.length; i++) {
+      const c = river[i]!;
+      const a = river[Math.max(0, i - 1)]!;
+      const b = river[Math.min(river.length - 1, i + 1)]!;
+      const tl = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+      const lx = -(b.z - a.z) / tl;
+      const lz = (b.x - a.x) / tl;
+      pos.push(c.x + lx * c.half, c.lift, c.z + lz * c.half, c.x, c.lift, c.z, c.x - lx * c.half, c.lift, c.z - lz * c.half);
+      cen.push(0, 1, 0);
+      if (i < river.length - 1) {
+        const o = base + i * 3;
+        idx.push(o, o + 3, o + 1, o + 1, o + 3, o + 4, o + 1, o + 4, o + 2, o + 2, o + 4, o + 5);
+      }
     }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
   geo.setAttribute("aCentre", new THREE.BufferAttribute(new Float32Array(cen), 1));
   geo.setIndex(idx);
+  return geo;
+}
+
+function vhash(x: number, z: number) {
+  const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+function vnoise(x: number, z: number) {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fx = x - ix;
+  const fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx);
+  const v = fz * fz * (3 - 2 * fz);
+  const a = vhash(ix, iz);
+  const b = vhash(ix + 1, iz);
+  const c = vhash(ix, iz + 1);
+  const d = vhash(ix + 1, iz + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+/**
+ * Terreno de hierba toon morada a los lados de la pista: una malla de rejilla con relieve de ruido,
+ * por debajo del talud, con la cuenca de la laguna excavada. Color por vértice #2E2547 → #5B4E7A.
+ */
+export function terrainGeometry(track: Track, shape: LagoonShape, waterY: number, groundY: number): THREE.BufferGeometry {
+  const x0 = -380;
+  const z0 = -300;
+  const n = 100;
+  const step = 760 / n;
+  const pos = new Float32Array((n + 1) * (n + 1) * 3);
+  const col = new Float32Array((n + 1) * (n + 1) * 3);
+  // Un tono por encima de la paleta: el sombreado toon y la niebla lo oscurecen hasta ~#2E2547 → #5B4E7A.
+  const lo = new THREE.Color(0x4a3d73);
+  const hi = new THREE.Color(0x8573b5);
+  const tmp = new THREE.Color();
+  for (let j = 0; j <= n; j++) {
+    for (let i = 0; i <= n; i++) {
+      const x = x0 + i * step;
+      const z = z0 + j * step * 1.05;
+      const c = closestPoint(track, x, z);
+      const away = Math.abs(c.lateral);
+      const amp = 4 + 11 * vnoise(x * 0.012 + 3, z * 0.012);
+      const bumps = vnoise(x * 0.045, z * 0.045) * 0.65 + vnoise(x * 0.11, z * 0.11) * 0.35;
+      let h = groundY + 0.5 + amp * bumps * THREE.MathUtils.smoothstep(away, 17, 55);
+      // Nunca por encima del talud ni de la vista desde la cámara.
+      h = Math.min(h, c.y - 3 + Math.max(0, away - 18) * 0.1);
+      // Cuenca de la laguna: bajo el agua en el cauce y orillas suaves.
+      const { d, lift } = lagoonDistance(shape, x, z);
+      h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * 0.45);
+      h = Math.max(h, groundY - 0.3);
+      const k = (j * (n + 1) + i) * 3;
+      pos[k] = x;
+      pos[k + 1] = h;
+      pos[k + 2] = z;
+      const t = THREE.MathUtils.clamp((h - groundY) / 16 + (vhash(i, j) - 0.5) * 0.12, 0, 1);
+      tmp.copy(lo).lerp(hi, t);
+      col[k] = tmp.r;
+      col[k + 1] = tmp.g;
+      col[k + 2] = tmp.b;
+    }
+  }
+  const idx: number[] = [];
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const a = j * (n + 1) + i;
+      idx.push(a, a + n + 1, a + 1, a + 1, a + n + 1, a + n + 2);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
   return geo;
 }
 
@@ -410,7 +550,10 @@ void main() {
   // Orilla clara.
   col = mix(col, vec3(0.80, 1.0, 0.94), (1.0 - smoothstep(0.0, 0.16, vCentre)) * 0.9);
   gl_FragColor = vec4(col, 1.0);
-  #include <fog_fragment>
+  // La niebla solo apaga el agua a medias: el río lejano tiene que seguir brillando como un camino de luz.
+  #ifdef USE_FOG
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth) * 0.3);
+  #endif
 }
 `;
 
@@ -433,9 +576,9 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   oldMoon?.parent?.remove(oldMoon);
   if (dome) {
     dome.add(stars());
-    dome.add(createClouds(0x5b4e7a, 0x2e2547));
+    dome.add(createClouds(0x8a7cb0, 0x4a3f66));
     dome.add(createHills());
-    const moon = createAnimasMoon(17);
+    const moon = createAnimasMoon(10);
     // Delante del kart en la salida (la recta mira a +z), alta y a la izquierda.
     moon.position.set(95, 72, 190).setLength(214);
     moon.lookAt(0, 0, 0);
@@ -547,15 +690,20 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       low = Math.min(low, surfaceY({ y: p.y, lateral: -p.width / 2, bank: p.bank }));
     }
     const waterY = low - 1.8;
-    // El óvalo se desplaza hacia el lado del campanario: debajo del eje quedaría tapado por la calzada.
-    const toward = (off: number) => {
-      const q = pointAt(track, big.to + 10, off);
-      return Math.hypot(q.x - towerFoot.x, q.z - towerFoot.z);
-    };
-    const mid = pointAt(track, big.to + 10, toward(30) < toward(-30) ? 30 : -30);
-    const lagoon = new THREE.Mesh(lagoonGeometry(mid, towerFoot), lagoonMaterial());
+    // El óvalo queda en el interior del gancho que forma la pista, entre la recta de salida y el salto.
+    const lip2 = pointAt(track, big.to);
+    const mid = { x: (towerFoot.x + lip2.x) / 2 - 3, z: Math.max(towerFoot.z, lip2.z) + 32 };
+    const shape = lagoonShape(mid, towerFoot);
+    const lagoon = new THREE.Mesh(lagoonGeometry(shape), lagoonMaterial());
+    const terrain = new THREE.Mesh(
+      terrainGeometry(track, shape, waterY, GROUND_Y),
+      toonMaterial({ vertexColors: true }),
+    );
+    terrain.name = "terreno";
+    terrain.frustumCulled = false;
+    scene.add(terrain);
     lagoon.position.y = waterY;
-    lagoon.renderOrder = -2;
+    lagoon.renderOrder = 0; // después del cielo (-1): el río lejano queda a más de 230 m, fuera de la cúpula
     lagoon.frustumCulled = false;
     lagoon.name = "laguna";
     const waterMat = lagoon.material as THREE.ShaderMaterial;

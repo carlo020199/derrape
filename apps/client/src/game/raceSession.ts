@@ -195,7 +195,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   showTouchHint();
 
   // El cielo (radio 230) tiene que caber en el plano lejano. La niebla corta a 190.
-  camera.far = 260;
+  // En Ánimas el río lejano brilla por encima del final de la pista (a ~250 m), así que ve más lejos.
+  camera.far = track.relief ? 420 : 260;
   camera.updateProjectionMatrix();
 
   // --- Escena ---
