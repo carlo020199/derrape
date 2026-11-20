@@ -122,19 +122,106 @@ export function createOvalTrack(straight = 120, radius = 45, width = 16, segment
 }
 
 /**
+ * Pendiente de una magnitud (altura o peralte) respecto a la distancia en un nodo,
+ * con la fórmula de Catmull-Rom centrípeto (alpha 0,5): los tramos largos pesan menos
+ * que con el parámetro uniforme y no hay rebasamiento donde los puntos están muy desiguales.
+ * `hL` y `hR` son las distancias a los vecinos; `dL` y `dR`, los incrementos de la magnitud.
+ */
+function centripetalSlope(hL: number, hR: number, dL: number, dR: number): number {
+  const kL = Math.sqrt(hL);
+  const kR = Math.sqrt(hR);
+  const perKnot = dL / kL - (dL + dR) / (kL + kR) + dR / kR;
+  // De d/dτ a d/ds: dτ/ds ≈ (kL + kR) / (hL + hR).
+  return (perKnot * (kL + kR)) / (hL + hR);
+}
+
+/** Interpolación cúbica de Hermite entre dos nodos separados `h` metros. */
+function hermite(v0: number, v1: number, m0: number, m1: number, h: number, u: number): number {
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (
+    (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * h * m0 + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * h * m1
+  );
+}
+
+/**
+ * Segundas derivadas de la spline cúbica periódica (clase C²) que pasa por `v` en nodos separados
+ * `h[i]` (de i a i+1). Sistema cíclico pequeño: eliminación gaussiana directa.
+ */
+function periodicSplineMoments(v: number[], h: number[]): number[] {
+  const n = v.length;
+  const a = Array.from({ length: n }, () => new Array<number>(n + 1).fill(0));
+  for (let i = 0; i < n; i++) {
+    const im = (i - 1 + n) % n;
+    const ip = (i + 1) % n;
+    a[i]![im]! += h[im]!;
+    a[i]![i]! += 2 * (h[im]! + h[i]!);
+    a[i]![ip]! += h[i]!;
+    a[i]![n] = 6 * ((v[ip]! - v[i]!) / h[i]! - (v[i]! - v[im]!) / h[im]!);
+  }
+  for (let col = 0; col < n; col++) {
+    let piv = col;
+    for (let r = col + 1; r < n; r++) if (Math.abs(a[r]![col]!) > Math.abs(a[piv]![col]!)) piv = r;
+    [a[col], a[piv]] = [a[piv]!, a[col]!];
+    const d = a[col]![col]! || 1e-12;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const f = a[r]![col]! / d;
+      if (f !== 0) for (let k = col; k <= n; k++) a[r]![k]! -= f * a[col]![k]!;
+    }
+  }
+  return a.map((row, i) => row[n]! / (row[i]! || 1e-12));
+}
+
+/** Valor de la spline cúbica con momentos `m0`, `m1` en un tramo de longitud `h`, a `u` (0..1). */
+function splineSegment(v0: number, v1: number, m0: number, m1: number, h: number, u: number): number {
+  const w = 1 - u;
+  return w * v0 + u * v1 + ((w * w * w - w) * m0 + (u * u * u - u) * m1) * (h * h) / 6;
+}
+
+type Profile = { y: number; bank: number };
+
+/**
+ * Altura y peralte entre el nodo `i` y el siguiente (u de 0 a 1), con splines de clase C¹ en la
+ * distancia. Así la pendiente y el peralte no tienen escalones en los nodos (antes, lineal a trozos).
+ */
+function profileBetween(points: readonly { x: number; z: number; y: number; bank: number }[], i: number, u: number): Profile {
+  const n = points.length;
+  const p0 = points[(i - 1 + n) % n]!;
+  const p1 = points[i]!;
+  const p2 = points[(i + 1) % n]!;
+  const p3 = points[(i + 2) % n]!;
+  const h0 = Math.hypot(p1.x - p0.x, p1.z - p0.z) || 1;
+  const h1 = Math.hypot(p2.x - p1.x, p2.z - p1.z) || 1;
+  const h2 = Math.hypot(p3.x - p2.x, p3.z - p2.z) || 1;
+  const my1 = centripetalSlope(h0, h1, p1.y - p0.y, p2.y - p1.y);
+  const my2 = centripetalSlope(h1, h2, p2.y - p1.y, p3.y - p2.y);
+  const mb1 = centripetalSlope(h0, h1, p1.bank - p0.bank, p2.bank - p1.bank);
+  const mb2 = centripetalSlope(h1, h2, p2.bank - p1.bank, p3.bank - p2.bank);
+  return {
+    y: hermite(p1.y, p2.y, my1, my2, h1, u),
+    bank: hermite(p1.bank, p2.bank, mb1, mb2, h1, u),
+  };
+}
+
+/**
  * Curva suave y cerrada que pasa por los puntos de control (Catmull-Rom),
- * remuestreada a puntos separados `spacing` metros. Interpola también altura y ancho.
+ * remuestreada a puntos separados `spacing` metros. Interpola también altura, ancho y peralte.
+ * x y z usan Catmull-Rom uniforme (el trazado en planta no cambia). La altura es un spline
+ * Catmull-Rom centrípeto en la distancia y el peralte una spline cúbica C², no lineales entre puntos.
  */
 export function smoothTrack(control: TrackPoint[], width: number, spacing = 3, verge = 0): Track {
   const n = control.length;
   const c = control.map((p) => ({ x: p.x, z: p.z, y: p.y ?? 0, w: p.w ?? width, bank: p.bank ?? 0 }));
   const dense: Required<TrackPoint>[] = [];
+  const nodeStart: number[] = [];
   for (let i = 0; i < n; i++) {
     const p0 = c[(i - 1 + n) % n]!;
     const p1 = c[i]!;
     const p2 = c[(i + 1) % n]!;
     const p3 = c[(i + 2) % n]!;
     const steps = Math.max(4, Math.ceil(Math.hypot(p2.x - p1.x, p2.z - p1.z) / 0.5));
+    nodeStart.push(dense.length);
     for (let s = 0; s < steps; s++) {
       const t = s / steps;
       const t2 = t * t;
@@ -144,10 +231,38 @@ export function smoothTrack(control: TrackPoint[], width: number, spacing = 3, v
       dense.push({
         x: f(p0.x, p1.x, p2.x, p3.x),
         z: f(p0.z, p1.z, p2.z, p3.z),
-        y: f(p0.y, p1.y, p2.y, p3.y),
+        y: p1.y + (p2.y - p1.y) * t,
         w: p1.w + (p2.w - p1.w) * t,
         bank: p1.bank + (p2.bank - p1.bank) * t,
       });
+    }
+  }
+  // Altura y peralte como splines de la distancia recorrida entre puntos de control.
+  const plan = buildTrack(dense, width);
+  const nodeS = nodeStart.map((k) => plan.lengths[k]!);
+  const arc = (i: number) => (i === n - 1 ? plan.length : nodeS[i + 1]!) - nodeS[i]!;
+  // Peralte: spline cúbica C² (su aceleración no salta en los puntos de control).
+  const moments = periodicSplineMoments(
+    c.map((p) => p.bank),
+    c.map((_, i) => arc(i)),
+  );
+  for (let i = 0; i < n; i++) {
+    const a = nodeStart[i]!;
+    const b = i === n - 1 ? dense.length : nodeStart[i + 1]!;
+    const h = arc(i);
+    // Separaciones con los vecinos (cíclicas) a lo largo de la curva.
+    const hPrev = arc((i - 1 + n) % n);
+    const hNext = arc((i + 1) % n);
+    const q0 = c[(i - 1 + n) % n]!;
+    const q1 = c[i]!;
+    const q2 = c[(i + 1) % n]!;
+    const q3 = c[(i + 2) % n]!;
+    const m1y = centripetalSlope(hPrev, h, q1.y - q0.y, q2.y - q1.y);
+    const m2y = centripetalSlope(h, hNext, q2.y - q1.y, q3.y - q2.y);
+    for (let k = a; k < b; k++) {
+      const u = (plan.lengths[k]! - nodeS[i]!) / (h || 1);
+      dense[k]!.y = hermite(q1.y, q2.y, m1y, m2y, h, u);
+      dense[k]!.bank = splineSegment(q1.bank, q2.bank, moments[i]!, moments[(i + 1) % n]!, h, u);
     }
   }
   // Remuestrear a distancia constante para que los segmentos sean parecidos.
@@ -158,33 +273,22 @@ export function smoothTrack(control: TrackPoint[], width: number, spacing = 3, v
     const p = pointAt(fine, (i / count) * fine.length);
     points.push({ x: p.x, z: p.z, y: p.y, w: p.width, bank: p.bank });
   }
-  // La curva a veces comprime un cambio de peralte por encima de 2°/m.
-  // Se reparte con los vecinos. Con bank 0 (el resto de circuitos) no hace nada.
-  capBankRate(points, 1.95);
   return buildTrack(points, width, verge);
 }
 
-/** Reparte los saltos de peralte más bruscos que `maxPerMeter` grados por metro. */
-function capBankRate(points: TrackPoint[], maxPerMeter: number) {
-  const n = points.length;
-  for (let pass = 0; pass < 12; pass++) {
-    let hot = false;
-    for (let i = 0; i < n; i++) {
-      const a = points[i]!;
-      const b = points[(i + 1) % n]!;
-      const ds = Math.hypot(b.x - a.x, b.z - a.z) || 1;
-      const maxDelta = maxPerMeter * ds;
-      const delta = (b.bank ?? 0) - (a.bank ?? 0);
-      if (Math.abs(delta) > maxDelta + 1e-4) {
-        const excess = (Math.abs(delta) - maxDelta) / 2;
-        const sign = Math.sign(delta);
-        a.bank = (a.bank ?? 0) + sign * excess;
-        b.bank = (b.bank ?? 0) - sign * excess;
-        hot = true;
-      }
-    }
-    if (!hot) break;
+/**
+ * Ritmo de cambio del peralte más brusco (°/m) entre nodos contiguos.
+ * Es solo una comprobación: antes `capBankRate` repartía los saltos entre vecinos y movía los datos.
+ */
+export function maxBankRate(track: Track): number {
+  const pts = track.points;
+  let worst = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i]!;
+    const b = pts[(i + 1) % pts.length]!;
+    worst = Math.max(worst, Math.abs(b.bank - a.bank) / (Math.hypot(b.x - a.x, b.z - a.z) || 1));
   }
+  return worst;
 }
 
 /** Lleva una distancia cualquiera al rango 0..length. */
@@ -214,13 +318,14 @@ export function pointAt(
   const u = (d - lengths[lo]!) / segLen;
   const dx = (b.x - a.x) / segLen;
   const dz = (b.z - a.z) / segLen;
+  const prof = profileBetween(points, lo, u);
   // Normal izquierda (dz, -dx): la del sentido en que gira el kart con rumbo positivo.
   return {
     x: a.x + (b.x - a.x) * u + dz * lateral,
     z: a.z + (b.z - a.z) * u - dx * lateral,
-    y: a.y + (b.y - a.y) * u,
+    y: prof.y,
     width: a.w + (b.w - a.w) * u,
-    bank: a.bank + (b.bank - a.bank) * u,
+    bank: prof.bank,
     heading: Math.atan2(dx, dz),
   };
 }
@@ -252,12 +357,13 @@ export function closestPoint(track: Track, x: number, z: number): ClosestPoint {
   const pz = a.z + dz * bestU;
   // Producto cruzado: >0 si el punto está a la izquierda del segmento.
   const side = Math.sign(dz * (x - a.x) - dx * (z - a.z)) || 1;
+  const prof = profileBetween(pts, best, bestU);
   return {
     x: px,
     z: pz,
-    y: a.y + (b.y - a.y) * bestU,
+    y: prof.y,
     width: a.w + (b.w - a.w) * bestU,
-    bank: a.bank + (b.bank - a.bank) * bestU,
+    bank: prof.bank,
     lateral: Math.sqrt(bestD2) * side,
     segment: best,
     distance: track.lengths[best]! + Math.hypot(dx, dz) * bestU,
@@ -359,6 +465,51 @@ export function surfaceNormal(track: Track, c: ClosestPoint): { x: number; y: nu
     nz = -nz;
   }
   return { x: nx / len, y: ny / len, z: nz / len };
+}
+
+/** Marco de la calzada en el eje de un punto, con rumbo y pendiente filtrados (no a trozos). */
+export interface RoadFrame {
+  x: number;
+  y: number;
+  z: number;
+  /** Rumbo suavizado (rad): dirección entre los puntos a ±`window` metros. */
+  heading: number;
+  /** Pendiente dy/ds con el mismo filtro. */
+  grade: number;
+  /** Peralte (°) y ancho del asfalto. */
+  bank: number;
+  width: number;
+}
+
+/**
+ * Posición, rumbo, pendiente y peralte a `distance` metros. El rumbo y la pendiente se toman entre
+ * `distance ± window`, así no saltan en los nodos de la polilínea (cada ~3 m) y las normales de la
+ * malla salen continuas.
+ */
+export function roadFrameAt(track: Track, distance: number, window = 1.5): RoadFrame {
+  const p = pointAt(track, distance);
+  const a = pointAt(track, distance - window);
+  const b = pointAt(track, distance + window);
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const h = Math.hypot(dx, dz) || 1;
+  return { x: p.x, y: p.y, z: p.z, heading: Math.atan2(dx, dz), grade: (b.y - a.y) / h, bank: p.bank, width: p.width };
+}
+
+/**
+ * Normal de la calzada (hacia arriba) a partir del rumbo, la pendiente y el peralte, sin pasar por
+ * caras de la malla: es analítica, así que el sombreado no muestra escalones.
+ */
+export function roadNormal(heading: number, grade: number, bankDeg: number): { x: number; y: number; z: number } {
+  const tx = Math.sin(heading);
+  const tz = Math.cos(heading);
+  const tb = Math.tan((bankDeg * Math.PI) / 180);
+  // L × T, con T = (tx, grade, tz) a lo largo de la pista y L = (tz, -tb, -tx) a la izquierda, inclinado.
+  const cx = -tb * tz + tx * grade;
+  const cy = -tx * tx - tz * tz;
+  const cz = tz * grade + tb * tx;
+  const len = Math.hypot(cx, cy, cz) || 1;
+  return cy < 0 ? { x: -cx / len, y: -cy / len, z: -cz / len } : { x: cx / len, y: cy / len, z: cz / len };
 }
 
 /** Seno de la pendiente en el rumbo del kart. Positivo = cuesta arriba. 0 si el circuito no tiene relieve. */

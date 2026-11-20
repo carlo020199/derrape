@@ -28,6 +28,24 @@ export const CAMERA = {
   reliefPortraitLookLift: 0.9,
 };
 
+/** Máxima velocidad de alabeo de la cámara (°/s) y salto vertical por fotograma a 60 fps (m). */
+export const ROLL_RATE_MAX = 25;
+export const CAM_Y_STEP_MAX = 0.15;
+/** Anchura (m) de la transición del suelo: dentro de ella la cámara se apoya sin quiebro. */
+const FLOOR_BLEND = 0.4;
+
+/**
+ * Máximo suave entre `y` y el suelo: igual a `max(y, floor)` fuera de la banda de `FLOOR_BLEND` m
+ * y con transición cuadrática dentro, así el suelo no empuja la cámara de golpe.
+ */
+export function softFloor(y: number, floor: number): number {
+  const d = y - floor;
+  if (d >= FLOOR_BLEND) return y;
+  if (d <= -FLOOR_BLEND) return floor;
+  const t = (d + FLOOR_BLEND) / (2 * FLOOR_BLEND);
+  return floor + (d + FLOOR_BLEND) * t * 0.5;
+}
+
 export interface CameraCue {
   /** Circuito con peralte y saltos. Sin esto, la cámara es la de siempre. */
   relief: boolean;
@@ -131,7 +149,7 @@ export class ChaseCamera {
     const lookBase = y + n.y * lookLift;
     const underCam = cue.floorAt(behindX, behindZ);
     const underLook = cue.floorAt(lookX, lookZ);
-    if (!cue.airborne && camBase < underCam + 0.15) camBase = underCam + 0.15;
+    if (!cue.airborne) camBase = softFloor(camBase, underCam + 0.15);
     const desiredCamY = cue.airborne ? Math.min(y + height, underCam + height + 0.6) : camBase;
     const desiredLookY = cue.airborne ? Math.min(y + 0.35, underLook + 0.8 + 0.6) : lookBase;
     if (!this.initialized) {
@@ -147,18 +165,19 @@ export class ChaseCamera {
     if (this.dip < 0) this.dip = Math.min(0, this.dip + (0.2 / 0.25) * dt);
     const kPos = 1 - Math.exp(-CAMERA.follow * dt);
     const kY = cue.airborne ? 1 - Math.pow(0.85, dt * 60) : kPos;
-    this.camY += (desiredCamY - this.camY) * kY;
+    // Salto vertical limitado por fotograma (a 60 fps), también al subir o bajar de golpe.
+    const yStep = CAM_Y_STEP_MAX * Math.max(1, dt * 60);
+    this.camY += THREE.MathUtils.clamp((desiredCamY - this.camY) * kY, -yStep, yStep);
     this.lookY += (desiredLookY - this.lookY) * kY;
     const targetRoll = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -32, 32);
-    this.rollDeg += (targetRoll - this.rollDeg) * kSmooth;
+    const rollStep = ROLL_RATE_MAX * dt;
+    this.rollDeg += THREE.MathUtils.clamp((targetRoll - this.rollDeg) * kSmooth, -rollStep, rollStep);
     const targetPos = new THREE.Vector3(behindX, this.camY + this.dip, behindZ);
-    const floor = cue.floorAt(targetPos.x, targetPos.z) + 0.15;
-    if (targetPos.y < floor) targetPos.y = floor;
+    targetPos.y = softFloor(targetPos.y, cue.floorAt(targetPos.x, targetPos.z) + 0.15);
     const targetLook = new THREE.Vector3(lookX, this.lookY, lookZ);
     this.pos.lerp(targetPos, kPos);
     this.look.lerp(targetLook, Math.min(1, kPos * 2));
-    const settled = cue.floorAt(this.pos.x, this.pos.z) + 0.15;
-    if (settled > this.pos.y) this.pos.y = settled;
+    this.pos.y = softFloor(this.pos.y, cue.floorAt(this.pos.x, this.pos.z) + 0.15);
 
     this.camera.position.copy(this.pos);
     this.camera.up.set(0, 1, 0);

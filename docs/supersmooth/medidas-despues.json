@@ -1,0 +1,338 @@
+[
+  {
+    "id": "pruebas",
+    "largo": 611,
+    "nodos": 204,
+    "malla": {
+      "llamadas": 10,
+      "triangulos": 6928,
+      "llamadasVisiblesEnParrilla": 10
+    },
+    "quiebros": {
+      "pendienteMax": 0,
+      "cambioPendienteMax": 0,
+      "radioValleMin": null,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0
+    },
+    "donde": {
+      "grade": 0,
+      "gradeChange": 0,
+      "sag": 0,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 0
+    }
+  },
+  {
+    "id": "paseo-del-puerto",
+    "largo": 1492.3,
+    "nodos": 497,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 22880,
+      "llamadasVisiblesEnParrilla": 12
+    },
+    "quiebros": {
+      "pendienteMax": 0.059,
+      "cambioPendienteMax": 0.0024,
+      "radioValleMin": 425.1,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0.12
+    },
+    "donde": {
+      "grade": 1457.2567100700912,
+      "gradeChange": 1488.7514520029954,
+      "sag": 1488.7514520029954,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 1488.2515354643779
+    }
+  },
+  {
+    "id": "playa-dorada",
+    "largo": 1414.4,
+    "nodos": 471,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21688,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0.069,
+      "cambioPendienteMax": 0.0018,
+      "radioValleMin": 586.5,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0.09
+    },
+    "donde": {
+      "grade": 1010.4123946294359,
+      "gradeChange": 962.9165126453703,
+      "sag": 1059.9081032233566,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 963.916425950298
+    }
+  },
+  {
+    "id": "mercado-central",
+    "largo": 1378.6,
+    "nodos": 460,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21152,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0,
+      "cambioPendienteMax": 0,
+      "radioValleMin": null,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0
+    },
+    "donde": {
+      "grade": 0,
+      "gradeChange": 0,
+      "sag": 0,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 0
+    }
+  },
+  {
+    "id": "vinedos",
+    "largo": 1400,
+    "nodos": 467,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21474,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0.026,
+      "cambioPendienteMax": 0.0002,
+      "radioValleMin": 6037.6,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0.01
+    },
+    "donde": {
+      "grade": 1373.990466550077,
+      "gradeChange": 1324.4908100040589,
+      "sag": 1324.4908100040589,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 73.99948655364315
+    }
+  },
+  {
+    "id": "feria-loca",
+    "largo": 1356.8,
+    "nodos": 452,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 20800,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0.031,
+      "cambioPendienteMax": 0.001,
+      "radioValleMin": 1113.6,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0.05
+    },
+    "donde": {
+      "grade": 562.9322441198713,
+      "gradeChange": 524.4368775148712,
+      "sag": 602.9274302029883,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 524.9368173409101
+    }
+  },
+  {
+    "id": "estacion-vieja",
+    "largo": 1422,
+    "nodos": 474,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21802,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0,
+      "cambioPendienteMax": 0,
+      "radioValleMin": null,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0
+    },
+    "donde": {
+      "grade": 0,
+      "gradeChange": 0,
+      "sag": 0,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 0
+    }
+  },
+  {
+    "id": "pico-nevado",
+    "largo": 1400,
+    "nodos": 467,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21474,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0.032,
+      "cambioPendienteMax": 0.0002,
+      "radioValleMin": 4094.8,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0.01
+    },
+    "donde": {
+      "grade": 1017.4929401125933,
+      "gradeChange": 1399.4902896192377,
+      "sag": 1399.4902896192377,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 1399.4902896192377
+    }
+  },
+  {
+    "id": "canon-rojo",
+    "largo": 1440.4,
+    "nodos": 480,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 22092,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0,
+      "cambioPendienteMax": 0,
+      "radioValleMin": null,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0
+    },
+    "donde": {
+      "grade": 0,
+      "gradeChange": 0,
+      "sag": 0,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 0
+    }
+  },
+  {
+    "id": "volcan-dormido",
+    "largo": 1414.4,
+    "nodos": 471,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21688,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0,
+      "cambioPendienteMax": 0,
+      "radioValleMin": null,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0
+    },
+    "donde": {
+      "grade": 0,
+      "gradeChange": 0,
+      "sag": 0,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 0
+    }
+  },
+  {
+    "id": "ciudad-neon",
+    "largo": 1407.7,
+    "nodos": 469,
+    "malla": {
+      "llamadas": 12,
+      "triangulos": 21586,
+      "llamadasVisiblesEnParrilla": 8
+    },
+    "quiebros": {
+      "pendienteMax": 0.04,
+      "cambioPendienteMax": 0.0017,
+      "radioValleMin": 606,
+      "peralteMax": 0,
+      "peralteRitmoMax": 0,
+      "peralteAceleracionMax": 0,
+      "saltoNormalMax": 0.09
+    },
+    "donde": {
+      "grade": 1358.1713449345934,
+      "gradeChange": 1407.159490611292,
+      "sag": 1407.159490611292,
+      "bank": 0,
+      "bankRate": 0,
+      "bankAccel": 0,
+      "normal": 1407.159490611292
+    }
+  },
+  {
+    "id": "laguna-de-las-animas",
+    "largo": 1491.2,
+    "nodos": 497,
+    "malla": {
+      "llamadas": 14,
+      "triangulos": 29732,
+      "llamadasVisiblesEnParrilla": 13
+    },
+    "quiebros": {
+      "pendienteMax": 0.192,
+      "cambioPendienteMax": 0.0138,
+      "radioValleMin": 72.6,
+      "peralteMax": 28.7,
+      "peralteRitmoMax": 1.19,
+      "peralteAceleracionMax": 0.142,
+      "saltoNormalMax": 1.74
+    },
+    "donde": {
+      "grade": 79.48583585018315,
+      "gradeChange": 1016.8188057815881,
+      "sag": 1016.8188057815881,
+      "bank": 544.40298893616,
+      "bankRate": 967.32762496921,
+      "bankAccel": 950.3306537811205,
+      "normal": 1015.8189839469946
+    }
+  }
+]

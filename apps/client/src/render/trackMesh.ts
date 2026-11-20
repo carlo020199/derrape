@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Track } from "@derrape/shared";
+import { roadFrameAt, roadNormal, type RoadFrame, type Track } from "@derrape/shared";
 import { PALETTE, animasAsphaltLineMaterial, animasAsphaltMaterial, markShared, sharedVertexToonDouble } from "./materials";
 
 // Malla de la pista generada a partir de la línea central: asfalto, bordillos, arcén,
@@ -90,11 +90,71 @@ export function leftNormals(track: Track) {
   });
 }
 
+/** Separación base de los anillos de la calzada (m) y la fina donde cambian la pendiente o el peralte. */
+export const MESH_STEP = 1;
+export const MESH_STEP_FINE = 0.5;
+
+interface Ring extends RoadFrame {
+  d: number;
+  /** Curvatura en planta con signo (1/m): + = gira a la izquierda. */
+  kappa: number;
+}
+
+function ringAt(track: Track, d: number): Ring {
+  const f = roadFrameAt(track, d);
+  const a = roadFrameAt(track, d - 1.5).heading;
+  const b = roadFrameAt(track, d + 1.5).heading;
+  let dh = b - a;
+  while (dh > Math.PI) dh -= Math.PI * 2;
+  while (dh < -Math.PI) dh += Math.PI * 2;
+  return { ...f, d, kappa: dh / 3 };
+}
+
+/**
+ * Distancias de los anillos: cada `MESH_STEP` m, y cada `MESH_STEP_FINE` donde la pendiente o el peralte
+ * cambian de ritmo (curvas verticales, entradas y salidas de peralte).
+ */
+export function ringDistances(track: Track): number[] {
+  const half = MESH_STEP_FINE;
+  const count = Math.round(track.length / half);
+  const step = track.length / count;
+  const f = Array.from({ length: count + 2 }, (_, i) => roadFrameAt(track, (i - 1) * step));
+  const active = (i: number) => {
+    const a = f[i]!;
+    const b = f[i + 1]!;
+    const c = f[i + 2]!;
+    const dGrade = Math.abs(c.grade - 2 * b.grade + a.grade) / (step * step);
+    const dBank = Math.abs(c.bank - 2 * b.bank + a.bank) / (step * step);
+    return dGrade > 0.004 || dBank > 0.05;
+  };
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) {
+    // Un anillo cada 2 muestras (1 m); el intermedio solo si hay cambio de ritmo cerca.
+    if (i % 2 === 0 || active(i) || active(Math.max(0, i - 1)) || active(Math.min(count - 1, i + 1))) out.push(i * step);
+  }
+  return out;
+}
+
+/**
+ * Comprime el desplazamiento lateral en el lado interior de una curva cerrada: pasado el 50 % del radio
+ * se acerca despacio al 90 %, así el borde no cruza el centro de curvatura y no se pliega.
+ */
+export function squashOffset(offset: number, kappa: number): number {
+  if (kappa * offset <= 0) return offset;
+  const radius = 1 / Math.abs(kappa);
+  const a = radius * 0.5;
+  const e = Math.abs(offset);
+  if (e <= a) return offset;
+  const b = radius * 0.9;
+  return Math.sign(offset) * (a + (b - a) * (1 - Math.exp(-(e - a) / (b - a))));
+}
+
 export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group {
   const group = new THREE.Group();
   const pts = track.points;
   const n = pts.length;
   const left = leftNormals(track);
+  const nodeKappa = pts.map((_, k) => ringAt(track, track.lengths[k]!).kappa);
 
   /**
    * Altura de la calzada en un borde. Con peralte 0 es la línea central más el realce,
@@ -138,11 +198,10 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     const cb = new THREE.Color(colorB);
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
-      const vert = (k: number, off: number, lift: number, ground: boolean) => [
-        pts[k]!.x + left[k]!.x * off,
-        heightAt(k, off, lift, ground),
-        pts[k]!.z + left[k]!.z * off,
-      ];
+      const vert = (k: number, off: number, lift: number, ground: boolean) => {
+        const o = squashOffset(off, nodeKappa[k]!);
+        return [pts[k]!.x + left[k]!.x * o, heightAt(k, off, lift, ground), pts[k]!.z + left[k]!.z * o];
+      };
       const bi = pts[i]!.bank ?? 0;
       const bj = pts[j]!.bank ?? 0;
       const a0 = vert(i, inner(pts[i]!.w, bi), liftOf(liftIn, bi), groundIn);
@@ -164,51 +223,125 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     return mesh;
   }
 
+
+  // Anillos finos de la calzada, compartidos por todas las tiras de superficie.
+  const baseRings = ringDistances(track).map((d) => ringAt(track, d));
+  const extra = new Map<number, Ring>();
+  const ringFor = (d: number) => {
+    const key = Math.round(d * 1000);
+    let r = extra.get(key);
+    if (!r) extra.set(key, (r = ringAt(track, d)));
+    return r;
+  };
+
+  /**
+   * Tira de superficie con geometría indexada y normales analíticas (pendiente + peralte):
+   * el toon no muestra escalones entre segmentos. `breaks` son distancias donde cambia el color
+   * y donde se duplican los vértices.
+   */
+  function roadStrip(
+    inner: (w: number, bank: number) => number,
+    outer: (w: number, bank: number) => number,
+    liftIn: Lift,
+    liftOut: Lift,
+    colorAt: (d: number, bank: number) => THREE.Color,
+    mat: THREE.Material,
+    breaks: number[] = [],
+  ) {
+    const rings: Ring[] = baseRings.slice();
+    for (const b of breaks) if (b > 0 && b < track.length) rings.push(ringFor(b));
+    rings.sort((p, q) => p.d - q.d);
+    const pos: number[] = [];
+    const nor: number[] = [];
+    const col: number[] = [];
+    const idx: number[] = [];
+    const emit = (r: Ring, c: THREE.Color) => {
+      const n = roadNormal(r.heading, r.grade, r.bank);
+      const lx = Math.cos(r.heading);
+      const lz = -Math.sin(r.heading);
+      const base = pos.length / 3;
+      for (const [off, lift] of [
+        [inner(r.width, r.bank), liftOf(liftIn, r.bank)],
+        [outer(r.width, r.bank), liftOf(liftOut, r.bank)],
+      ] as const) {
+        const o = squashOffset(off, r.kappa);
+        pos.push(r.x + lx * o, r.y - off * Math.tan((r.bank * Math.PI) / 180) + lift, r.z + lz * o);
+        nor.push(n.x, n.y, n.z);
+        col.push(c.r, c.g, c.b);
+      }
+      return base;
+    };
+    const total = rings.length;
+    let prevColor: THREE.Color | null = null;
+    let prevBase = 0;
+    for (let k = 0; k < total; k++) {
+      const a = rings[k]!;
+      const b = rings[(k + 1) % total]!;
+      const dB = k === total - 1 ? track.length + b.d : b.d;
+      const c = colorAt((a.d + dB) / 2, (a.bank + b.bank) / 2);
+      const aBase = prevColor && prevColor.equals(c) ? prevBase : emit(a, c);
+      const bBase = emit(b, c);
+      // Mismo orden de caras que antes: (a0, a1, b1) y (a0, b1, b0).
+      idx.push(aBase, aBase + 1, bBase + 1, aBase, bBase + 1, bBase);
+      prevColor = c;
+      prevBase = bBase;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    geo.setIndex(idx);
+    const mesh = new THREE.Mesh(geo, mat);
+    group.add(mesh);
+    return mesh;
+  }
+  const flat = (c: THREE.Color) => () => c;
+  const stripeLen = (every: number) => (every * track.length) / n;
+  const multiples = (len: number, offset = 0) => {
+    const out: number[] = [];
+    for (let d = offset; d < track.length; d += len) out.push(d);
+    return out;
+  };
+
   const v = track.verge;
 
   // Asfalto y bordillos. En llano el realce es el de siempre (0,02 / 0,04).
   const roadMat = colors.animasAsphalt ? animasAsphaltMaterial() : sharedVertexToonDouble();
-  strip((w) => -w / 2, (w) => w / 2, colors.road, colors.road, 0.02, 0.02, false, false, 1, roadMat);
+  roadStrip((w) => -w / 2, (w) => w / 2, 0.02, 0.02, flat(new THREE.Color(colors.road)), roadMat);
   const innerA = colors.innerCurbA != null ? new THREE.Color(colors.innerCurbA) : null;
   const innerB = colors.innerCurbB != null ? new THREE.Color(colors.innerCurbB) : null;
-  const curbColor = (side: number) => (segment: number, bank: number) => {
+  const curbA = new THREE.Color(colors.curbA);
+  const curbB = new THREE.Color(colors.curbB);
+  const curbLen = stripeLen(curbEvery);
+  const curbColor = (side: number) => (d: number, bank: number) => {
     const high = bank >= 0 ? -1 : 1;
     const outer = innerA == null || Math.abs(bank) < 8 || Math.sign(side) === high || Math.sign(bank) === 0;
-    const pair = outer ? [new THREE.Color(colors.curbA), new THREE.Color(colors.curbB)] : [innerA!, innerB ?? innerA!];
-    return pair[Math.floor(segment / curbEvery) % 2]!;
+    const pair = outer ? [curbA, curbB] : [innerA!, innerB ?? innerA!];
+    return pair[Math.floor(d / curbLen) % 2]!;
   };
-  strip((w, b) => w / 2 - curb(b), (w) => w / 2, colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat, curbColor(1));
-  strip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), colors.curbA, colors.curbB, curbLift, curbLift, false, false, curbEvery, curbMat, curbColor(-1));
+  roadStrip((w, b) => w / 2 - curb(b), (w) => w / 2, curbLift, curbLift, curbColor(1), curbMat, multiples(curbLen));
+  roadStrip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), curbLift, curbLift, curbColor(-1), curbMat, multiples(curbLen));
   if (colors.racingLine != null) {
     const line = new THREE.Color(colors.racingLine);
     const dash = colors.centreDash;
     const dashColor = dash ? line.clone().lerp(new THREE.Color(dash.color), dash.opacity) : line;
     const lineMat = colors.animasAsphalt ? animasAsphaltLineMaterial() : sharedVertexToonDouble();
-    strip(
+    roadStrip(
       () => -0.125,
       () => 0.125,
-      colors.racingLine,
-      colors.racingLine,
       0.045,
       0.045,
-      false,
-      false,
-      1,
+      dash ? (d) => (((d % dash.period) + dash.period) % dash.period < dash.length ? dashColor : line) : flat(line),
       lineMat,
-      dash
-        ? (segment) => {
-            const d = track.lengths[segment] ?? 0;
-            const m = ((d % dash.period) + dash.period) % dash.period;
-            return m < dash.length ? dashColor : line;
-          }
-        : undefined,
+      dash ? [...multiples(dash.period), ...multiples(dash.period, dash.length)] : [],
     );
   }
   if (colors.bankEdge) bankEdge(group, track, left, heightAt);
   // Arcén.
   if (v > 0) {
-    strip((w) => w / 2, (w) => w / 2 + v, colors.verge);
-    strip((w) => -w / 2 - v, (w) => -w / 2, colors.verge);
+    const vergeColor = flat(new THREE.Color(colors.verge));
+    roadStrip((w) => w / 2, (w) => w / 2 + v, 0, 0, vergeColor, sharedVertexToonDouble());
+    roadStrip((w) => -w / 2 - v, (w) => -w / 2, 0, 0, vergeColor, sharedVertexToonDouble());
   }
   // Muros bajos en el borde exterior del arcén, con tapa de hueso.
   strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, 0.9, 0);

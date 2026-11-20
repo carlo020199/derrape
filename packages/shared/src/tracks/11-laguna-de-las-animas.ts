@@ -26,48 +26,48 @@ const def: TrackDef = {
   control: [
     p(-75, 95, 34, 16, 0), //  0 · Recta de meta
     p(-62, 150, 31.4, 16, 0), //  1 · Recta de meta
-    p(-52, 185, 25.2, 18, 30), //  2 · Ese del Sepulturero
-    p(-35, 200, 21.4, 18, 20), //  3 · Ese del Sepulturero
+    p(-52, 185, 25.2, 18, 26), //  2 · Ese del Sepulturero
+    p(-35, 200, 21.4, 18, 10), //  3 · Ese del Sepulturero
     p(-12, 190, 18, 18, -8), //  4 · Ese del Sepulturero (el -15° de diseño caía en el aterrizaje de S1)
     p(12, 196, 16, 16, 0), //  5 · Ese del Sepulturero
-    p(40, 202, 14, 16, 35), //  6 · Curva del Sol Negro
-    p(68, 190, 12, 16, 35), //  7 · Curva del Sol Negro
+    p(40, 202, 14, 16, 23), //  6 · Curva del Sol Negro
+    p(68, 190, 12, 16, 23), //  7 · Curva del Sol Negro
     p(85, 160, 10, 16, 5), //  8 · Curva del Sol Negro
     p(97, 120, 8, 16, 0), //  9 · Recta del Osario
     p(110, 60, 2, 16, 0), // 10 · Recta del Osario
     p(125, 0, -1, 16, 0), // 11 · Recta del Osario
-    p(135, -40, -3, 16, 30), // 12 · Bajada de la Laguna
-    p(128, -68, -4, 16, 40), // 13 · Bajada de la Laguna
-    p(100, -78, -3, 16, 35), // 14 · Bajada de la Laguna
-    p(68, -72, 1, 15, 35), // 15 · La Herradura
+    p(135, -40, -3, 16, 26), // 12 · Bajada de la Laguna
+    p(128, -68, -4, 16, 18), // 13 · Bajada de la Laguna
+    p(100, -78, -3, 16, 26), // 14 · Bajada de la Laguna
+    p(68, -72, 1, 15, 26), // 15 · La Herradura
     p(45, -52, 6, 15, 10), // 16 · La Herradura
     p(20, -15, 11, 15, 0), // 17 · Cuesta de los Faroles
     p(-5, 20, 14, 15, -5), // 18 · Cuesta de los Faroles
-    p(-25, 42, 15, 16, -30), // 19 · La Calabaza
-    p(-45, 47, 15, 16, -40), // 20 · La Calabaza
-    p(-56, 35, 14, 16, -30), // 21 · La Calabaza
+    p(-25, 42, 15, 16, -26), // 19 · La Calabaza
+    p(-45, 47, 15, 16, -11), // 20 · La Calabaza
+    p(-56, 35, 14, 16, -12), // 21 · La Calabaza
     p(-60, 5, 13, 15, -20), // 22 · La Calabaza
-    p(-57, -18, 12, 15, -40), // 23 · Codo del Campanero
-    p(-46, -33, 11, 15, -15), // 24 · Codo del Campanero
-    p(-32, -40, 10, 15, 15), // 25 · Pinar de Huesos
-    p(-28, -53, 9, 15, 40), // 26 · Pinar de Huesos
-    p(-40, -68, 8, 15, 20), // 27 · Pinar de Huesos
-    p(-58, -82, 7, 15, -5), // 28 · Pico de Cuervo (entrada suave: S2 aterriza aquí)
-    p(-64, -100, 7, 16, -40), // 29 · Pico de Cuervo
-    p(-50, -113, 6.6, 16, -40), // 30 · Pico de Cuervo
-    p(-30, -106, 3, 15, -30), // 31 · Pico de Cuervo
-    p(-12, -90, -1.1, 15, 0), // 32 · El Zambullido
-    p(0, -77, -4.1, 15, 8), // 33 · El Zambullido (S3 aterriza antes del peralte de 40°)
-    p(20, -78, -6.3, 15, 40), // 34 · Cruce de Almas
-    p(35, -90, -3.1, 16, 30), // 35 · Cruce de Almas
+    p(-57, -18, 12, 15, -26), // 23 · Codo del Campanero
+    p(-46, -33, 11, 15, -9), // 24 · Codo del Campanero
+    p(-32, -40, 10, 15, 5), // 25 · Pinar de Huesos
+    p(-28, -53, 9, 15, 10), // 26 · Pinar de Huesos
+    p(-40, -68, 8, 15, 18), // 27 · Pinar de Huesos
+    p(-58, -82, 7, 15, -3), // 28 · Pico de Cuervo (entrada suave: S2 aterriza aquí)
+    p(-64, -100, 7, 16, -10), // 29 · Pico de Cuervo
+    p(-50, -113, 6.4, 16, -11), // 30 · Pico de Cuervo
+    p(-30, -106, 3, 15, -24), // 31 · Pico de Cuervo
+    p(-12, -90, -1.1, 15, -2), // 32 · El Zambullido
+    p(0, -77, -3.9, 15, 8), // 33 · El Zambullido (S3 aterriza antes del peralte de 40°)
+    p(20, -78, -5.2, 15, 24), // 34 · Cruce de Almas
+    p(35, -90, -3.1, 16, 26), // 35 · Cruce de Almas
     p(48, -110, 1, 16, 15), // 36 · Subida de las Linternas
-    p(58, -135, 5.6, 16, 35), // 37 · Subida de las Linternas
-    p(55, -158, 9.5, 16, 40), // 38 · Subida de las Linternas
-    p(35, -170, 13.5, 16, 35), // 39 · Subida de las Linternas
+    p(58, -135, 5.6, 16, 26), // 37 · Subida de las Linternas
+    p(55, -158, 9.5, 16, 17), // 38 · Subida de las Linternas
+    p(35, -170, 13.5, 16, 26), // 39 · Subida de las Linternas
     p(5, -170, 18.6, 16, 10), // 40 · Subida de las Linternas
     p(-30, -162, 24.7, 16, 25), // 41 · Subida de las Linternas
     p(-60, -140, 28, 16, 0), // 42 · Subida de las Linternas
-    p(-92, -112, 31, 16, 30), // 43 · Subida de las Linternas
+    p(-92, -112, 31, 16, 26), // 43 · Subida de las Linternas
     p(-102, -75, 33, 16, 5), // 44 · Recta de meta
     p(-104, -30, 34, 16, 0), // 45 · Recta de meta
     p(-96, 20, 35, 16, 0), // 46 · Recta de meta
