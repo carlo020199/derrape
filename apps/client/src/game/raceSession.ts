@@ -206,7 +206,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const moon = new THREE.DirectionalLight(0xcfc4ff, 1.05);
   moon.position.set(-50, 80, 30);
   scene.add(moon);
-  const sky = createGradientSky(theme.sky, theme.horizon, 230);
+  const sky = createGradientSky(theme.sky, theme.skyHorizon ?? theme.horizon, 230, theme.skyHorizon !== undefined ? 0x9b6bff : undefined);
   sky.add(createMoon());
   scene.add(sky);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), toonMaterial({ color: theme.ground }));
@@ -373,6 +373,25 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     chase.snap();
   }
   resetLocals();
+
+  // ?foto=<metros>[,<lateral>[,<giro en grados>]]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
+  const foto = !online ? new URLSearchParams(location.search).get("foto") : null;
+  if (foto) {
+    const [d, lat, giro] = foto.split(",").map(Number);
+    const at = pointAt(track, d ?? 0, lat ?? 0);
+    const s = createKart(at.x, at.z, at.heading + ((giro ?? 0) * Math.PI) / 180);
+    player.race = createRaceKart(player.race.id, s, track);
+    player.prev = { ...s };
+    countdown = -1e6;
+    (window as unknown as { __escena: unknown }).__escena = { scene, camera, renderer };
+    // Los demás, detrás de la cámara.
+    locals.filter((r) => r !== player).forEach((r, i) => {
+      const b = pointAt(track, ((d ?? 0) - 40 - i * 8 + track.length) % track.length);
+      const bs = createKart(b.x, b.z, b.heading);
+      r.race = createRaceKart(r.race.id, bs, track);
+      r.prev = { ...bs };
+    });
+  }
 
   // Volver a una carrera ya empezada (tras recargar o un corte largo).
   if (online?.start.elapsed !== undefined) {

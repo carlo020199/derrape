@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { KART_COLORS } from "@derrape/shared";
+import { DEFAULT_KART, KART_COLORS } from "@derrape/shared";
 import { createKartModel, type KartModel } from "./kartModel";
 import { Fire, paintExhaust, paintHair } from "./flames";
 import { PALETTE, toonMaterial } from "./materials";
@@ -61,6 +61,51 @@ export class GaragePreview {
     this.scene.add(model.root);
     this.model = model;
     if (cheer) this.cheer = 1.4;
+  }
+
+  /**
+   * Retrato de un piloto (primer plano de la cabeza, fondo transparente) como imagen para los
+   * botones de selección. Se dibuja una vez con el mismo renderer, en una textura aparte.
+   */
+  portrait(character: string, size = 144): string {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight(0xfff7ea, PALETTE.ciruela, 0.9));
+    const key = new THREE.DirectionalLight(0xfff7ea, 1.25);
+    key.position.set(2.2, 3.4, 5);
+    scene.add(key);
+    const model = createKartModel(KART_COLORS[3], character, DEFAULT_KART);
+    scene.add(model.root);
+    model.root.updateMatrixWorld(true);
+    const head = model.head.getWorldPosition(new THREE.Vector3());
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
+    camera.position.set(head.x + 0.8, head.y + 0.25, head.z + 2.4);
+    camera.lookAt(head.x, head.y + 0.06, head.z);
+
+    const target = new THREE.WebGLRenderTarget(size, size);
+    target.texture.colorSpace = THREE.SRGBColorSpace;
+    const r = this.renderer;
+    const before = r.getRenderTarget();
+    const alpha = r.getClearAlpha();
+    r.setRenderTarget(target);
+    r.setClearAlpha(0);
+    r.clear();
+    r.render(scene, camera);
+    const pixels = new Uint8Array(size * size * 4);
+    r.readRenderTargetPixels(target, 0, 0, size, size, pixels);
+    r.setRenderTarget(before);
+    r.setClearAlpha(alpha);
+    target.dispose();
+
+    // La textura se lee de abajo arriba: se da la vuelta al pasarla al canvas.
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext("2d")!;
+    const image = g.createImageData(size, size);
+    for (let y = 0; y < size; y++) {
+      image.data.set(pixels.subarray((size - 1 - y) * size * 4, (size - y) * size * 4), y * size * 4);
+    }
+    g.putImageData(image, 0, 0);
+    return canvas.toDataURL("image/png");
   }
 
   start() {

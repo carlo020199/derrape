@@ -37,6 +37,13 @@ export const TRACKS: TrackEntry[] = [
     cup: null,
     load: () => import("./11-laguna-de-las-animas").then((m) => m.default),
   },
+  {
+    id: "ribera-de-las-animas",
+    number: 12,
+    name: "Ribera de las Ánimas",
+    cup: null,
+    load: () => import("./12-ribera-de-las-animas").then((m) => m.default),
+  },
 ];
 
 export const DEFAULT_TRACK = "paseo-del-puerto";

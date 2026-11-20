@@ -78,6 +78,7 @@ Cada circuito tiene **una mecánica propia** para que se sienta distinto. Vuelta
 | # | Circuito | Tema | Dificultad | Mecánica propia |
 |---|---|---|---|---|
 | 11 | **Laguna de las Ánimas** | Noche de difuntos junto a una laguna espectral | ★★★ | Peralte, cuestas y saltos S/M/L con vuelo real. Se abre directo con `?track=laguna-de-las-animas` |
+| 12 | **Ribera de las Ánimas** | La misma laguna espectral, por la orilla | ★★ | Vuelta más llana y abierta: curvas peraltadas y tres saltos (S, M, L). 1.466 m, ~56 s por vuelta. `?track=ribera-de-las-animas` |
 
 Cómo hacer 10 circuitos sin volverse loco:
 - Cada circuito es **un archivo de datos** (`packages/shared/src/tracks/NN-nombre.ts`): puntos de la spline,

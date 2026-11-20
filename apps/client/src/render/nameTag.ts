@@ -6,9 +6,9 @@ export function createNameTag(name: string, color: number): THREE.Sprite {
   canvas.width = 256;
   canvas.height = 64;
   const g = canvas.getContext("2d")!;
-  g.font = "bold 34px system-ui, sans-serif";
+  g.font = '800 32px "Nunito", system-ui, sans-serif';
   const w = Math.min(240, g.measureText(name).width + 36);
-  g.fillStyle = "rgba(10, 12, 30, 0.7)";
+  g.fillStyle = "rgba(18, 15, 30, 0.75)";
   g.beginPath();
   g.roundRect((256 - w) / 2, 8, w, 48, 24);
   g.fill();
@@ -16,7 +16,7 @@ export function createNameTag(name: string, color: number): THREE.Sprite {
   g.beginPath();
   g.arc((256 - w) / 2 + 20, 32, 7, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = "#fff";
+  g.fillStyle = "#fff7ea";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText(name, 128 + 8, 33, 200);

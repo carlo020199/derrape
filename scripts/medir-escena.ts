@@ -32,6 +32,11 @@ if (!g.document) {
             createLinearGradient: () => grad,
             fillRect() {},
             fillText() {},
+            beginPath() {},
+            moveTo() {},
+            lineTo() {},
+            closePath() {},
+            fill() {},
           };
         },
       };
@@ -93,7 +98,7 @@ async function one(id: string) {
   const track = buildTrackFromDef(def);
   const theme = THEMES[def.theme];
   const scene = new THREE.Scene();
-  scene.add(createGradientSky(theme.sky, theme.horizon, 230));
+  scene.add(createGradientSky(theme.sky, theme.skyHorizon ?? theme.horizon, 230));
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshBasicMaterial());
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);

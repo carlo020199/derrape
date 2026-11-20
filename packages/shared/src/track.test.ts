@@ -140,6 +140,54 @@ describe("pista", () => {
     }
   });
 
+  it("Ribera de las Ánimas: antihoraria, peralte hacia dentro y un bot da la vuelta con sus tres saltos", async () => {
+    const def = await TRACKS.find((t) => t.id === "ribera-de-las-animas")!.load();
+    const track = buildTrackFromDef(def);
+    expect(track.relief).toBe(true);
+    const limits = designLimits(track);
+    expect(limits.maxGrade).toBeLessThanOrEqual(0.22);
+    expect(limits.maxBank).toBeLessThanOrEqual(40);
+    const ramps = track.zones.filter((z) => z.type === "ramp" && z.size);
+    expect(ramps.map((z) => z.size)).toEqual(["S", "M", "L"]);
+    for (const z of ramps) {
+      const landing = rampLanding(track, z);
+      expect(landing.landed, `${z.size} no aterriza`).toBe(true);
+      expect(Math.abs(landing.lateral), `${z.size} lateral ${landing.lateral}`).toBeLessThan(landing.half);
+      expect(Math.abs(landing.bank), `${z.size} peralte ${landing.bank}`).toBeLessThan(10);
+    }
+    // En la Herradura (curva a la izquierda) el borde exterior, el derecho, queda más alto.
+    const h = pointAt(track, track.length * 0.45);
+    expect(surfaceY({ y: h.y, lateral: -4, bank: h.bank })).toBeGreaterThan(surfaceY({ y: h.y, lateral: 4, bank: h.bank }));
+
+    const pose = pointAt(track, 0);
+    const s = createKart(pose.x, pose.z, pose.heading);
+    s.speed = 12;
+    const p = createProgress();
+    let time = 0;
+    let respawns = 0;
+    let jumps = 0;
+    let turned = 0;
+    let last = s.heading;
+    while (p.finishTime === null && time < 120) {
+      const wasAir = s.airborne;
+      const c = stepKartOnTrack(s, botInput({ lane: 0, lookAhead: 12 }, s, track), PHYSICS_DT, track);
+      if (wasAir && !s.airborne) jumps++;
+      turned += s.heading - last;
+      last = s.heading;
+      time += PHYSICS_DT;
+      updateProgress(p, track, c.distance, time, 1);
+      if (needsRespawn(s, p, PHYSICS_DT)) {
+        respawnKart(s, p, track);
+        respawns++;
+      }
+    }
+    expect(p.finishTime).not.toBeNull();
+    expect(respawns).toBe(0);
+    expect(jumps).toBe(3);
+    // Una vuelta completa a la izquierda (el rumbo crece al girar a la izquierda).
+    expect(turned).toBeGreaterThan(Math.PI);
+  });
+
   it("un bot da una vuelta a Laguna de las Ánimas sin caerse ni atascarse", async () => {
     const track = buildTrackFromDef(await TRACKS.find((t) => t.id === "laguna-de-las-animas")!.load());
     const pose = pointAt(track, 0);

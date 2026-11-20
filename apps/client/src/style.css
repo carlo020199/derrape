@@ -798,11 +798,19 @@ body.in-menu #minimap { display: none !important; }
   border-radius: 16px;
   box-shadow: none;
 }
+.picker button img {
+  grid-row: span 2;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 35%, var(--niebla, #5b4e7a), var(--ciruela, #1e1830));
+}
+#garage-chars { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .picker button i { grid-row: span 2; width: 14px; height: 14px; border-radius: 50%; }
 .picker button b { grid-column: 2; font-size: 14px; }
-.picker button:not(:has(i)) b { grid-column: 1 / -1; }
+.picker button:not(:has(i, img)) b { grid-column: 1 / -1; }
 .picker button small { grid-column: 2; font-size: 11px; font-weight: 700; color: var(--tenue); }
-.picker button:not(:has(i)) small { grid-column: 1 / -1; }
+.picker button:not(:has(i, img)) small { grid-column: 1 / -1; }
 .screen .picker button.sel { border-color: var(--llama); background: rgb(255 180 35 / 0.18); }
 #garage-stats { display: grid; gap: 4px; }
 #garage-stats > div { display: grid; grid-template-columns: 96px 1fr 28px; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
