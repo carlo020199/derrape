@@ -320,7 +320,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     return pair[Math.floor(d / curbLen) % 2]!;
   };
   roadStrip((w, b) => w / 2 - curb(b), (w) => w / 2, curbLift, curbLift, curbColor(1), curbMat, multiples(curbLen));
-  roadStrip((w, b) => -w / 2, (w, b) => -w / 2 + curb(b), curbLift, curbLift, curbColor(-1), curbMat, multiples(curbLen));
+  roadStrip((w, _b) => -w / 2, (w, b) => -w / 2 + curb(b), curbLift, curbLift, curbColor(-1), curbMat, multiples(curbLen));
   if (colors.racingLine != null) {
     const line = new THREE.Color(colors.racingLine);
     const dash = colors.centreDash;

@@ -52,7 +52,7 @@ const partsMat = sharedVertexToon();
 const boneMat = sharedBoneToon();
 const outlineMat = driverOutlineMaterial();
 
-const { noche: NOCHE, hueso: HUESO, huesoSombra: HUESO_S, marfil: MARFIL, brasa: BRASA, llama: LLAMA, sombra: SOMBRA, ciruela: CIRUELA } = PALETTE;
+const { noche: NOCHE, hueso: HUESO, marfil: MARFIL, brasa: BRASA, llama: LLAMA, sombra: SOMBRA, ciruela: CIRUELA } = PALETTE;
 const TYRE = 0x16141f;
 
 type Vec3 = [number, number, number];
@@ -521,7 +521,7 @@ function buildLod(look: KartLook, color: number, c: CharacterDef): { kart: THREE
   const y = look.frontWheel * 0.7 + h * 0.2;
   const half = Math.PI / 2;
   p.rounded(look.width * 0.96, h, look.length * 0.8, color, [0, y, 0], undefined, 0.14);
-  const wheel = (r: number, w: number, x: number, z: number) => {
+  const wheel = (r: number, _w: number, x: number, z: number) => {
     p.add(new THREE.TorusGeometry(r * 0.72, r * 0.28, 3, 6), TYRE, [x, r, z], [0, half, 0]);
   };
   if (look.skin === "broom") {

@@ -2,7 +2,7 @@
 // Estadísticas del coche en escala 1–5 y suman 12 (así ninguno es mejor en todo). Ver docs/CONTENIDO.md.
 
 import { WEIGHT_CLASS_MOD, findCharacter, type CharacterDef } from "./characters";
-import { KART, type KartTuning } from "./tuning";
+import type { KartTuning } from "./tuning";
 
 export interface KartStats {
   speed: number;
