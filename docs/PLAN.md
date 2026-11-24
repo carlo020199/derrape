@@ -125,6 +125,12 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* los 10 circuitos se pueden jugar, cada uno con su mecánica, a ~60 fps en móvil.
 - [x] **Fase 9 — Versión 1.0.** Sonido sintético, partículas, minimapa, pantalla de podio. (Falta la prueba final con amigos en iPhone + Android tras el despliegue.)
   *Hecho cuando:* jugáis una copa entera entre iPhone y Android sin problemas → **lanzamiento**.
+- **Release 1 (rama `release/v1`)** — 2 pilotos, 2 coches y la Laguna de las Ánimas con el aspecto de `docs/release-v1/referencias/`.
+  - [x] R1·Fase 1 — Base: paleta, Lilita One/Nunito y CSS del HUD/menús.
+  - [ ] R1·Fase 2 — Laguna: cielo, niebla, terreno, laguna, árboles, farolillos, vallas de hueso, bordillo, campanario.
+  - [ ] R1·Fase 3 — Fuego: escapes con sprites aditivos, chispas, turbo Espectro.
+  - [ ] R1·Fase 4 — Pilotos y coches: Lía + Hueso, Calavera Chispas + Medianoche, animaciones, selección sobre pedestal.
+  - [ ] R1·Fase 5 — Pulido y rendimiento; `medidas.json`.
 - [ ] **Después de la 1.0:** bots, contrarreloj con fantasma, circuitos espejo, más objetos.
 
 Consejo: aunque la 1.0 sea con todo el contenido, no esperes a tenerlo todo para probar: la sensación
