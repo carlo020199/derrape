@@ -79,7 +79,7 @@ describe("sala", () => {
     room.addPlayer("a", "Ana", 0, "nonna-pina", "tanque");
     room.addPlayer("b", "Beto", 1, "no-existe", 42);
     expect(room.lobby().players[0]).toMatchObject({ character: "nonna-pina", kart: "tanque" });
-    expect(room.lobby().players[1]).toMatchObject({ character: "lia", kart: "chispa" });
+    expect(room.lobby().players[1]).toMatchObject({ character: "lia", kart: "hueso" });
     expect(room.setProfile("b", undefined, undefined, "kiko", "pulga")).toBeNull();
     expect(room.lobby().players[1]).toMatchObject({ character: "kiko", kart: "pulga" });
     expect(room.setProfile("b", undefined, undefined, "nadie")).toMatch(/personaje/);

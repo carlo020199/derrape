@@ -1,12 +1,12 @@
 // Los personajes (datos). Dan una clase de peso que ajusta un poco las estadísticas del coche.
-// Los 5 primeros conservan id y clase: solo cambian el nombre, el texto y los colores.
+// Lía Brasas se rediseña en el Release 1 y se suma Calavera Chispas. Los demás conservan id y clase.
 // Los 3 últimos usan la misma fórmula de clase (no tienen estadísticas propias).
 // Todo ORIGINAL (ver CLAUDE.md). Añadir un personaje = una entrada nueva aquí + su aspecto en el cliente.
 
 export type WeightClass = "light" | "medium" | "heavy";
 
 /** Cómo se dibuja la cabeza y los accesorios (el cliente construye cada estilo con primitivas). */
-export type CharacterLook = "mechanic" | "robot" | "courier" | "bulldog" | "granny" | "mascot" | "sheet" | "dandy";
+export type CharacterLook = "mechanic" | "chispas" | "robot" | "courier" | "bulldog" | "granny" | "mascot" | "sheet" | "dandy";
 
 export interface CharacterDef {
   id: string;
@@ -21,6 +21,8 @@ export interface CharacterDef {
   skin: number;
   /** Detalle (gorra, bufanda, antena, fuego…). */
   accent: number;
+  /** Coche que va con este piloto (la pantalla de selección lo propone al elegirlo). */
+  kart?: string;
 }
 
 export const WEIGHT_CLASS_NAMES: Record<WeightClass, string> = { light: "Ligero", medium: "Medio", heavy: "Pesado" };
@@ -38,12 +40,24 @@ export const CHARACTERS: readonly CharacterDef[] = [
   {
     id: "lia",
     name: "Lía Brasas",
-    blurb: "Mecánica esqueleto, coleta de fuego espectral, llave de hueso y mono ciruela.",
+    blurb: "Calavera amable con coleta de Espectro, sudadera ciruela y ojos de brasa. Va en el kart Hueso.",
     weightClass: "light",
     look: "mechanic",
-    color: 0x6b3fd6,
+    color: 0x1e1830,
     skin: HUESO,
     accent: 0x3ff2c8,
+    kart: "hueso",
+  },
+  {
+    id: "calavera-chispas",
+    name: "Calavera Chispas",
+    blurb: "Calavera grande y sonriente con costillas al aire y guantes de brasa. Va en el kart Medianoche.",
+    weightClass: "medium",
+    look: "chispas",
+    color: 0x2e2547,
+    skin: HUESO,
+    accent: 0xff6a1f,
+    kart: "medianoche",
   },
   {
     id: "kiko",

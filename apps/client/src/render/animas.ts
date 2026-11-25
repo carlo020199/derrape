@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
 import { createAnimasMoon, createClouds, createHills } from "./sky";
-import { PALETTE, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
+import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
+import { createFences, createLanterns, createTrees } from "./animasProps";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -189,30 +190,6 @@ function clear(track: Track, x: number, z: number, margin: number) {
   return Math.abs(c.lateral) > c.width / 2 + track.verge + margin;
 }
 
-function lanternGeometry() {
-  const ball = paint(new THREE.SphereGeometry(0.32, 8, 6), LLAMA);
-  const ring = bake(new THREE.TorusGeometry(0.46, 0.07, 6, 10), M(), HUESO);
-  return merge([ball, ring]);
-}
-
-function lanternMaterial() {
-  const mat = new THREE.MeshBasicMaterial({ vertexColors: true });
-  mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = { value: 0 };
-    shader.vertexShader =
-      "uniform float uTime;\n" +
-      shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
-#ifdef USE_INSTANCING
-         transformed.y += sin(uTime * 1.7 + instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.21) * 0.3;
-#endif`,
-      );
-    mat.userData.shader = shader;
-  };
-  return mat;
-}
-
 function stars() {
   const n = 48;
   const pos = new Float32Array(n * 3);
@@ -315,24 +292,19 @@ function boostMarks(track: Track) {
  * más un óvalo bajo el salto. `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma).
  * Las posiciones están en mundo (x, z); el mesh solo pone la altura.
  */
-export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; z: number }): THREE.BufferGeometry {
-  const pos: number[] = [];
-  const cen: number[] = [];
-  const idx: number[] = [];
-  // Óvalo (abanico) bajo el salto.
-  const rx = 26;
-  const rz = 22;
-  pos.push(mid.x, 0, mid.z);
-  cen.push(1);
-  const seg = 28;
-  for (let i = 0; i < seg; i++) {
-    const a = (i / seg) * Math.PI * 2;
-    const k = 1 + 0.08 * Math.sin(a * 3);
-    pos.push(mid.x + Math.cos(a) * rx * k, 0, mid.z + Math.sin(a) * rz * k);
-    cen.push(0);
-    idx.push(0, 1 + i, 1 + ((i + 1) % seg));
-  }
-  // Cauce desde el óvalo hacia el campanario, con meandros.
+const FAR_LIFT = 22;
+
+export interface LagoonShape {
+  mid: { x: number; z: number };
+  rx: number;
+  rz: number;
+  /** Ejes de cauce con su semiancho: del óvalo al campanario y el río lejano que cruza el valle de cara a la salida. */
+  rivers: { x: number; z: number; half: number; lift: number }[][];
+}
+
+export function lagoonShape(mid: { x: number; z: number }, end: { x: number; z: number }): LagoonShape {
+  const rx = 78;
+  const rz = 38;
   const dx = end.x - mid.x;
   const dz = end.z - mid.z;
   const len = Math.hypot(dx, dz) || 1;
@@ -340,26 +312,97 @@ export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; 
   const nz = dx / len;
   const curve = new THREE.CatmullRomCurve3(
     [0, 0.14, 0.3, 0.46, 0.62, 0.78, 0.92].map((t, i) => {
-      const off = [0, 8, -9, 8, -6, 4, 0][i]! * 1;
+      const off = [0, 8, -9, 8, -6, 4, 0][i]!;
       return new THREE.Vector3(mid.x + dx * t + nx * off, 0, mid.z + dz * t + nz * off);
     }),
   );
   const steps = 44;
-  const base = pos.length / 3;
+  const river: LagoonShape["rivers"][number] = [];
   const p = new THREE.Vector3();
-  const tg = new THREE.Vector3();
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     curve.getPoint(t, p);
-    curve.getTangent(t, tg);
-    const half = (11 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.35 * t) * Math.min(1, 0.4 + t * 6);
-    const lx = -tg.z;
-    const lz = tg.x;
-    pos.push(p.x + lx * half, 0, p.z + lz * half, p.x, 0, p.z, p.x - lx * half, 0, p.z - lz * half);
-    cen.push(0, 1, 0);
-    if (i < steps) {
-      const o = base + i * 3;
-      idx.push(o, o + 3, o + 1, o + 1, o + 3, o + 4, o + 1, o + 4, o + 2, o + 2, o + 4, o + 5);
+    const half = (13 + 4 * Math.sin(t * 9) + 3 * Math.sin(t * 17)) * (1 - 0.3 * t) * Math.min(1, 0.4 + t * 6);
+    river.push({ x: p.x, z: p.z, half, lift: 0 });
+  }
+  // Río lejano: cruza el valle por detrás del gancho de la pista, justo en la línea de mirada desde la
+  // salida, y entra en el óvalo por debajo de la calzada (el talud lo tapa).
+  const far = new THREE.CatmullRomCurve3(
+    [
+      [-300, 440, 45],
+      [-170, 400, 50],
+      [-60, 382, 56],
+      [40, 376, 52],
+      [60, 300, 36],
+      [mid.x + 6, 250, 24],
+      [mid.x, mid.z + rz * 0.6, 14],
+    ].map(([x, z]) => new THREE.Vector3(x, 0, z)),
+  );
+  const halfs = [60, 68, 76, 70, 44, 26, 14];
+  const arm: LagoonShape["rivers"][number] = [];
+  for (let i = 0; i <= 40; i++) {
+    const t = i / 40;
+    far.getPoint(t, p);
+    const f = t * (halfs.length - 1);
+    const k = Math.min(halfs.length - 2, Math.floor(f));
+    // El río lejano queda más alto que la laguna para que asome por encima del final de la pista vista desde la salida.
+    arm.push({ x: p.x, z: p.z, half: halfs[k]! + (halfs[k + 1]! - halfs[k]!) * (f - k), lift: FAR_LIFT * (1 - THREE.MathUtils.smoothstep(t, 0.6, 1)) });
+  }
+  return { mid, rx, rz, rivers: [river, arm] };
+}
+
+/** Distancia aproximada a la orilla (negativa dentro del agua), para excavar el terreno. */
+export function lagoonDistance(shape: LagoonShape, x: number, z: number): { d: number; lift: number } {
+  const ex = (x - shape.mid.x) / shape.rx;
+  const ez = (z - shape.mid.z) / shape.rz;
+  let d = (Math.hypot(ex, ez) - 1) * Math.min(shape.rx, shape.rz);
+  let lift = 0;
+  for (const river of shape.rivers) {
+    for (const r of river) {
+      const e = Math.hypot(x - r.x, z - r.z) - r.half;
+      if (e < d) {
+        d = e;
+        lift = r.lift;
+      }
+    }
+  }
+  return { d, lift };
+}
+
+/**
+ * Cauce de la laguna: tira de triángulos con ancho variable más un óvalo.
+ * `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma). Posiciones en mundo (x, z).
+ */
+export function lagoonGeometry(shape: LagoonShape): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const cen: number[] = [];
+  const idx: number[] = [];
+  const { mid, rx, rz, rivers } = shape;
+  pos.push(mid.x, 0, mid.z);
+  cen.push(1);
+  const seg = 32;
+  for (let i = 0; i < seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    const k = 1 + 0.08 * Math.sin(a * 3);
+    pos.push(mid.x + Math.cos(a) * rx * k, 0, mid.z + Math.sin(a) * rz * k);
+    cen.push(0);
+    idx.push(0, 1 + i, 1 + ((i + 1) % seg));
+  }
+  for (const river of rivers) {
+    const base = pos.length / 3;
+    for (let i = 0; i < river.length; i++) {
+      const c = river[i]!;
+      const a = river[Math.max(0, i - 1)]!;
+      const b = river[Math.min(river.length - 1, i + 1)]!;
+      const tl = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+      const lx = -(b.z - a.z) / tl;
+      const lz = (b.x - a.x) / tl;
+      pos.push(c.x + lx * c.half, c.lift, c.z + lz * c.half, c.x, c.lift, c.z, c.x - lx * c.half, c.lift, c.z - lz * c.half);
+      cen.push(0, 1, 0);
+      if (i < river.length - 1) {
+        const o = base + i * 3;
+        idx.push(o, o + 3, o + 1, o + 1, o + 3, o + 4, o + 1, o + 4, o + 2, o + 2, o + 4, o + 5);
+      }
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -367,6 +410,130 @@ export function lagoonGeometry(mid: { x: number; z: number }, end: { x: number; 
   geo.setAttribute("aCentre", new THREE.BufferAttribute(new Float32Array(cen), 1));
   geo.setIndex(idx);
   return geo;
+}
+
+function vhash(x: number, z: number) {
+  const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+function vnoise(x: number, z: number) {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fx = x - ix;
+  const fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx);
+  const v = fz * fz * (3 - 2 * fz);
+  const a = vhash(ix, iz);
+  const b = vhash(ix + 1, iz);
+  const c = vhash(ix, iz + 1);
+  const d = vhash(ix + 1, iz + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+/**
+ * Altura del terreno en (x, z). Abraza la calzada: junto al borde queda a ras (justo por debajo) y baja
+ * con pendiente suave hacia el valle, así no hay un talud negro de 40 m a los lados. Lejos de todo
+ * camino se suman colinas de ruido. Nunca sube por encima de otro tramo de pista cercano (pasos a distinto nivel)
+ * y deja la cuenca de la laguna excavada.
+ */
+export function terrainHeightField(track: Track, shape: LagoonShape, waterY: number, groundY: number, hill?: { x: number; z: number; top: number }) {
+  const samples: { x: number; z: number; y: number; r: number; d: number }[] = [];
+  for (let i = 0; i < track.points.length; i += 3) {
+    const p = track.points[i]!;
+    samples.push({ x: p.x, z: p.z, y: p.y, r: p.w / 2 + track.verge, d: track.lengths[i]! });
+  }
+  return (x: number, z: number) => {
+    const c = closestPoint(track, x, z);
+    const edge = c.width / 2 + track.verge;
+    const lat = THREE.MathUtils.clamp(c.lateral, -edge, edge);
+    let out = Math.max(0, Math.abs(c.lateral) - edge);
+    let h = surfaceY({ y: c.y, lateral: lat, bank: c.bank }) - 0.35 - out * 0.42;
+    // Otros tramos de pista (por debajo o por encima): el terreno no los tapa ni los deja flotando.
+    for (const q of samples) {
+      let sep = Math.abs(q.d - c.distance);
+      sep = Math.min(sep, track.length - sep);
+      if (sep < 70) continue;
+      const dd = Math.max(0, Math.hypot(x - q.x, z - q.z) - q.r);
+      if (dd > 60) continue;
+      h = Math.min(h, q.y - 4.5 + dd * 0.45);
+      out = Math.min(out, dd);
+    }
+    const amp = 4 + 11 * vnoise(x * 0.012 + 3, z * 0.012);
+    const bumps = vnoise(x * 0.045, z * 0.045) * 0.65 + vnoise(x * 0.11, z * 0.11) * 0.35;
+    h += amp * bumps * THREE.MathUtils.smoothstep(out, 8, 42);
+    const { d, lift } = lagoonDistance(shape, x, z);
+    h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * 0.45);
+    // Isla-colina del campanario, al final del río: el agua la rodea.
+    if (hill) {
+      const hd = Math.hypot(x - hill.x, z - hill.z);
+      if (hd < 40) h = Math.max(h, hill.top - Math.max(0, hd - 7) * 0.6);
+    }
+    return Math.max(h, groundY - 0.3);
+  };
+}
+
+/**
+ * Terreno de hierba toon morada a los lados de la pista: rejilla con la altura de `terrainHeightField`,
+ * partida en 5×5 trozos para que el frustum culling descarte lo que no se ve (cada trozo, una llamada).
+ * Color por vértice #2E2547 → #5B4E7A (más claro en las lomas). Normales por diferencias centrales: sin costuras.
+ */
+export function terrainMeshes(height: (x: number, z: number) => number, groundY: number, material: THREE.Material): THREE.Mesh[] {
+  const x0 = -380;
+  const z0 = -300;
+  const n = 100;
+  const chunks = 5;
+  const step = 760 / n;
+  const stepZ = step * 1.05;
+  const W = n + 1;
+  const h = new Float32Array(W * W);
+  const px = (i: number) => x0 + i * step;
+  const pz = (j: number) => z0 + j * stepZ;
+  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) h[j * W + i] = height(px(i), pz(j));
+  const at = (i: number, j: number) => h[Math.min(n, Math.max(0, j)) * W + Math.min(n, Math.max(0, i))]!;
+  // Un tono por encima de la paleta: el sombreado toon y la niebla lo oscurecen hasta ~#2E2547 → #5B4E7A.
+  const lo = new THREE.Color(0x5b3fb0);
+  const hi = new THREE.Color(0x9b6bff);
+  const tmp = new THREE.Color();
+  const meshes: THREE.Mesh[] = [];
+  const cells = n / chunks;
+  for (let cj = 0; cj < chunks; cj++) {
+    for (let ci = 0; ci < chunks; ci++) {
+      const pos: number[] = [];
+      const nor: number[] = [];
+      const col: number[] = [];
+      const idx: number[] = [];
+      for (let j = cj * cells; j <= (cj + 1) * cells; j++) {
+        for (let i = ci * cells; i <= (ci + 1) * cells; i++) {
+          const y = at(i, j);
+          pos.push(px(i), y, pz(j));
+          const nx = (at(i - 1, j) - at(i + 1, j)) / (2 * step);
+          const nz = (at(i, j - 1) - at(i, j + 1)) / (2 * stepZ);
+          const len = Math.hypot(nx, 1, nz);
+          nor.push(nx / len, 1 / len, nz / len);
+          const t = THREE.MathUtils.clamp(0.18 + 0.5 * vnoise(px(i) * 0.02 + 9, pz(j) * 0.02) + 0.55 * (vnoise(px(i) * 0.085 + 5, pz(j) * 0.085) - 0.5) + (y - groundY) * 0.004 + (vhash(i, j) - 0.5) * 0.34, 0, 1);
+          tmp.copy(lo).lerp(hi, t);
+          col.push(tmp.r, tmp.g, tmp.b);
+        }
+      }
+      const row = cells + 1;
+      for (let j = 0; j < cells; j++) {
+        for (let i = 0; i < cells; i++) {
+          const a = j * row + i;
+          idx.push(a, a + row, a + 1, a + 1, a + row, a + row + 1);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+      geo.setIndex(idx);
+      geo.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.name = "terreno";
+      meshes.push(mesh);
+    }
+  }
+  return meshes;
 }
 
 const WATER_VERT = /* glsl */ `
@@ -410,7 +577,10 @@ void main() {
   // Orilla clara.
   col = mix(col, vec3(0.80, 1.0, 0.94), (1.0 - smoothstep(0.0, 0.16, vCentre)) * 0.9);
   gl_FragColor = vec4(col, 1.0);
-  #include <fog_fragment>
+  // La niebla solo apaga el agua a medias: el río lejano tiene que seguir brillando como un camino de luz.
+  #ifdef USE_FOG
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, smoothstep(fogNear, fogFar, vFogDepth) * 0.3);
+  #endif
 }
 `;
 
@@ -433,11 +603,11 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   oldMoon?.parent?.remove(oldMoon);
   if (dome) {
     dome.add(stars());
-    dome.add(createClouds(0x5b4e7a, 0x2e2547));
+    dome.add(createClouds(0x8a7cb0, 0x4a3f66));
     dome.add(createHills());
-    const moon = createAnimasMoon(17);
-    // Delante del kart en la salida (la recta mira a +z), alta y a la izquierda.
-    moon.position.set(95, 72, 190).setLength(214);
+    const moon = createAnimasMoon(9);
+    // Delante del kart en la salida (la recta mira a +z), alta y algo a la izquierda del eje.
+    moon.position.set(40, 62, 200).setLength(214);
     moon.lookAt(0, 0, 0);
     dome.add(moon);
   }
@@ -445,28 +615,26 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const bone = sharedBoneToon();
 
   // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
-  const spot = pointAt(track, 42, 11);
-  const road = pointAt(track, 42, 0);
+  // Se asienta sobre el terreno (ver más abajo), que abraza la pista y ya hace de cerro.
+  const spot = pointAt(track, 92, 16);
+  const road = pointAt(track, 92, 0);
   const towerFoot = { x: spot.x, z: spot.z };
-  const tower = new THREE.Mesh(campanarioGeometry(), bone);
-  tower.position.set(spot.x, spot.y, spot.z);
-  tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
-  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
-  bell.position.set(0, 9.2, 1.85);
-  tower.add(bell);
-  const bellRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 8, 16), boneToonMaterial());
-  bellRing.position.copy(bell.position);
-  bellRing.rotation.x = Math.PI / 2;
-  tower.add(bellRing);
-  tower.name = "campanario";
-  scene.add(tower);
-  // Cerro bajo el campanario: sin él la torre flotaría sobre el valle. Pendiente 1:1.1, por debajo de la calzada.
-  const hillTop = spot.y - 0.3;
-  const hillH = hillTop - GROUND_Y;
-  const hill = new THREE.Mesh(new THREE.CylinderGeometry(5, 5 + hillH / 1.1, hillH, 16, 1, true), toonMaterial({ color: 0x2e2547 }));
-  hill.position.set(spot.x, GROUND_Y + hillH / 2, spot.z);
-  hill.name = "cerro-campanario";
-  scene.add(hill);
+  const placeTower = (groundY: number) => {
+    const tower = new THREE.Mesh(campanarioGeometry(), bone);
+    tower.position.set(spot.x, groundY - 0.4, spot.z);
+    tower.scale.setScalar(1.6);
+    tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
+    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
+    bell.position.set(0, 9.2, 1.85);
+    tower.add(bell);
+    const bellRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 8, 16), boneToonMaterial());
+    bellRing.position.copy(bell.position);
+    bellRing.rotation.x = Math.PI / 2;
+    tower.add(bellRing);
+    tower.name = "campanario";
+    scene.add(tower);
+  };
+  let towerPlaced = false;
 
   // Arco-calavera en la salida, en vez del arco genérico.
   const start = pointAt(track, 0);
@@ -547,15 +715,17 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       low = Math.min(low, surfaceY({ y: p.y, lateral: -p.width / 2, bank: p.bank }));
     }
     const waterY = low - 1.8;
-    // El óvalo se desplaza hacia el lado del campanario: debajo del eje quedaría tapado por la calzada.
-    const toward = (off: number) => {
-      const q = pointAt(track, big.to + 10, off);
-      return Math.hypot(q.x - towerFoot.x, q.z - towerFoot.z);
-    };
-    const mid = pointAt(track, big.to + 10, toward(30) < toward(-30) ? 30 : -30);
-    const lagoon = new THREE.Mesh(lagoonGeometry(mid, towerFoot), lagoonMaterial());
+    // El óvalo queda en el interior del gancho que forma la pista, entre la recta de salida y el salto.
+    const lip2 = pointAt(track, big.to);
+    const mid = { x: (towerFoot.x + lip2.x) / 2 - 2, z: Math.max(towerFoot.z, lip2.z) + 15 };
+    const shape = lagoonShape(mid, towerFoot);
+    const lagoon = new THREE.Mesh(lagoonGeometry(shape), lagoonMaterial());
+    const height = terrainHeightField(track, shape, waterY, GROUND_Y, { x: spot.x, z: spot.z, top: road.y - 6 });
+    for (const chunk of terrainMeshes(height, GROUND_Y, animasTerrainMaterial())) scene.add(chunk);
+    placeTower(height(towerFoot.x, towerFoot.z));
+    towerPlaced = true;
     lagoon.position.y = waterY;
-    lagoon.renderOrder = -2;
+    lagoon.renderOrder = 0; // después del cielo (-1): el río lejano queda a más de 230 m, fuera de la cúpula
     lagoon.frustumCulled = false;
     lagoon.name = "laguna";
     const waterMat = lagoon.material as THREE.ShaderMaterial;
@@ -563,59 +733,17 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       waterMat.uniforms.uTime!.value = performance.now() / 1000;
     };
     scene.add(lagoon);
+
+    // Árboles, farolillos y vallas de hueso. `height` es el mismo terreno que se dibuja.
+    for (const mesh of createTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
+    const lanterns = createLanterns(track, height, { x: shape.mid.x, z: shape.mid.z, y: waterY, rx: shape.rx, rz: shape.rz });
+    scene.add(lanterns.bodies, lanterns.halos);
+    if (lanterns.poles) scene.add(lanterns.poles);
+    const fences = createFences(track);
+    scene.add(fences.posts, fences.rope);
   }
 
-  // Faroles flotantes, una sola malla.
-  const lanterns = new THREE.InstancedMesh(lanternGeometry(), lanternMaterial(), 40);
-  let n = 0;
-  const pts = track.points;
-  for (let i = 0; i < pts.length && n < 40; i += 16) {
-    const p = pts[i]!;
-    const side = i % 32 === 0 ? 1 : -1;
-    const off = p.w / 2 + track.verge + 2.2;
-    const c = closestPoint(track, p.x, p.z);
-    const left = pointAt(track, c.distance, off * side);
-    if (!clear(track, left.x, left.z, 0.4)) continue;
-    lanterns.setMatrixAt(n++, M(left.x, p.y + 3.1, left.z));
-  }
-  lanterns.count = n;
-  lanterns.frustumCulled = false;
-  lanterns.userData.animasLanterns = true;
-  lanterns.onBeforeRender = () => {
-    const shader = lanterns.material.userData.shader as { uniforms: { uTime: { value: number } } } | undefined;
-    if (shader) shader.uniforms.uTime.value = performance.now() / 1000;
-  };
-  scene.add(lanterns);
-
-  // Pinos de hueso y lápidas en el Pinar, linternas ya van en la subida con el mismo lote.
-  const trunks = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.28, 1.4, 2, 6), boneToonMaterial(), 16);
-  const crowns = new THREE.InstancedMesh(new THREE.SphereGeometry(0.9, 8, 6), toonMaterial({ color: ANIMA }), 16);
-  const tombs = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.35, 0.7, 2, 6), boneToonMaterial(), 12);
-  let trees = 0;
-  let graves = 0;
-  for (let i = 0; i < pts.length && (trees < 16 || graves < 12); i += 10) {
-    const dist = track.lengths[i]!;
-    const f = dist / track.length;
-    if (f < 0.54 || f > 0.66) continue;
-    const p = pts[i]!;
-    const c = closestPoint(track, p.x, p.z);
-    const spot = pointAt(track, c.distance, (trees % 2 === 0 ? 1 : -1) * (p.w / 2 + track.verge + 3));
-    if (!clear(track, spot.x, spot.z, 0.3)) continue;
-    if (trees < 16) {
-      trunks.setMatrixAt(trees, M(spot.x, p.y + 1, spot.z));
-      crowns.setMatrixAt(trees, M(spot.x, p.y + 2.5, spot.z, 0, 0, 0, 1.1, 0.8, 1.1));
-      trees++;
-    } else if (graves < 12) {
-      tombs.setMatrixAt(graves++, M(spot.x, p.y + 0.7, spot.z));
-    }
-  }
-  trunks.count = trees;
-  crowns.count = trees;
-  tombs.count = graves;
-  trunks.frustumCulled = false;
-  crowns.frustumCulled = false;
-  tombs.frustumCulled = false;
-  scene.add(trunks, crowns, tombs);
+  if (!towerPlaced) placeTower(spot.y);
 
   const pumpkinMark = def.landmarks?.find((m) => m.kind === "calabaza");
   if (pumpkinMark && clear(track, pumpkinMark.x, pumpkinMark.z, 0)) {

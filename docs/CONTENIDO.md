@@ -1,7 +1,7 @@
 # Derrape — Contenido de lanzamiento
 
 Todo disponible desde el primer día (nada que desbloquear):
-**10 circuitos de copa, 1 extra, 8 personajes y 10 coches.** Todo ORIGINAL (ver reglas en `CLAUDE.md`).
+**10 circuitos de copa, 1 extra, 9 personajes y 12 coches.** Todo ORIGINAL (ver reglas en `CLAUDE.md`).
 
 Los nombres son provisionales: cámbialos libremente.
 
@@ -49,8 +49,20 @@ Proporción chibi (la cabeza ronda el 45 % de la figura sentada), calavera amabl
 | 8 | **Flecha** | Alerón en hoja de guadaña | 5 | 1 | 3 | 3 | Expertos |
 | 9 | **Grillo** | Buggy con jaula de costillas | 2 | 4 | 3 | 3 | Salidas y remontadas |
 | 10 | **Derrapín** | Traseras anchas y cuernecitos romos | 3 | 3 | 4 | 2 | **Extra:** el turbo de derrape carga un 15 % más rápido |
+| 11 | **Hueso** | Kart blanco con morro de calavera, dos escapes y un hueso cruzado (Release 1: el de **Lía Brasas**) | 3 | 3 | 3 | 3 | Equilibrado; es el coche por defecto |
+| 12 | **Medianoche** | Kart oscuro con laterales de hueso, banda brasa, faros redondos y turbo espectral (Release 1: el de **Calavera Chispas**) | 4 | 3 | 2 | 3 | Rectas rápidas |
 
-Todos con color elegible. Base de modelos: packs CC0 de Kenney (coches y karts), modificados.
+Todos con color elegible, salvo Hueso y Medianoche, que llevan la paleta fija de Dalí. Los modelos son procedurales (primitivas de Three.js, sin assets externos).
+
+## Pilotos
+Cada piloto sugiere un coche (la pantalla «Piloto y coche» lo propone al elegirlo; se puede cambiar).
+
+| Piloto | Clase | Aspecto | Coche |
+|---|---|---|---|
+| **Lía Brasas** (rediseñada) | Ligera | Calavera amable, ojos Llama con pupila Brasa, coleta alta Espectro con mechones que se balancean, diadema Ánima prof., sudadera Ciruela/Sombra | Hueso |
+| **Calavera Chispas** (nuevo) | Media | Calavera grande sin pelo, cuencas vacías con destello Ánima, 5 dientes en bloque, costillas sobre torso Sombra, guantes Brasa | Medianoche |
+
+Los otros siete pilotos siguen igual y siguen siendo elegibles.
 
 ## Circuitos (10) en 2 copas
 

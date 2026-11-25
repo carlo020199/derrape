@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { Parts, mix, type Vec3 } from "./parts";
+import { buildHuesoKart, buildMedianocheKart, type BuiltKartSkin } from "./kartSkins";
+import { buildChispas, buildLia, type BuiltPilot } from "./pilots";
 import { PALETTE, driverOutlineMaterial, sharedBoneToon, sharedVertexToon } from "./materials";
 import {
   DEFAULT_CHARACTER,
@@ -27,6 +28,8 @@ export interface KartModel {
   rearWheels: THREE.Vector3[];
   /** Bocas de escape, en el chasis. */
   exhausts: THREE.Object3D[];
+  /** Faros delanteros (Medianoche): reciben un halo aditivo. */
+  lamps: THREE.Object3D[];
   /** Llamas del piloto (coleta, melena, antena, bufanda, farol). */
   ornaments: THREE.Object3D[];
   /** Esas llamas son espectrales aunque el escape vaya en naranja. */
@@ -41,6 +44,11 @@ export interface KartModel {
   readonly detail: boolean;
   setDetail(near: boolean): void;
   setMood(mood: Mood, time: number): void;
+  /**
+   * Animación por fotograma: el cuerpo se inclina al girar (±12°), la cabeza mira hacia el giro,
+   * la coleta se balancea y hay un rebote de 0,1 s al recibir turbo.
+   */
+  animate(heading: number, dt: number, boosting: boolean, time: number): void;
   setOutline(on: boolean): void;
 }
 
@@ -52,78 +60,14 @@ const partsMat = sharedVertexToon();
 const boneMat = sharedBoneToon();
 const outlineMat = driverOutlineMaterial();
 
-const { noche: NOCHE, hueso: HUESO, huesoSombra: HUESO_S, marfil: MARFIL, brasa: BRASA, llama: LLAMA, sombra: SOMBRA, ciruela: CIRUELA } = PALETTE;
+const { noche: NOCHE, hueso: HUESO, marfil: MARFIL, brasa: BRASA, llama: LLAMA, sombra: SOMBRA, ciruela: CIRUELA } = PALETTE;
 const TYRE = 0x16141f;
-
-type Vec3 = [number, number, number];
-
-/** Acumula piezas y las fusiona en una sola geometría con color por vértice. */
-class Parts {
-  private list: THREE.BufferGeometry[] = [];
-  private m = new THREE.Matrix4();
-  private q = new THREE.Quaternion();
-  private e = new THREE.Euler();
-
-  add(geo: THREE.BufferGeometry, color: number, pos: Vec3, rot: Vec3 = [0, 0, 0], scale: Vec3 = [1, 1, 1]) {
-    const src = geo.index ? geo.toNonIndexed() : geo;
-    if (src !== geo) geo.dispose();
-    this.m.compose(new THREE.Vector3(...pos), this.q.setFromEuler(this.e.set(...rot)), new THREE.Vector3(...scale));
-    src.applyMatrix4(this.m);
-    const c = new THREE.Color(color);
-    const n = src.getAttribute("position").count;
-    const colors = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) colors.set([c.r, c.g, c.b], i * 3);
-    src.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    this.list.push(src);
-    return this;
-  }
-
-  ball(r: number, color: number, pos: Vec3, scale?: Vec3, seg: [number, number] = [6, 5]) {
-    return this.add(new THREE.SphereGeometry(r, seg[0], seg[1]), color, pos, [0, 0, 0], scale);
-  }
-
-  dome(r: number, color: number, pos: Vec3, scale?: Vec3) {
-    return this.add(new THREE.SphereGeometry(r, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), color, pos, [0, 0, 0], scale);
-  }
-
-  capsule(radius: number, length: number, color: number, pos: Vec3, rot?: Vec3, scale?: Vec3, radial = 5) {
-    return this.add(new THREE.CapsuleGeometry(radius, length, 1, radial), color, pos, rot, scale);
-  }
-
-  cyl(rTop: number, rBot: number, h: number, color: number, pos: Vec3, rot?: Vec3) {
-    return this.add(new THREE.CylinderGeometry(rTop, rBot, h, 5), color, pos, rot);
-  }
-
-  torus(r: number, tube: number, color: number, pos: Vec3, rot?: Vec3, arc = Math.PI * 2) {
-    return this.add(new THREE.TorusGeometry(r, tube, 3, 8, arc), color, pos, rot);
-  }
-
-  cone(r: number, h: number, color: number, pos: Vec3, rot?: Vec3) {
-    const g = new THREE.ConeGeometry(r, h, 5);
-    g.translate(0, h / 2, 0);
-    return this.add(g, color, pos, rot);
-  }
-
-  rounded(w: number, h: number, d: number, color: number, pos: Vec3, rot?: Vec3, radius = 0.1) {
-    const rad = Math.min(radius, w / 2, h / 2, d / 2);
-    return this.add(new RoundedBoxGeometry(w, h, d, 1, Math.max(0.02, rad)), color, pos, rot);
-  }
-
-  build(): THREE.BufferGeometry {
-    const merged = mergeGeometries(this.list, false);
-    for (const g of this.list) g.dispose();
-    if (!merged) throw new Error("no se pudo fusionar la malla");
-    // No recomputar normales: en una malla sin índices cada triángulo quedaría plano
-    // y la esfera de 20×14 se vería como una cabeza facetada.
-    if (!merged.getAttribute("normal")) merged.computeVertexNormals();
-    return merged;
-  }
-}
-
-const mix = (a: number, b: number, t: number) => new THREE.Color(a).lerp(new THREE.Color(b), t).getHex();
 
 interface BuiltKart {
   geo: THREE.BufferGeometry;
+  /** Piezas emisivas (faros y pilotos) y anclas de los faros. */
+  glow?: THREE.BufferGeometry | null;
+  lamps?: THREE.Vector3[];
   seat: THREE.Vector3;
   rear: THREE.Vector3[];
   exhausts: THREE.Vector3[];
@@ -149,6 +93,8 @@ function emblem(p: Parts, pos: Vec3) {
 }
 
 function buildKartGeometry(look: KartLook, color: number): BuiltKart {
+  if (look.skin === "hueso") return buildHuesoKart(look) satisfies BuiltKartSkin;
+  if (look.skin === "medianoche") return buildMedianocheKart(look);
   const p = new Parts();
   const { length: len, width: wid, height: hgt } = look;
   const y0 = Math.max(look.frontWheel, look.rearWheel) * 0.9 + hgt / 2;
@@ -481,6 +427,7 @@ function halfTurn() {
 
 const kartCache = new Map<string, BuiltKart>();
 const driverCache = new Map<string, BuiltDriver>();
+const pilotCache = new Map<string, BuiltPilot>();
 
 function kartParts(def: KartDef, color: number) {
   const key = `${def.id}:${color}`;
@@ -488,6 +435,7 @@ function kartParts(def: KartDef, color: number) {
   if (!v) {
     v = buildKartGeometry(def.look, color);
     v.geo.userData.shared = true;
+    if (v.glow) v.glow.userData.shared = true;
     kartCache.set(key, v);
   }
   return v;
@@ -505,6 +453,18 @@ function driverParts(def: CharacterDef) {
   return g;
 }
 
+/** Los dos pilotos del Release 1 tienen su propio constructor (brazos y mechones animables). */
+function pilotParts(def: CharacterDef): BuiltPilot | null {
+  if (def.look !== "mechanic" && def.look !== "chispas") return null;
+  let p = pilotCache.get(def.id);
+  if (!p) {
+    p = def.look === "mechanic" ? buildLia() : buildChispas();
+    for (const g of [p.body, p.head, p.eyes, ...p.arms.map((a) => a.geo), ...p.strands.map((s) => s.geo)]) g.userData.shared = true;
+    pilotCache.set(def.id, p);
+  }
+  return p;
+}
+
 /** Kiko es pequeño; Nonna y Don Osario, un poco más grandes. */
 const DRIVER_SCALE: Record<string, number> = { kiko: 0.84, "nonna-pina": 1.06, "don-osario": 1.14, mimi: 0.96, brasa: 0.98 };
 
@@ -515,13 +475,19 @@ function pin(parent: THREE.Object3D, pos: THREE.Vector3) {
   return o;
 }
 
+/** Color de la carrocería del modelo barato: el de la piel si tiene paleta propia, si no el del jugador. */
+function lodBody(look: KartLook, color: number) {
+  return look.skin === "hueso" ? HUESO : look.skin === "medianoche" ? SOMBRA : color;
+}
+
 function buildLod(look: KartLook, color: number, c: CharacterDef): { kart: THREE.BufferGeometry; driver: THREE.BufferGeometry } {
   const p = new Parts();
   const h = Math.max(look.height * 1.4, 0.42);
   const y = look.frontWheel * 0.7 + h * 0.2;
   const half = Math.PI / 2;
-  p.rounded(look.width * 0.96, h, look.length * 0.8, color, [0, y, 0], undefined, 0.14);
-  const wheel = (r: number, w: number, x: number, z: number) => {
+  p.rounded(look.width * 0.96, h, look.length * 0.8, lodBody(look, color), [0, y, 0], undefined, 0.14);
+  if (look.skin === "medianoche") p.rounded(look.width * 0.5, 0.06, 0.1, BRASA, [0, y + h * 0.28, look.length * 0.37], undefined, 0.02);
+  const wheel = (r: number, _w: number, x: number, z: number) => {
     p.add(new THREE.TorusGeometry(r * 0.72, r * 0.28, 3, 6), TYRE, [x, r, z], [0, half, 0]);
   };
   if (look.skin === "broom") {
@@ -536,10 +502,12 @@ function buildLod(look: KartLook, color: number, c: CharacterDef): { kart: THREE
     wheel(look.rearWheel, look.rearWheelW, rx, -look.length * 0.3);
   }
   const d = new Parts();
-  d.capsule(0.2, 0.26, c.color, [0, 0.42, 0]);
+  d.capsule(0.2, 0.26, c.look === "mechanic" || c.look === "chispas" ? c.color : c.color, [0, 0.42, 0]);
   d.ball(0.38, HUESO, [0, 1.02, 0.02], undefined, [8, 6]);
-  d.ball(0.09, SOMBRA, [-0.12, 1.06, 0.32], [1.1, 1.3, 0.55], [5, 4]);
-  d.ball(0.09, SOMBRA, [0.12, 1.06, 0.32], [1.1, 1.3, 0.55], [5, 4]);
+  d.ball(0.09, c.look === "chispas" ? NOCHE : SOMBRA, [-0.12, 1.06, 0.32], [1.1, 1.3, 0.55], [5, 4]);
+  d.ball(0.09, c.look === "chispas" ? NOCHE : SOMBRA, [0.12, 1.06, 0.32], [1.1, 1.3, 0.55], [5, 4]);
+  // Lía: la coleta Espectro se reconoce incluso de lejos.
+  if (c.look === "mechanic") d.ball(0.22, PALETTE.espectro, [0, 1.38, -0.28], [1, 1.2, 1], [6, 4]);
   return { kart: p.build(), driver: d.build() };
 }
 
@@ -552,6 +520,27 @@ function outlined(geo: THREE.BufferGeometry, parent: THREE.Object3D) {
   return shell;
 }
 
+let glowMat: THREE.MeshBasicMaterial | null = null;
+/** Faros y pilotos: color puro de la paleta, sin luz (emisivo al 100 %). */
+function sharedGlowMaterial() {
+  if (!glowMat) {
+    glowMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    glowMat.userData.shared = true;
+  }
+  return glowMat;
+}
+
+const wrapPi = (a: number) => {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+};
+
+/** Inclinación del cuerpo en las curvas: ±12°. */
+const LEAN_MAX = (12 * Math.PI) / 180;
+/** Brazos agarrando el volante (rotación X desde colgar hacia abajo). */
+const ARM_REST = -1.0;
+
 export function createKartModel(color: number = BRASA, characterId: string = DEFAULT_CHARACTER, kartId: string = DEFAULT_KART): KartModel {
   const character = findCharacter(characterId) ?? findCharacter(DEFAULT_CHARACTER)!;
   const kart = findKart(kartId) ?? findKart(DEFAULT_KART)!;
@@ -562,7 +551,10 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
   const parts = kartParts(kart, color);
   const hiKart = new THREE.Mesh(parts.geo, partsMat);
   body.add(hiKart);
+  const glowMesh = parts.glow ? new THREE.Mesh(parts.glow, sharedGlowMaterial()) : null;
+  if (glowMesh) body.add(glowMesh);
   const exhausts = parts.exhausts.map((pos) => pin(body, pos));
+  const lamps = (parts.lamps ?? []).map((pos) => pin(body, pos));
   const lod = buildLod(kart.look, color, character);
   lod.kart.userData.shared = false;
   lod.driver.userData.shared = false;
@@ -571,23 +563,60 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
   loKart.visible = false;
   body.add(loKart);
 
-  const built = driverParts(character);
+  const pilot = pilotParts(character);
+  const built = pilot ? null : driverParts(character);
   const driver = new THREE.Group();
   driver.position.copy(parts.seat);
   driver.scale.setScalar(DRIVER_SCALE[character.id] ?? 1);
   if (character.look === "sheet") driver.position.y += 0.18;
   const shells: THREE.Mesh[] = [];
   const driverBody = new THREE.Group();
-  shells.push(outlined(built.body, driverBody));
-  driver.add(driverBody);
-
   const head = new THREE.Group();
-  head.position.copy(built.headPos);
-  shells.push(outlined(built.head, head));
-  const pupilMat = new THREE.MeshBasicMaterial({ color: built.pupil, toneMapped: false });
-  const pupilMesh = new THREE.Mesh(built.pupils, pupilMat);
-  head.add(pupilMesh);
-  const ornaments = built.ornaments.map((pos) => pin(head, pos));
+  const eyeMat = new THREE.MeshBasicMaterial({ vertexColors: !!pilot, color: pilot ? 0xffffff : built!.pupil, toneMapped: false });
+  const hiExtra: THREE.Object3D[] = [];
+  const ornaments: THREE.Object3D[] = [];
+  const armPivots: THREE.Group[] = [];
+  const strandPivots: { g: THREE.Group; base: number; yaw: number; phase: number }[] = [];
+  let ornamentSpectral = false;
+  let eyes: THREE.Mesh;
+
+  if (pilot) {
+    shells.push(outlined(pilot.body, driverBody));
+    head.position.copy(pilot.headPos);
+    shells.push(outlined(pilot.head, head));
+    eyes = new THREE.Mesh(pilot.eyes, eyeMat);
+    head.add(eyes);
+    pilot.arms.forEach((a, i) => {
+      const g = new THREE.Group();
+      g.position.copy(a.pivot);
+      g.rotation.set(ARM_REST, 0, 0);
+      shells.push(outlined(a.geo, g));
+      driver.add(g);
+      armPivots[i] = g;
+      hiExtra.push(g);
+    });
+    for (const s of pilot.strands) {
+      const g = new THREE.Group();
+      g.position.copy(s.pivot);
+      g.rotation.order = "YXZ";
+      g.add(new THREE.Mesh(s.geo, boneMat));
+      if (pilot.sparkles) ornaments.push(pin(g, s.tip));
+      head.add(g);
+      strandPivots.push({ g, base: s.base, yaw: s.yaw, phase: s.phase });
+      hiExtra.push(g);
+    }
+    ornamentSpectral = pilot.sparkles;
+  } else {
+    const b = built!;
+    shells.push(outlined(b.body, driverBody));
+    head.position.copy(b.headPos);
+    shells.push(outlined(b.head, head));
+    eyes = new THREE.Mesh(b.pupils, eyeMat);
+    head.add(eyes);
+    for (const pos of b.ornaments) ornaments.push(pin(head, pos));
+    ornamentSpectral = b.spectral;
+  }
+  driver.add(driverBody);
   driver.add(head);
   const loDriver = new THREE.Mesh(lod.driver, boneMat);
   loDriver.name = "lejos";
@@ -602,6 +631,13 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
   let headScale = 1;
   let headVel = 0;
   let lastTime = 0;
+  // Estado de la animación (ver `animate`).
+  let lastHeading: number | null = null;
+  let steer = 0;
+  let armsUp = 0;
+  let wasBoosting = false;
+  let bounceT = 1;
+  const baseEyeColor = eyeMat.color.getHex();
 
   const shield = new THREE.Mesh(shieldGeo, shieldMat);
   shield.position.y = 0.9;
@@ -610,15 +646,17 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
 
   let mood: Mood = "idle";
   let near = true;
-  const hiBits = [hiKart, driverBody, head, pupilMesh];
+  const hiBits: THREE.Object3D[] = [hiKart, driverBody, head, eyes, ...hiExtra];
+  if (glowMesh) hiBits.push(glowMesh);
   return {
     root,
     body,
     shield,
     rearWheels: parts.rear,
     exhausts,
+    lamps,
     ornaments,
-    ornamentSpectral: built.spectral,
+    ornamentSpectral,
     head,
     flameLength: kart.look.length,
     get mood() {
@@ -637,6 +675,17 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
     setOutline(on) {
       for (const s of shells) s.visible = on && near;
     },
+    animate(heading, dt, boosting, time) {
+      if (dt > 0 && lastHeading !== null) {
+        const target = THREE.MathUtils.clamp(wrapPi(heading - lastHeading) / dt / 1.4, -1, 1);
+        steer += (target - steer) * Math.min(1, dt * 8);
+      }
+      lastHeading = heading;
+      if (boosting && !wasBoosting) bounceT = 0;
+      wasBoosting = boosting;
+      bounceT = Math.min(1, bounceT + dt / 0.1);
+      for (const s of strandPivots) s.g.rotation.set(s.base + Math.sin(time * 3.1 + s.phase) * 0.12 + (boosting ? 0.25 : 0), s.yaw, -steer * 0.5 + Math.sin(time * 2.3 + s.phase) * 0.06);
+    },
     setMood(next, time) {
       mood = next;
       const dt = Math.min(0.05, Math.max(0, time - lastTime || 0));
@@ -645,18 +694,26 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
       headVel += ((target - headScale) * 46 - headVel * 9) * dt;
       headScale += headVel * dt;
       head.scale.set(1, headScale, 1);
-      pupilMat.color.setHex(next === "angry" ? PALETTE.ascua : built.pupil);
+      eyeMat.color.setHex(next === "angry" ? PALETTE.ascua : baseEyeColor);
+      // Brazos: agarran el volante; al cruzar meta se levantan con un «¡yuju!».
+      armsUp += ((next === "celebrate" ? 1 : 0) - armsUp) * Math.min(1, dt * 10);
+      armPivots.forEach((g, i) => {
+        const side = i === 0 ? -1 : 1;
+        g.rotation.set(ARM_REST - 2.2 * armsUp + Math.sin(time * 12 + i * Math.PI) * 0.25 * armsUp, 0, side * (0.1 + 0.35 * armsUp));
+      });
+      const bounce = bounceT < 1 ? Math.sin(Math.PI * bounceT) * 0.08 : 0;
+      head.rotation.y = steer * 0.4;
       if (next === "celebrate") {
-        driver.position.y = baseY + Math.abs(Math.sin(time * 8)) * 0.12;
+        driver.position.y = baseY + Math.abs(Math.sin(time * 8)) * 0.12 + bounce;
         driver.rotation.set(0, Math.sin(time * 6) * 0.35, 0);
         driver.scale.set(baseScale, baseScale, baseScale);
       } else if (next === "angry") {
-        driver.position.y = baseY;
+        driver.position.y = baseY + bounce;
         driver.rotation.set(0, 0, Math.sin(time * 42) * 0.08);
         driver.scale.setScalar(baseScale);
-      } else if (driver.position.y !== baseY || driver.rotation.y !== 0) {
-        driver.position.y = baseY;
-        driver.rotation.set(0, 0, 0);
+      } else {
+        driver.position.y = baseY + bounce;
+        driver.rotation.set(0, 0, steer * LEAN_MAX);
         driver.scale.setScalar(baseScale);
       }
     },
@@ -665,14 +722,21 @@ export function createKartModel(color: number = BRASA, characterId: string = DEF
 
 /** Libera las mallas guardadas (al cerrar el juego o para depurar). */
 export function disposeKartModelCache() {
-  for (const v of kartCache.values()) v.geo.dispose();
+  for (const v of kartCache.values()) {
+    v.geo.dispose();
+    v.glow?.dispose();
+  }
   for (const g of driverCache.values()) {
     g.body.dispose();
     g.head.dispose();
     g.pupils.dispose();
   }
+  for (const p of pilotCache.values()) {
+    for (const g of [p.body, p.head, p.eyes, ...p.arms.map((a) => a.geo), ...p.strands.map((s) => s.geo)]) g.dispose();
+  }
   kartCache.clear();
   driverCache.clear();
+  pilotCache.clear();
 }
 
 export function triangleCount(geo: THREE.BufferGeometry) {

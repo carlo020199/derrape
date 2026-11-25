@@ -9,10 +9,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p packages/shared && tsc -p apps/server && tsc -p apps/client",
+    "lint": "tsc -p packages/shared --noUnusedLocals --noUnusedParameters && tsc -p apps/server --noUnusedLocals --noUnusedParameters && tsc -p apps/client --noUnusedLocals --noUnusedParameters",
+    "medir": "tsx scripts/medir-escena.ts",
+    "capturas": "tsx scripts/capturas-release.ts",
     "build": "npm run typecheck && npm run build -w @derrape/client && npm run build -w @derrape/server"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
+    "playwright-core": "^1.64.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

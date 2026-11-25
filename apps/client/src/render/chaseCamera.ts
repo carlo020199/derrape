@@ -22,9 +22,11 @@ export const CAMERA = {
    */
   reliefDistance: 5.2,
   reliefHeight: 2.2,
-  reliefPortraitDistance: 5.4,
-  reliefPortraitHeight: 2.0,
-  reliefPortraitLookAhead: 12,
+  /** Más campo de visión en vertical: se ven árboles, farolillos y vallas a los lados, como en la referencia. */
+  reliefPortraitExtraFov: 14,
+  reliefPortraitDistance: 7.8,
+  reliefPortraitHeight: 4.4,
+  reliefPortraitLookAhead: 10,
   reliefPortraitLookLift: 0.9,
 };
 
@@ -191,7 +193,7 @@ export class ChaseCamera {
 
     const fov =
       CAMERA.baseFov +
-      (portrait ? CAMERA.portraitExtraFov : 0) +
+      (portrait ? CAMERA.reliefPortraitExtraFov : 0) +
       (CAMERA.fastFov - CAMERA.baseFov) * Math.min(1.4, Math.max(0, speedRatio)) +
       (cue.bigJump ? 4 : 0);
     if (Math.abs(this.camera.fov - fov) > 0.05) {

@@ -30,23 +30,47 @@ export class GaragePreview {
     const key = new THREE.DirectionalLight(0xfff7ea, 1.25);
     key.position.set(2.2, 3.4, 5);
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(PALETTE.anima, 0.85);
+    const rim = new THREE.DirectionalLight(PALETTE.anima, 0.45);
     rim.position.set(-3.5, 2.4, -4);
     this.scene.add(rim);
-    const pedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.15, 2.35, 0.28, 28),
-      toonMaterial({ color: PALETTE.ciruela }),
-    );
-    pedestal.position.y = -0.14;
+    // Pedestal de hueso en dos escalones con un foco cálido (Llama) desde arriba.
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, 0.3, 32), toonMaterial({ color: PALETTE.sombra }));
+    base.position.y = -0.15;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.1, 0.22, 32), toonMaterial({ color: PALETTE.huesoSombra }));
+    top.position.y = 0.11;
     const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(2.05, 0.07, 8, 28),
-      new THREE.MeshBasicMaterial({ color: PALETTE.anima, toneMapped: false }),
+      new THREE.TorusGeometry(2.0, 0.05, 6, 32),
+      new THREE.MeshBasicMaterial({ color: PALETTE.espectro, toneMapped: false }),
     );
     ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.02;
-    this.scene.add(pedestal, ring);
-    this.camera.position.set(3.4, 2.4, 5.2);
-    this.camera.lookAt(0, 0.7, 0);
+    ring.position.y = 0.23;
+    // Foco cálido: resplandor aditivo en Llama detrás del piloto (sin luz real).
+    const glowCanvas = document.createElement("canvas");
+    glowCanvas.width = glowCanvas.height = 128;
+    const gg = glowCanvas.getContext("2d")!;
+    const grd = gg.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grd.addColorStop(0, "rgba(255,180,35,0.55)");
+    grd.addColorStop(0.5, "rgba(255,180,35,0.16)");
+    grd.addColorStop(1, "rgba(255,180,35,0)");
+    gg.fillStyle = grd;
+    gg.fillRect(0, 0, 128, 128);
+    const glowTex = new THREE.CanvasTexture(glowCanvas);
+    glowTex.colorSpace = THREE.SRGBColorSpace;
+    const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    spot.scale.set(9, 9, 1);
+    spot.position.set(-0.6, 2.0, -2.2);
+    const pool = new THREE.Mesh(
+      new THREE.CircleGeometry(1.9, 32),
+      new THREE.MeshBasicMaterial({ color: PALETTE.llama, transparent: true, opacity: 0.07, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
+    );
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.y = 0.235;
+    this.scene.add(base, top, ring, spot, pool);
+    const warm = new THREE.DirectionalLight(PALETTE.llama, 0.3);
+    warm.position.set(-1.5, 6, 2);
+    this.scene.add(warm);
+    this.camera.position.set(3.2, 2.7, 8.6);
+    this.camera.lookAt(0, 0.8, 0);
     this.fire = new Fire(this.scene);
   }
 
@@ -129,11 +153,12 @@ export class GaragePreview {
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    // En vertical la pantalla es estrecha: se aleja la cámara para que quepa el coche entero.
-    // La hoja tapa desde ~34 % de alto. La cara entera (ojos, nariz y sonrisa) cabe en ese hueco.
-    this.camera.position.set(1.05, 1.28, 4.35);
-    this.camera.lookAt(0, 1.12, 0.1);
-    this.camera.setViewOffset(w, h, 0, h * 0.06, w, h);
+    // En vertical la pantalla es estrecha: la cámara se aleja para que quepan el kart entero, el piloto y el
+    // pedestal en el hueco de arriba (la hoja de selección tapa desde ~42 % de alto).
+    const wide = w / h > 0.8;
+    this.camera.position.set(wide ? 2.6 : 4.1, wide ? 2.7 : 3.4, wide ? 6.6 : 11.6);
+    this.camera.lookAt(0, 0.9, 0);
+    this.camera.setViewOffset(w, h, 0, wide ? 0 : h * 0.245, w, h);
     this.camera.updateProjectionMatrix();
 
     this.fire.begin();
@@ -142,7 +167,9 @@ export class GaragePreview {
       const yaw = 0.62 + Math.sin(this.time * 0.6) * 0.12;
       this.model.root.rotation.y = yaw;
       this.cheer = Math.max(0, this.cheer - dt);
+      this.model.animate(yaw, dt, false, this.time);
       this.model.setMood(this.cheer > 0 ? "celebrate" : "idle", this.time);
+      for (const a of this.model.lamps) this.fire.flame(a.getWorldPosition(new THREE.Vector3()), PALETTE.llama, 0.55);
       const dir = this.flameAt;
       const local = new THREE.Vector3(0, 0.28, -1).normalize();
       for (const a of this.model.exhausts) {

@@ -195,15 +195,21 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   showTouchHint();
 
   // El cielo (radio 230) tiene que caber en el plano lejano. La niebla corta a 190.
-  camera.far = 260;
+  // En Ánimas el río lejano brilla por encima del final de la pista (a ~250 m), así que ve más lejos.
+  camera.far = track.relief ? 420 : 260;
   camera.updateProjectionMatrix();
 
   // --- Escena ---
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(theme.horizon);
   scene.fog = new THREE.Fog(theme.horizon, theme.fog[0], theme.fog[1]);
-  scene.add(new THREE.HemisphereLight(lighten(theme.sky, 0.55), theme.ground, 1.15));
-  const moon = new THREE.DirectionalLight(0xcfc4ff, 1.05);
+  const lit = theme.light;
+  scene.add(
+    lit
+      ? new THREE.HemisphereLight(lit.hemiSky, lit.hemiGround, lit.hemi)
+      : new THREE.HemisphereLight(lighten(theme.sky, 0.55), theme.ground, 1.15),
+  );
+  const moon = new THREE.DirectionalLight(lit?.key ?? 0xcfc4ff, lit?.keyIntensity ?? 1.05);
   moon.position.set(-50, 80, 30);
   scene.add(moon);
   const sky = createGradientSky(theme.sky, theme.skyHorizon ?? theme.horizon, 230, theme.skyHorizon !== undefined ? 0x9b6bff : undefined);
@@ -376,6 +382,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
   // ?foto=<metros>[,<lateral>[,<giro en grados>]]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
   const foto = !online ? new URLSearchParams(location.search).get("foto") : null;
+  const vistaParam = foto ? new URLSearchParams(location.search).get("vista") : null;
+  const vistaRel = vistaParam?.startsWith("k,") ? vistaParam.slice(2).split(",").map(Number) : null;
+  const vista = vistaParam && !vistaRel ? vistaParam.split(",").map(Number) : null;
   if (foto) {
     const [d, lat, giro] = foto.split(",").map(Number);
     const at = pointAt(track, d ?? 0, lat ?? 0);
@@ -689,6 +698,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       flameDir.copy(localFlame).transformDirection(a.matrixWorld);
       paintExhaust(fire, a.getWorldPosition(flameAt), flameDir, m.flameLength * reach * grow, mode, time, dt);
     }
+    for (const a of m.lamps) {
+      // Halo aditivo de los faros (sin luces reales).
+      fire.flame(a.getWorldPosition(flameAt), PALETTE.llama, m.detail ? 0.55 : 0.8);
+    }
     if (m.detail) {
       for (const a of m.ornaments) paintHair(fire, a.getWorldPosition(flameAt), m.ornamentSpectral, time, grow);
     }
@@ -735,6 +748,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.body.rotation.z = -r.driftVisual * 0.15;
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
     m.setDetail(poseHold || camera.position.distanceTo(m.root.position) < 15);
+    m.animate(heading, dt, view.boosting, time);
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     paintKartFire(m, view, time, dt);
   }
@@ -945,6 +959,16 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           }
         : undefined,
     );
+    // ?vista=x,y,z,mirax,miray,miraz: cámara libre para depurar el paisaje (solo con ?foto).
+    if (vista) {
+      camera.position.set(vista[0]!, vista[1]!, vista[2]!);
+      camera.lookAt(vista[3]!, vista[4]!, vista[5]!);
+    } else if (vistaRel) {
+      // ?vista=k,distancia,altura,giro°: cámara delante del kart (giro 0) mirando a la cabeza del piloto.
+      const a = me.heading + (vistaRel[2]! * Math.PI) / 180;
+      camera.position.set(root.position.x + Math.sin(a) * vistaRel[0]!, root.position.y + vistaRel[1]!, root.position.z + Math.cos(a) * vistaRel[0]!);
+      camera.lookAt(root.position.x, root.position.y + 1.15, root.position.z);
+    }
     sky.position.copy(camera.position);
     blobs.update(track, [
       ...locals.map((r) => ({ x: r.model.root.position.x, z: r.model.root.position.z, on: true })),

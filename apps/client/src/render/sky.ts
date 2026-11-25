@@ -111,7 +111,7 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
   ];
   const base = new THREE.Color(niebla);
   const shade = new THREE.Color(sombra);
-  const dark = new THREE.Color(0x4a3f66);
+  const dark = new THREE.Color(0x6a5c8e);
   for (const L of layers) {
     for (let k = 0; k < L.n; k++) {
       const az = r() * Math.PI * 2;
@@ -138,7 +138,7 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
   }
   const mesh = new THREE.Mesh(
     flatColored(parts),
-    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, transparent: true, opacity: 0.85, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, transparent: true, opacity: 0.5, depthWrite: false }),
   );
   mesh.frustumCulled = false;
   mesh.name = "nubes";
@@ -177,10 +177,20 @@ export function createHills(radius = 204): THREE.Mesh {
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
     parts.push({ geo: g, color: L.color });
   }
+  const hills = flatColored(parts);
+  // Las crestas son más claras que la base: nada de siluetas de un solo color.
+  const hp = hills.getAttribute("position");
+  const hc = hills.getAttribute("color");
+  for (let i = 0; i < hp.count; i++) {
+    const k = THREE.MathUtils.lerp(0.8, 1.22, THREE.MathUtils.smoothstep(hp.getY(i), -6, 30));
+    hc.setXYZ(i, Math.min(1, hc.getX(i) * k), Math.min(1, hc.getY(i) * k), Math.min(1, hc.getZ(i) * k));
+  }
   const mesh = new THREE.Mesh(
-    flatColored(parts),
-    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false }),
+    hills,
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, depthWrite: false }),
   );
+  // Telón de fondo: se pinta antes que el mundo y no tapa lo que quede más lejos (el río lejano).
+  mesh.renderOrder = -1;
   mesh.frustumCulled = false;
   mesh.name = "colinas";
   return mesh;
