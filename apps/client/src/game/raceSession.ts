@@ -697,6 +697,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       flameDir.copy(localFlame).transformDirection(a.matrixWorld);
       paintExhaust(fire, a.getWorldPosition(flameAt), flameDir, m.flameLength * reach * grow, mode, time, dt);
     }
+    for (const a of m.lamps) {
+      // Halo aditivo de los faros (sin luces reales).
+      fire.flame(a.getWorldPosition(flameAt), PALETTE.llama, m.detail ? 0.55 : 0.8);
+    }
     if (m.detail) {
       for (const a of m.ornaments) paintHair(fire, a.getWorldPosition(flameAt), m.ornamentSpectral, time, grow);
     }
@@ -743,6 +747,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     m.body.rotation.z = -r.driftVisual * 0.15;
     m.shield.visible = view.shield && (view.shieldLeft > 2 || Math.floor(time * 8) % 2 === 0);
     m.setDetail(poseHold || camera.position.distanceTo(m.root.position) < 15);
+    m.animate(heading, dt, view.boosting, time);
     m.setMood(view.spinning ? "angry" : view.finished ? "celebrate" : "idle", time);
     paintKartFire(m, view, time, dt);
   }

@@ -5,11 +5,19 @@ import { collideKarts, createKart, stepKart } from "./kart";
 import { KART } from "./tuning";
 
 describe("catálogo", () => {
-  it("hay 8 personajes y 10 coches con ids únicos", () => {
-    expect(CHARACTERS).toHaveLength(8);
-    expect(KARTS).toHaveLength(10);
-    expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(8);
-    expect(new Set(KARTS.map((k) => k.id)).size).toBe(10);
+  it("hay 9 personajes y 12 coches con ids únicos", () => {
+    expect(CHARACTERS).toHaveLength(9);
+    expect(KARTS).toHaveLength(12);
+    expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(9);
+    expect(new Set(KARTS.map((k) => k.id)).size).toBe(12);
+  });
+
+  it("Release 1: Lía va con Hueso y Calavera Chispas con Medianoche", () => {
+    expect(findCharacter("lia")).toMatchObject({ kart: "hueso", look: "mechanic", accent: 0x3ff2c8 });
+    expect(findCharacter("calavera-chispas")).toMatchObject({ kart: "medianoche", look: "chispas", weightClass: "medium" });
+    expect(findKart("hueso")?.look.skin).toBe("hueso");
+    expect(findKart("medianoche")?.look.skin).toBe("medianoche");
+    expect(KARTS[0]!.id).toBe("hueso"); // coche por defecto
   });
 
   it("las estadísticas de cada coche van de 1 a 5 y suman 12", () => {
@@ -25,7 +33,7 @@ describe("catálogo", () => {
     expect(KARTS.filter((k) => k.driftChargeMult !== undefined)).toHaveLength(1);
   });
 
-  it("los 5 de siempre conservan id y clase; los 3 nuevos usan la clase de la propuesta", () => {
+  it("los de siempre conservan id y clase; los nuevos usan la clase de la propuesta", () => {
     expect(findCharacter("lia")).toMatchObject({ weightClass: "light", look: "mechanic" });
     expect(findCharacter("kiko")).toMatchObject({ weightClass: "light", look: "robot" });
     expect(findCharacter("toni")).toMatchObject({ weightClass: "medium", look: "courier" });
@@ -35,12 +43,12 @@ describe("catálogo", () => {
     expect(findCharacter("mimi")).toMatchObject({ weightClass: "light", look: "sheet" });
     expect(findCharacter("don-osario")).toMatchObject({ weightClass: "heavy", look: "dandy" });
     const n = (c: string) => CHARACTERS.filter((x) => x.weightClass === c).length;
-    expect([n("light"), n("medium"), n("heavy")]).toEqual([3, 3, 2]);
+    expect([n("light"), n("medium"), n("heavy")]).toEqual([3, 4, 2]);
   });
 
   it("las pieles nuevas no cambian las estadísticas ni las medidas del coche", () => {
     const skins = KARTS.map((k) => k.look.skin);
-    expect(new Set(skins).size).toBe(10);
+    expect(new Set(skins).size).toBe(12);
     expect(findKart("pulga")!.look).toMatchObject({ length: 1.6, rearWheel: 0.4, skin: "pumpkin" });
     expect(findKart("tanque")!.stats).toEqual({ speed: 3, accel: 2, handling: 2, weight: 5 });
     expect(findKart("derrapin")!.look.rearWheelW).toBe(0.6);
@@ -70,6 +78,7 @@ describe("combineStats", () => {
   });
   it("statsFor tolera ids desconocidos", () => {
     expect(statsFor("nadie", "nada")).toEqual(combineStats(findCharacter("toni")!, KARTS[0]!));
+    expect(KARTS[0]!.stats).toEqual({ speed: 3, accel: 3, handling: 3, weight: 3 });
   });
 });
 

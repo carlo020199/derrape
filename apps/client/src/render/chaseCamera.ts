@@ -22,9 +22,9 @@ export const CAMERA = {
    */
   reliefDistance: 5.2,
   reliefHeight: 2.2,
-  reliefPortraitDistance: 6.5,
-  reliefPortraitHeight: 3.2,
-  reliefPortraitLookAhead: 8,
+  reliefPortraitDistance: 9.4,
+  reliefPortraitHeight: 4.7,
+  reliefPortraitLookAhead: 10,
   reliefPortraitLookLift: 0.9,
 };
 

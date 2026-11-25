@@ -1,4 +1,4 @@
-// Los 10 coches (datos) y la fórmula personaje + coche → estadísticas → ajuste de la simulación.
+// Los 12 coches (datos) y la fórmula personaje + coche → estadísticas → ajuste de la simulación.
 // Estadísticas del coche en escala 1–5 y suman 12 (así ninguno es mejor en todo). Ver docs/CONTENIDO.md.
 
 import { WEIGHT_CLASS_MOD, findCharacter, type CharacterDef } from "./characters";
@@ -23,6 +23,8 @@ export const STAT_NAMES: Record<keyof KartStats, string> = {
  * y las medidas de abajo no cambian el tamaño de esa esfera.
  */
 export type KartSkin =
+  | "hueso"
+  | "medianoche"
   | "classic"
   | "coffin"
   | "pumpkin"
@@ -84,6 +86,8 @@ const L = (look: Partial<KartLook>): KartLook => ({
 });
 
 export const KARTS: readonly KartDef[] = [
+  { id: "hueso", name: "Hueso", style: "Kart blanco con morro de calavera y dos escapes", stats: { speed: 3, accel: 3, handling: 3, weight: 3 }, forWho: "Equilibrado: el de Lía Brasas", look: L({ length: 2.3, width: 1.4, height: 0.38, frontWheel: 0.3, rearWheel: 0.34, frontWheelW: 0.36, rearWheelW: 0.42, skin: "hueso" }) },
+  { id: "medianoche", name: "Medianoche", style: "Kart oscuro con faros de brasa y turbo espectral", stats: { speed: 4, accel: 3, handling: 2, weight: 3 }, forWho: "Rectas rápidas: el de Calavera Chispas", look: L({ length: 2.4, width: 1.45, height: 0.36, frontWheel: 0.3, rearWheel: 0.34, frontWheelW: 0.36, rearWheelW: 0.42, nose: true, skin: "medianoche" }) },
   { id: "chispa", name: "Chispa", style: "Kart clásico de hueso y brasa", stats: { speed: 3, accel: 3, handling: 3, weight: 3 }, forWho: "Equilibrado, el de empezar", look: L({ skin: "classic" }) },
   { id: "bolido", name: "Bólido", style: "Ataúd redondeado y alargado", stats: { speed: 5, accel: 2, handling: 2, weight: 3 }, forWho: "Rectas largas", look: L({ length: 2.8, width: 1.15, height: 0.3, nose: true, wing: 1, skin: "coffin" }) },
   { id: "pulga", name: "Pulga", style: "Calabaza de ruedas gordas", stats: { speed: 2, accel: 5, handling: 4, weight: 1 }, forWho: "Circuitos técnicos", look: L({ length: 1.6, width: 1.1, frontWheel: 0.36, rearWheel: 0.4, frontWheelW: 0.4, rearWheelW: 0.45, skin: "pumpkin" }) },

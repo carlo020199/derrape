@@ -2,7 +2,7 @@
 //
 // Uso (con el cliente en marcha: `npm run dev -w @derrape/client`):
 //   npx tsx scripts/capturas-release.ts [urlBase] [carpetaSalida] [personaje] [coche]
-// Por defecto: http://localhost:5173, docs/release-v1/capturas, lia, el coche por defecto.
+// Por defecto: http://localhost:5173, docs/release-v1/capturas, lia, su coche (hueso / medianoche).
 // Usa el Chrome del sistema (CHROME_PATH para cambiarlo) con WebGL por software (SwiftShader).
 // Escribe: a-salida.png, b-recta-campanario.png, c-curva-valla.png, d-laguna.png, seleccion-<personaje>.png,
 // hoja-*.png (captura junto a ejemplo1/ejemplo2) y metricas.json (porcentajes de color y renderer.info por captura).
@@ -13,7 +13,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 const base = process.argv[2] ?? "http://localhost:5173";
 const out = process.argv[3] ?? "docs/release-v1/capturas";
 const character = process.argv[4] ?? "lia";
-const kart = process.argv[5];
+// Cada piloto del release va con su coche (Lía + Hueso, Calavera Chispas + Medianoche).
+const kart = process.argv[5] ?? (character === "calavera-chispas" ? "medianoche" : "hueso");
 const TRACK = "laguna-de-las-animas";
 
 // ?foto=<metros>,<lateral>,<giro°>. Ajustar al trazado si cambia la Laguna.

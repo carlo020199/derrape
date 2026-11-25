@@ -45,7 +45,7 @@ export function setupGarage(preview: GaragePreview, actions: GarageActions) {
   };
 
   for (const c of CHARACTERS) {
-    pick(chars, c.name, WEIGHT_CLASS_NAMES[c.weightClass], () => select({ character: c.id }));
+    pick(chars, c.name, WEIGHT_CLASS_NAMES[c.weightClass], () => select({ character: c.id, ...(c.kart ? { kart: c.kart } : {}) }));
     // Hueco para el retrato: se dibuja la primera vez que se abre la pantalla.
     chars.lastElementChild!.prepend(Object.assign(document.createElement("img"), { alt: "", width: 48, height: 48 }));
   }

@@ -762,7 +762,28 @@ body.in-menu #minimap { display: none !important; }
   touch-action: pan-y;
 }
 #garage.screen[hidden] { display: none; }
-#garage-stage { flex: 0 0 34dvh; }
+#garage-stage { flex: 0 0 42dvh; position: relative; align-self: stretch; }
+#garage-title {
+  position: absolute;
+  top: calc(10px + var(--safe-t));
+  left: 0;
+  right: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-size: 26px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--texto);
+  paint-order: stroke fill;
+  -webkit-text-stroke: 4px var(--noche);
+  pointer-events: none;
+}
 #garage-sheet {
   flex: 1;
   min-height: 0;
@@ -834,3 +855,42 @@ body.in-menu #minimap { display: none !important; }
   #item-slot.rolling,
   #touch-help { animation: none; }
 }
+
+/* --- Selección compacta (referencia «Piloto y coche»): filas horizontales y botón fijo --- */
+#garage-sheet { gap: 6px; padding-top: 10px; }
+#garage-sheet > * { flex-shrink: 0; }
+#garage-sheet > .dim:not([id]) { margin: 2px 0 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+#garage-sheet .picker {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+#garage-sheet .picker::-webkit-scrollbar { display: none; }
+#garage-sheet #garage-chars button {
+  flex: 0 0 76px;
+  min-height: 0;
+  padding: 6px 4px;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  row-gap: 2px;
+  text-align: center;
+  scroll-snap-align: start;
+}
+#garage-sheet #garage-chars button img { grid-row: auto; width: 54px; height: 54px; }
+#garage-sheet #garage-chars button b { grid-column: 1; font-size: 11px; line-height: 1.1; }
+#garage-sheet #garage-chars button small { display: none; }
+#garage-sheet #garage-karts button { flex: 0 0 118px; min-height: 0; padding: 6px 8px; scroll-snap-align: start; }
+#garage-sheet #garage-karts button small { font-size: 10px; line-height: 1.15; }
+#garage-sheet .colors button { min-height: 26px; }
+#garage-char-info, #garage-kart-info { margin: 0; font-size: 12px; line-height: 1.3; }
+#garage-done {
+  position: sticky;
+  bottom: 0;
+  margin-top: 4px;
+  box-shadow: 0 -10px 12px rgb(30 24 48 / 0.95);
+}
+#garage-stats { gap: 3px; }
+#garage-stats > div { font-size: 12px; }

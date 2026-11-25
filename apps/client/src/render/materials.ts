@@ -163,7 +163,7 @@ export function animasAsphaltMaterial(): THREE.MeshToonMaterial {
         new THREE.MeshToonMaterial({
           color: 0x3a3352,
           emissive: 0x3a3352,
-          emissiveIntensity: 0.12,
+          emissiveIntensity: 0.3,
           gradientMap: animasAsphaltGradient(),
           side: THREE.DoubleSide,
         }),
