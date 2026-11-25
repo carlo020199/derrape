@@ -98,7 +98,7 @@ function flatColored(parts: { geo: THREE.BufferGeometry; color: number }[]) {
 }
 
 /**
- * Nubes toon en tres capas sobre la cúpula: un solo mesh. Cada nube es un racimo de discos
+ * Nubes toon en tres capas sobre la cúpula: un solo mesh, opaco. Cada nube es un racimo de discos
  * Niebla con la misma silueta más abajo en Sombra. Siguen a la cámara (hijas del cielo).
  */
 export function createClouds(niebla: number, sombra: number, radius = 218): THREE.Mesh {
@@ -111,7 +111,7 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
   ];
   const base = new THREE.Color(niebla);
   const shade = new THREE.Color(sombra);
-  const dark = new THREE.Color(0x6a5c8e);
+  const anima = new THREE.Color(0x9b6bff);
   for (const L of layers) {
     for (let k = 0; k < L.n; k++) {
       const az = r() * Math.PI * 2;
@@ -119,28 +119,36 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
       const place = new THREE.Matrix4();
       const pos = new THREE.Vector3(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)).multiplyScalar(radius);
       place.lookAt(pos, new THREE.Vector3(), new THREE.Vector3(0, 1, 0)).setPosition(pos);
-      const top = base.clone().lerp(dark, L.mix).getHex();
-      const bot = shade.clone().lerp(dark, L.mix * 0.5).getHex();
+      // Opacas: los discos se pisan sin mezclarse. Arriba, borde claro Niebla con un toque de Ánima; abajo, Sombra.
+      // El borde claro es el mismo en las tres capas (más Ánima que antes): contra el horizonte, que es casi Niebla, el de las capas bajas se perdía y solo quedaba la base oscura.
+      const top = base.clone().lerp(anima, 0.34 - 0.08 * L.mix).getHex();
+      const bot = shade.clone().getHex();
       const puffs = 4 + Math.floor(r() * 3);
       const w = L.size * (0.8 + r() * 0.5);
+      // Primero todas las bases (Sombra) y luego todos los bordes claros: una base nunca tapa el borde del puff vecino.
+      const bots: typeof parts = [];
+      const tops: typeof parts = [];
       for (let i = 0; i < puffs; i++) {
         const u = (i / (puffs - 1) - 0.5) * w;
         const rad = w * (0.16 + 0.1 * Math.cos((i / (puffs - 1) - 0.5) * Math.PI)) * (0.8 + r() * 0.4);
-        for (const [color, dy, dz] of [[bot, -rad * 0.35, 0], [top, rad * 0.08, 0.05]] as const) {
+        for (const [color, dy, dz, list] of [[bot, -rad * 0.22, 0, bots], [top, rad * 0.08, 0.05, tops]] as const) {
           const g = new THREE.CircleGeometry(rad, 10);
           g.scale(1, 0.6, 1);
           g.applyMatrix4(new THREE.Matrix4().makeTranslation(u, dy * 0.6, dz));
           g.applyMatrix4(place);
-          parts.push({ geo: g, color });
+          list.push({ geo: g, color });
         }
       }
+      parts.push(...bots, ...tops);
     }
   }
   const mesh = new THREE.Mesh(
     flatColored(parts),
-    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, transparent: true, opacity: 0.5, depthWrite: false }),
+    // Sin prueba de profundidad: los discos de cada nube se pintan en orden (Sombra y encima el borde claro), sin z-fighting.
+    new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, depthTest: false, depthWrite: false }),
   );
   mesh.frustumCulled = false;
+  mesh.renderOrder = -0.5; // después de la cúpula y antes de las colinas (-0,4): las colinas las tapan
   mesh.name = "nubes";
   return mesh;
 }
@@ -189,8 +197,8 @@ export function createHills(radius = 204): THREE.Mesh {
     hills,
     new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, depthWrite: false }),
   );
-  // Telón de fondo: se pinta antes que el mundo y no tapa lo que quede más lejos (el río lejano).
-  mesh.renderOrder = -1;
+  // Telón de fondo: se pinta antes que el mundo y no tapa lo que quede más lejos (el río lejano). Después de las nubes (-0,5).
+  mesh.renderOrder = -0.4;
   mesh.frustumCulled = false;
   mesh.name = "colinas";
   return mesh;

@@ -88,18 +88,28 @@ const M = (x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) 
     new THREE.Vector3(sx, sy, sz),
   );
 
-/** Campanario: una sola malla, hueso con tejado ciruela y campana llama. */
+/** Campanario: una sola malla, cuerpo Sombra #2E2547 con tejado Ciruela #1E1830. La luz cálida va aparte (`campanarioLuz`). */
 export function campanarioGeometry(): THREE.BufferGeometry {
   const body = new THREE.CapsuleGeometry(1.7, 11, 3, 18);
   const roof = new THREE.ConeGeometry(2.5, 4.2, 20);
-  const bell = new THREE.SphereGeometry(0.7, 14, 10);
-  const halo = new THREE.TorusGeometry(0.85, 0.1, 8, 16);
-  return merge([
-    bake(body, M(0, 7.2), HUESO),
-    bake(roof, M(0, 14.6), CIRUELA),
-    bake(bell, M(0, 8.2), LLAMA),
-    bake(halo, M(0, 8.2, 0, Math.PI / 2), HUESO),
-  ]);
+  return merge([bake(body, M(0, 7.2), PALETTE.sombra), bake(roof, M(0, 14.6), CIRUELA)]);
+}
+
+/**
+ * Ventanas arqueadas y campana del campanario: Llama #FFB423 emisiva, una sola malla con color por vértice.
+ * Tres ventanas por piso (−60°, 0°, 60°) para que alguna mire a la cámara desde la parrilla y desde la recta.
+ */
+function campanarioLuz(): THREE.BufferGeometry {
+  const win = new THREE.CapsuleGeometry(0.42, 1.2, 3, 10);
+  const bell = new THREE.SphereGeometry(0.95, 16, 12);
+  const parts = [bake(bell, M(0, 9.2, 1.85), LLAMA)];
+  for (const yaw of [-Math.PI / 3, 0, Math.PI / 3]) {
+    const turn = new THREE.Matrix4().makeRotationY(yaw);
+    for (const [y, r, sx, sy] of [[5.6, 1.62, 1, 1], [12.2, 1.45, 0.85, 0.8]] as const) {
+      parts.push(bake(win, turn.clone().multiply(M(0, y, r, 0, 0, 0, sx, sy, 0.35)), LLAMA));
+    }
+  }
+  return merge(parts);
 }
 
 export function triangleCount(geo: THREE.BufferGeometry) {
@@ -612,7 +622,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   oldMoon?.parent?.remove(oldMoon);
   if (dome) {
     dome.add(stars());
-    dome.add(createClouds(0x8a7cb0, 0x4a3f66));
+    dome.add(createClouds(PALETTE.niebla, PALETTE.sombra));
     dome.add(createHills());
     const moon = createAnimasMoon(9);
     // Delante del kart en la salida (la recta mira a +z), alta y algo a la izquierda del eje.
@@ -632,31 +642,18 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     const tower = new THREE.Mesh(campanarioGeometry(), bone);
     tower.position.set(spot.x, groundY - 0.4, spot.z);
     tower.scale.setScalar(1.6);
-    tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
-    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
-    bell.position.set(0, 9.2, 1.85);
-    tower.add(bell);
+    // De cara a la parrilla (d = 18), no a la calzada de al lado: así la campana y las ventanas se ven desde la salida.
+    const grid = pointAt(track, 18, 0);
+    tower.rotation.y = Math.atan2(grid.x - spot.x, grid.z - spot.z);
+    tower.add(new THREE.Mesh(campanarioLuz(), new THREE.MeshBasicMaterial({ vertexColors: true })));
     const bellRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 8, 16), boneToonMaterial());
-    bellRing.position.copy(bell.position);
+    bellRing.position.set(0, 9.2, 1.85);
     bellRing.rotation.x = Math.PI / 2;
     tower.add(bellRing);
     tower.name = "campanario";
     scene.add(tower);
   };
   let towerPlaced = false;
-
-  // Arco-calavera en la salida, en vez del arco genérico.
-  const start = pointAt(track, 0);
-  const span = 4.6;
-  const arch = merge([
-    bake(new THREE.CapsuleGeometry(0.28, 2.6, 3, 10), M(-span, 1.7, 0), HUESO),
-    bake(new THREE.CapsuleGeometry(0.28, 2.6, 3, 10), M(span, 1.7, 0), HUESO),
-    bake(new THREE.CapsuleGeometry(0.32, span * 2, 3, 12), M(0, 3.35, 0, 0, 0, Math.PI / 2), HUESO),
-    bake(new THREE.SphereGeometry(0.7, 14, 12), M(0, 4.15, 0.15), HUESO),
-  ]);
-  const archMesh = new THREE.Mesh(arch, bone);
-  placeOnTrack(archMesh, start.x, start.y, start.z, start.heading);
-  scene.add(archMesh);
 
   // Salto L: mandíbula. Los ojos van aparte (un lit sin luz, color ánima).
   const big = track.zones.find((z) => z.type === "ramp" && z.size === "L");

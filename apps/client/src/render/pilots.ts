@@ -9,6 +9,8 @@ import { PALETTE } from "./materials";
 const { noche: NOCHE, hueso: HUESO, huesoSombra: HUESO_SOMBRA, sombra: SOMBRA, ciruela: CIRUELA, brasa: BRASA, llama: LLAMA, anima: ANIMA, animaProfunda: ANIMA_PROF, espectro: ESPECTRO } = PALETTE;
 /** Sombra de la coleta: cian oscuro derivado de Espectro. */
 const ESPECTRO_SOMBRA = 0x1fa896;
+/** Escalón oscuro de la coleta vista de espaldas: Sombra de Espectro hundida hacia Noche (dos tonos bien separados). */
+const ESPECTRO_NUCA = mix(ESPECTRO_SOMBRA, NOCHE, 0.6);
 
 export interface PilotArm {
   geo: THREE.BufferGeometry;
@@ -188,7 +190,9 @@ export function buildLia(): BuiltPilot {
 
   skullHead(head, { r, scale: sc, socket, teeth: 5, blocky: false });
   // Pelo: casquete Espectro, flequillo en dos mechones, mechones laterales y diadema Ánima prof.
-  head.add(new THREE.SphereGeometry(r * 1.045, 16, 9, 0, Math.PI * 2, 0, 1.72), ESPECTRO, [0, r * 0.03, -r * 0.05], [-0.34, 0, 0], [1, 0.95, 1.02]);
+  // De espaldas es lo único que se ve: cúpula clara arriba y banda oscura en la nuca (dos escalones nítidos, no una mancha).
+  head.add(new THREE.SphereGeometry(r * 1.045, 16, 4, 0, Math.PI * 2, 0, 0.85), ESPECTRO, [0, r * 0.03, -r * 0.05], [-0.34, 0, 0], [1, 0.95, 1.02]);
+  head.add(new THREE.SphereGeometry(r * 1.045, 16, 5, 0, Math.PI * 2, 0.85, 0.87), ESPECTRO_NUCA, [0, r * 0.03, -r * 0.05], [-0.34, 0, 0], [1, 0.95, 1.02]);
   for (const s of [-1, 1] as const) {
     head.capsule(0.095, 0.22, ESPECTRO, [s * 0.15, r * 0.7, r * 0.78], [1.15, 0, s * 0.55], undefined, 8);
     head.capsule(0.07, 0.22, ESPECTRO_SOMBRA, [s * r * 0.97, -r * 0.05, -r * 0.05], [0, 0, s * 0.1], undefined, 7);
@@ -196,9 +200,11 @@ export function buildLia(): BuiltPilot {
   head.torus(r * 0.99, 0.048, ANIMA_PROF, [0, r * 0.3, -r * 0.03], [half() - 0.28, 0, 0]);
   // Raíz de la coleta: nudo voluminoso y lazo.
   head.ball(0.22, ESPECTRO, [0, r * 1.42, -r * 0.62], [1.1, 1, 1.05], [8, 6]);
-  head.ball(0.17, ESPECTRO_SOMBRA, [0, r * 1.25, -r * 0.84], [1, 1, 1], [8, 6]);
+  head.ball(0.17, ESPECTRO_NUCA, [0, r * 1.25, -r * 0.84], [1, 1, 1], [8, 6]);
   head.ball(0.15, ESPECTRO, [0, r * 1.62, -r * 0.46], [1, 1, 1], [8, 6]);
   head.torus(0.17, 0.035, ANIMA_PROF, [0, r * 1.3, -r * 0.7], [0.8, 0, 0]);
+  // Goma Noche entre el nudo y la cúpula: recorta la coleta del pelo.
+  head.torus(0.21, 0.07, NOCHE, [0, r * 1.28, -r * 0.62], [0.55, 0, 0]);
 
   const strands: PilotStrand[] = [];
   const specs: [number, number, number, number][] = [

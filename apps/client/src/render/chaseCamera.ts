@@ -32,6 +32,8 @@ export const CAMERA = {
 
 /** Máxima velocidad de alabeo de la cámara (°/s) y salto vertical por fotograma a 60 fps (m). */
 export const ROLL_RATE_MAX = 25;
+/** Tope del balanceo de la cámara con el peralte (y del horizonte inclinado): más de ~8° marea en el móvil. */
+export const ROLL_MAX_DEG = 8;
 export const CAM_Y_STEP_MAX = 0.15;
 /** Anchura (m) de la transición del suelo: dentro de ella la cámara se apoya sin quiebro. */
 const FLOOR_BLEND = 0.4;
@@ -159,7 +161,7 @@ export class ChaseCamera {
       this.lookY = desiredLookY;
       this.pos.set(behindX, desiredCamY, behindZ);
       this.look.set(lookX, desiredLookY, lookZ);
-      this.rollDeg = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -32, 32);
+      this.rollDeg = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -ROLL_MAX_DEG, ROLL_MAX_DEG);
       this.initialized = true;
     }
     if (this.wasAir && !cue.airborne) this.dip = -0.2;
@@ -171,7 +173,7 @@ export class ChaseCamera {
     const yStep = CAM_Y_STEP_MAX * Math.max(1, dt * 60);
     this.camY += THREE.MathUtils.clamp((desiredCamY - this.camY) * kY, -yStep, yStep);
     this.lookY += (desiredLookY - this.lookY) * kY;
-    const targetRoll = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -32, 32);
+    const targetRoll = cue.airborne ? 0 : THREE.MathUtils.clamp(cue.bankDeg * 0.8, -ROLL_MAX_DEG, ROLL_MAX_DEG);
     const rollStep = ROLL_RATE_MAX * dt;
     this.rollDeg += THREE.MathUtils.clamp((targetRoll - this.rollDeg) * kSmooth, -rollStep, rollStep);
     const targetPos = new THREE.Vector3(behindX, this.camY + this.dip, behindZ);
@@ -188,7 +190,7 @@ export class ChaseCamera {
     // El cabeceo de lookAt no puede llevar el horizonte más allá del tope.
     this.worldUp.set(0, 1, 0).applyQuaternion(this.invQuat.copy(this.camera.quaternion).invert());
     const tilt = Math.atan2(this.worldUp.x, this.worldUp.y);
-    const maxTilt = THREE.MathUtils.degToRad(32);
+    const maxTilt = THREE.MathUtils.degToRad(ROLL_MAX_DEG);
     if (Math.abs(tilt) > maxTilt) this.camera.rotateZ(Math.sign(tilt) * maxTilt - tilt);
 
     const fov =

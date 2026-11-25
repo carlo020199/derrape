@@ -1,89 +1,88 @@
 {
-  "fecha": "2026-11-25T10:40:58.289Z",
+  "fecha": "2026-11-25T15:01:06.969Z",
   "personaje": "calavera-chispas",
   "kart": "medianoche",
   "a-salida": {
-    "c2_moradoPct": 89.65,
-    "c2_casiNegroPct": 1.08,
-    "c3_lagunaPct": 1.39,
-    "c3_lagunaTercioMedioSuperiorPct": 1.36,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 18.23,
-    "c7_regionPlanaMayorPctPantalla": 5.29,
-    "c7_bloquesPlanosRelativoPct": 0,
+    "c2_moradoPct": 93.53,
+    "c2_casiNegroPct": 1.04,
+    "c3_lagunaPct": 0.58,
+    "c3_lagunaTercioMedioSuperiorPct": 0.56,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 55.73,
+    "c7_regionPlanaMayorPctPantalla": 30.18,
+    "c7_bloquesPlanosRelativoPct": 45.83,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 55,
-      "triangles": 99776
+      "calls": 52,
+      "triangles": 96840
     },
-    "msPorFotogramaSoftware": 43.4
+    "msPorFotogramaSoftware": 48.8
   },
   "b-recta-campanario": {
-    "c2_moradoPct": 91.68,
-    "c2_casiNegroPct": 1.13,
-    "c3_lagunaPct": 1.48,
-    "c3_lagunaTercioMedioSuperiorPct": 1.46,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 16.15,
-    "c7_regionPlanaMayorPctPantalla": 5.91,
-    "c7_bloquesPlanosRelativoPct": 0.52,
+    "c2_moradoPct": 93.07,
+    "c2_casiNegroPct": 1.06,
+    "c3_lagunaPct": 1.26,
+    "c3_lagunaTercioMedioSuperiorPct": 1.24,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 58.33,
+    "c7_regionPlanaMayorPctPantalla": 34.22,
+    "c7_bloquesPlanosRelativoPct": 49.48,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 53,
-      "triangles": 97836
+      "calls": 51,
+      "triangles": 96040
     },
-    "msPorFotogramaSoftware": 43.2
+    "msPorFotogramaSoftware": 43.5
   },
   "c-curva-valla": {
-    "c2_moradoPct": 93.37,
-    "c2_casiNegroPct": 1.3,
-    "c3_lagunaPct": 0.2,
+    "c2_moradoPct": 93.9,
+    "c2_casiNegroPct": 1.21,
+    "c3_lagunaPct": 0.19,
     "c3_lagunaTercioMedioSuperiorPct": 0.16,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 16.67,
-    "c7_regionPlanaMayorPctPantalla": 5.6,
-    "c7_bloquesPlanosRelativoPct": 0.52,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 57.29,
+    "c7_regionPlanaMayorPctPantalla": 32.66,
+    "c7_bloquesPlanosRelativoPct": 50.52,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 53,
-      "triangles": 95446
+      "calls": 51,
+      "triangles": 92598
     },
-    "msPorFotogramaSoftware": 42.5
+    "msPorFotogramaSoftware": 42.8
   },
   "d-laguna": {
-    "c2_moradoPct": 85.99,
-    "c2_casiNegroPct": 1.35,
-    "c3_lagunaPct": 6.89,
-    "c3_lagunaTercioMedioSuperiorPct": 6.44,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 22.4,
-    "c7_regionPlanaMayorPctPantalla": 6.53,
-    "c7_bloquesPlanosRelativoPct": 6.77,
+    "c2_moradoPct": 85.62,
+    "c2_casiNegroPct": 1.33,
+    "c3_lagunaPct": 7.41,
+    "c3_lagunaTercioMedioSuperiorPct": 6.71,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 45.31,
+    "c7_regionPlanaMayorPctPantalla": 16.18,
+    "c7_bloquesPlanosRelativoPct": 30.73,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 62,
-      "triangles": 101422
+      "calls": 58,
+      "triangles": 97702
     },
-    "msPorFotogramaSoftware": 53.6
+    "msPorFotogramaSoftware": 49.6
   },
   "e-frontal": {
-    "c2_moradoPct": 92.95,
-    "c2_casiNegroPct": 1.66,
-    "c3_lagunaPct": 0.1,
+    "c2_moradoPct": 94.53,
+    "c2_casiNegroPct": 1.65,
+    "c3_lagunaPct": 0.11,
     "c3_lagunaTercioMedioSuperiorPct": 0.08,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 34.9,
-    "c7_regionPlanaMayorPctPantalla": 17.11,
-    "c7_bloquesPlanosRelativoPct": 3.13,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 59.38,
+    "c7_regionPlanaMayorPctPantalla": 32.04,
+    "c7_bloquesPlanosRelativoPct": 53.13,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 48,
-      "triangles": 96444
+      "calls": 45,
+      "triangles": 92480
     },
-    "msPorFotogramaSoftware": 42.4
+    "msPorFotogramaSoftware": 38.1
   },
   "erroresDeConsola": [
-    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
