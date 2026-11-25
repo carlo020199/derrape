@@ -12,8 +12,14 @@ const BRASA = PALETTE.brasa;
 const LLAMA = PALETTE.llama;
 const ANIMA = PALETTE.anima;
 const CIRUELA = PALETTE.ciruela;
-/** Suelo del tema (themes.ts, track.groundY). */
-const GROUND_Y = -8;
+/**
+ * Suelo del plano y del terreno de Ánimas (también `themes.ts`, `track.groundY`).
+ * El peralte de la curva baja deja el arcén a -10,2 m; si el suelo queda en -8,
+ * el plano de 1600 m y la malla del terreno (que no baja de `groundY - 0,3`)
+ * atraviesan la calzada y el kart se hunde.
+ */
+export const ANIMAS_GROUND_Y = -12;
+const GROUND_Y = ANIMAS_GROUND_Y;
 
 function paint(geo: THREE.BufferGeometry, color: number) {
   const pos = geo.getAttribute("position");
@@ -431,9 +437,10 @@ function vnoise(x: number, z: number) {
 }
 
 /**
- * Altura del terreno en (x, z). Abraza la calzada: junto al borde queda a ras (justo por debajo) y baja
- * con pendiente suave hacia el valle, así no hay un talud negro de 40 m a los lados. Lejos de todo
- * camino se suman colinas de ruido. Nunca sube por encima de otro tramo de pista cercano (pasos a distinto nivel)
+ * Altura del terreno en (x, z). Abraza la calzada: junto al borde queda por debajo (1 m, suficiente
+ * para que la malla de 7,6 m no atraviese el peralte al interpolar) y baja con pendiente suave
+ * hacia el valle, así no hay un talud negro de 40 m a los lados. Lejos de todo camino se suman
+ * colinas de ruido. Nunca sube por encima de otro tramo de pista cercano (pasos a distinto nivel)
  * y deja la cuenca de la laguna excavada.
  */
 export function terrainHeightField(track: Track, shape: LagoonShape, waterY: number, groundY: number, hill?: { x: number; z: number; top: number }) {
@@ -447,7 +454,8 @@ export function terrainHeightField(track: Track, shape: LagoonShape, waterY: num
     const edge = c.width / 2 + track.verge;
     const lat = THREE.MathUtils.clamp(c.lateral, -edge, edge);
     let out = Math.max(0, Math.abs(c.lateral) - edge);
-    let h = surfaceY({ y: c.y, lateral: lat, bank: c.bank }) - 0.35 - out * 0.42;
+    const roadY = surfaceY({ y: c.y, lateral: lat, bank: c.bank });
+    let h = roadY - 1.0 - out * 0.42;
     // Otros tramos de pista (por debajo o por encima): el terreno no los tapa ni los deja flotando.
     for (const q of samples) {
       let sep = Math.abs(q.d - c.distance);
@@ -468,7 +476,8 @@ export function terrainHeightField(track: Track, shape: LagoonShape, waterY: num
       const hd = Math.hypot(x - hill.x, z - hill.z);
       if (hd < 40) h = Math.max(h, hill.top - Math.max(0, hd - 7) * 0.6);
     }
-    return Math.max(h, groundY - 0.3);
+    // El piso nunca puede quedar por encima de la calzada cercana (el peralte la baja más que groundY).
+    return Math.max(h, Math.min(groundY - 0.3, roadY - 1.0));
   };
 }
 
