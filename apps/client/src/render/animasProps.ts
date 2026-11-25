@@ -296,7 +296,7 @@ export function createFences(track: Track, spacing = 3.4, maxPosts = 150): Fence
 }
 
 /** Grupo de árboles instanciados: una malla por modelo. `height` da el suelo en cada punto. */
-export function createTrees(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, target = 48): THREE.InstancedMesh[] {
+export function createTrees(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, target = 66): THREE.InstancedMesh[] {
   const geos = treeGeometries();
   const mat = toonMaterial({ vertexColors: true });
   const slots: { x: number; y: number; z: number; model: number; s: number; rot: number }[] = [];
@@ -322,14 +322,15 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
     }
     k++;
   }
-  // Refuerzo junto a la salida: los laterales del primer encuadre llevan árboles a los dos lados.
-  for (let i = 0; i < 8; i++) {
-    const d = 36 + i * 13;
+  // Relleno de la salida: la parrilla está unos 9 m sobre el terreno, así que los árboles van pegados al arcén
+  // (a 3–8 m del borde, grandes, con la copa por encima de la calzada) y a los dos lados, para que los laterales del primer encuadre no queden vacíos.
+  for (let i = 0; i < 22; i++) {
+    const d = 4 + i * 5.5;
     const side = i % 2 === 0 ? 1 : -1;
     const p = pointAt(track, d);
-    const at = pointAt(track, d, side * (p.width / 2 + track.verge + 3.2 + rnd() * 3));
+    const at = pointAt(track, d + (rnd() - 0.5) * 3, side * (p.width / 2 + track.verge + 3.2 + rnd() * 4.5));
     if (!lagoonClear(at.x, at.z)) continue;
-    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: i % 3, s: 1.2 + rnd() * 0.5, rot: rnd() * Math.PI * 2 });
+    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: i % 3, s: 1.5 + rnd() * 0.5, rot: rnd() * Math.PI * 2 });
   }
   const out: THREE.InstancedMesh[] = [];
   const m = new THREE.Matrix4();
