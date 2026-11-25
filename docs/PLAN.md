@@ -127,7 +127,7 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   *Hecho cuando:* jugáis una copa entera entre iPhone y Android sin problemas → **lanzamiento**.
 - **Release 1 (rama `release/v1`)** — 2 pilotos, 2 coches y la Laguna de las Ánimas con el aspecto de `docs/release-v1/referencias/`.
   - [x] R1·Fase 1 — Base: paleta, Lilita One/Nunito y CSS del HUD/menús.
-  - [ ] R1·Fase 2 — Laguna: cielo, niebla, terreno, laguna, árboles, farolillos, vallas de hueso, bordillo, campanario.
+  - [x] R1·Fase 2 — Laguna: cielo, niebla, terreno, laguna, árboles, farolillos, vallas de hueso, bordillo, campanario.
   - [ ] R1·Fase 3 — Fuego: escapes con sprites aditivos, chispas, turbo Espectro.
   - [ ] R1·Fase 4 — Pilotos y coches: Lía + Hueso, Calavera Chispas + Medianoche, animaciones, selección sobre pedestal.
   - [ ] R1·Fase 5 — Pulido y rendimiento; `medidas.json`.

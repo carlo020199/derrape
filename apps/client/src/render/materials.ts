@@ -125,18 +125,49 @@ function animasAsphaltGradient(): THREE.DataTexture {
   return tex;
 }
 
+/**
+ * Moteado del asfalto: ±7 % de luminosidad con ruido de valor en coordenadas de mundo (manchas de ~3 m)
+ * y dos carriles algo más claros. Sin texturas ni triángulos extra; evita el plano de color uniforme.
+ */
+function mottle(mat: THREE.MeshToonMaterial) {
+  mat.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWP;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vWP;
+float mh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float mn(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mh(i), mh(i + vec2(1.0, 0.0)), f.x), mix(mh(i + vec2(0.0, 1.0)), mh(i + vec2(1.0, 1.0)), f.x), f.y);
+}`,
+      )
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+diffuseColor.rgb *= 0.9 + 0.2 * (mn(vWP.xz * 0.33) * 0.65 + mn(vWP.xz * 1.1) * 0.35);`,
+      );
+  };
+  return mat;
+}
+
 let animasRoad: THREE.MeshToonMaterial | null = null;
 /** Asfalto de Ánimas: base #3A3352, sombra #2A2440 y un emisivo bajo para no fundirse con el cielo. */
 export function animasAsphaltMaterial(): THREE.MeshToonMaterial {
   if (!animasRoad) {
     animasRoad = markShared(
-      new THREE.MeshToonMaterial({
-        color: 0x3a3352,
-        emissive: 0x3a3352,
-        emissiveIntensity: 0.12,
-        gradientMap: animasAsphaltGradient(),
-        side: THREE.DoubleSide,
-      }),
+      mottle(
+        new THREE.MeshToonMaterial({
+          color: 0x3a3352,
+          emissive: 0x3a3352,
+          emissiveIntensity: 0.12,
+          gradientMap: animasAsphaltGradient(),
+          side: THREE.DoubleSide,
+        }),
+      ),
     );
   }
   return animasRoad;
@@ -155,6 +186,22 @@ export function animasAsphaltLineMaterial(): THREE.MeshToonMaterial {
     );
   }
   return animasLine;
+}
+
+let animasTerrain: THREE.MeshToonMaterial | null = null;
+/** Hierba de Ánimas: la banda oscura se queda lila (0,72), no negra. Color por vértice. */
+export function animasTerrainMaterial(): THREE.MeshToonMaterial {
+  if (!animasTerrain) {
+    const data = new Uint8Array([Math.round(0.72 * 255), Math.round(0.87 * 255), 255]);
+    const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.NoColorSpace;
+    tex.needsUpdate = true;
+    animasTerrain = markShared(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: markShared(tex) }));
+  }
+  return animasTerrain;
 }
 
 let outline: THREE.MeshBasicMaterial | null = null;

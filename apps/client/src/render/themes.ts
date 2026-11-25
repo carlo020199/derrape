@@ -18,6 +18,8 @@ export interface ThemeKit {
   /** Distancias de la niebla (cerca, lejos), en metros. */
   fog: [number, number];
   ground: number;
+  /** Luces de la escena si el tema no quiere las de siempre (Ánimas: hueso cálido, no gris). */
+  light?: { hemiSky: number; hemiGround: number; hemi: number; key: number; keyIntensity: number };
   track: TrackColors;
   decorate(scene: THREE.Object3D, track: Track, def: TrackDef): void;
 }
@@ -1033,13 +1035,14 @@ const animas: ThemeKit = {
   // Un poco más lejos que 40 m: si no, el peralte de la siguiente curva se pierde en la niebla.
   fog: [50, 190],
   ground: 0x1a1430,
+  light: { hemiSky: 0xfff7ea, hemiGround: 0x5b4e7a, hemi: 1.0, key: 0xffe9c8, keyIntensity: 1.1 },
   track: {
     road: 0x3a3352,
     curbA: 0xf3e7d3,
-    curbB: 0x3ff2c8,
+    curbB: 0x6b3fd6,
     innerCurbA: 0xf3e7d3,
-    innerCurbB: 0x1e1830,
-    verge: 0x2a2338,
+    innerCurbB: 0x2e2547,
+    verge: 0x4a3f66,
     wall: 0x2e2547,
     groundY: -8,
     curbWidth: 0.8,

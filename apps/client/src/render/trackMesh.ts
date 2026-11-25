@@ -24,7 +24,7 @@ export interface TrackColors {
   innerCurbB?: number;
   /** Asfalto con su propia rampa de toon y un emisivo bajo. Solo Ánimas. */
   animasAsphalt?: boolean;
-  /** Filete emisivo en el borde alto de las curvas peraltadas. */
+  /** Línea Espectro (0,15 m) en los dos bordes de la calzada, antes del bordillo. */
   bankEdge?: boolean;
 }
 
@@ -35,43 +35,46 @@ function vividRoad() {
   return vivid;
 }
 
-/** Filete Espectro en el borde alto, solo donde hay peralte. */
+/**
+ * Línea Espectro de 0,15 m en el borde de la calzada, justo antes del bordillo, a los dos lados y en toda
+ * la vuelta (en las curvas peraltadas es la que se ve en el borde exterior). Una sola malla.
+ */
 function bankEdge(
   group: THREE.Group,
   track: Track,
   left: { x: number; z: number }[],
   heightAt: (k: number, lateral: number, lift: number) => number,
+  kappa: number[],
+  curbWidth: number,
 ) {
   const pts = track.points;
   const pos: number[] = [];
-  for (let i = 0; i < pts.length; i++) {
-    const j = (i + 1) % pts.length;
-    const bi = pts[i]!.bank ?? 0;
-    const bj = pts[j]!.bank ?? 0;
-    if (Math.abs(bi) < 12 && Math.abs(bj) < 12) continue;
-    const side = (b: number) => (b >= 0 ? -1 : 1);
-    const quad = (k: number, bank: number) => {
-      const w = pts[k]!.w;
-      const sign = side(bank);
-      const inner = sign * (w / 2 - 0.16);
-      const outer = sign * (w / 2 + 0.02);
-      return [
-        [pts[k]!.x + left[k]!.x * inner, heightAt(k, inner, 0.14), pts[k]!.z + left[k]!.z * inner],
-        [pts[k]!.x + left[k]!.x * outer, heightAt(k, outer, 0.14), pts[k]!.z + left[k]!.z * outer],
-      ];
-    };
-    const a = quad(i, bi);
-    const b = quad(j, bj || bi);
-    for (const v of [a[0], a[1], b[1], a[0], b[1], b[0]]) pos.push(...v!);
+  for (const sign of [1, -1]) {
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i + 1) % pts.length;
+      const quad = (k: number) => {
+        const w = pts[k]!.w;
+        const inner = sign * (w / 2 - curbWidth - 0.15);
+        const outer = sign * (w / 2 - curbWidth);
+        const oi = squashOffset(inner, kappa[k]!);
+        const oo = squashOffset(outer, kappa[k]!);
+        return [
+          [pts[k]!.x + left[k]!.x * oi, heightAt(k, inner, 0.07), pts[k]!.z + left[k]!.z * oi],
+          [pts[k]!.x + left[k]!.x * oo, heightAt(k, outer, 0.07), pts[k]!.z + left[k]!.z * oo],
+        ];
+      };
+      const a = quad(i);
+      const b = quad(j);
+      for (const v of [a[0], a[1], b[1], a[0], b[1], b[0]]) pos.push(...v!);
+    }
   }
-  if (pos.length === 0) return;
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   const mesh = new THREE.Mesh(
     geo,
     new THREE.MeshBasicMaterial({ color: PALETTE.espectro, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
   );
-  mesh.name = "filete-peralte";
+  mesh.name = "linea-espectro";
   mesh.renderOrder = 1;
   group.add(mesh);
 }
@@ -336,21 +339,26 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
       dash ? [...multiples(dash.period), ...multiples(dash.period, dash.length)] : [],
     );
   }
-  if (colors.bankEdge) bankEdge(group, track, left, heightAt);
+  if (colors.bankEdge) bankEdge(group, track, left, heightAt, nodeKappa, curb(0));
   // Arcén.
   if (v > 0) {
     const vergeColor = flat(new THREE.Color(colors.verge));
     roadStrip((w) => w / 2, (w) => w / 2 + v, 0, 0, vergeColor, sharedVertexToonDouble());
     roadStrip((w) => -w / 2 - v, (w) => -w / 2, 0, 0, vergeColor, sharedVertexToonDouble());
   }
-  // Muros bajos en el borde exterior del arcén, con tapa de hueso.
-  strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, 0.9, 0);
-  strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, 0.9, 0);
-  strip((w) => w / 2 + v - 0.16, (w) => w / 2 + v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
-  strip((w) => -w / 2 - v - 0.16, (w) => -w / 2 - v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+  // Muros bajos en el borde exterior del arcén, con tapa de hueso. En Ánimas los sustituyen las vallas de calaveras.
+  if (!colors.animasAsphalt) {
+    strip((w) => w / 2 + v, (w) => w / 2 + v, colors.wall, colors.wall, 0.9, 0);
+    strip((w) => -w / 2 - v, (w) => -w / 2 - v, colors.wall, colors.wall, 0.9, 0);
+    strip((w) => w / 2 + v - 0.16, (w) => w / 2 + v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+    strip((w) => -w / 2 - v - 0.16, (w) => -w / 2 - v + 0.16, PALETTE.hueso, PALETTE.hueso, 0.96, 0.96);
+  }
   // Talud desde el borde (ya peraltado) hasta el suelo.
-  strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, 0, 0, false, true);
-  strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, 0, 0, true, false);
+  // En Ánimas lo sustituye el terreno, que abraza el borde.
+  if (!colors.animasAsphalt) {
+    strip((w) => w / 2 + v, (w) => w / 2 + v + 6, colors.verge, colors.verge, 0, 0, false, true);
+    strip((w) => -w / 2 - v - 6, (w) => -w / 2 - v, colors.verge, colors.verge, 0, 0, true, false);
+  }
 
   // Línea de salida a cuadros.
   const checker = document.createElement("canvas");

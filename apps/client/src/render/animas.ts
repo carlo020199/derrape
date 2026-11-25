@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
 import { createAnimasMoon, createClouds, createHills } from "./sky";
-import { PALETTE, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
+import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
+import { createFences, createLanterns, createTrees } from "./animasProps";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -187,30 +188,6 @@ function placeOnTrack(mesh: THREE.Object3D, x: number, y: number, z: number, hea
 function clear(track: Track, x: number, z: number, margin: number) {
   const c = closestPoint(track, x, z);
   return Math.abs(c.lateral) > c.width / 2 + track.verge + margin;
-}
-
-function lanternGeometry() {
-  const ball = paint(new THREE.SphereGeometry(0.32, 8, 6), LLAMA);
-  const ring = bake(new THREE.TorusGeometry(0.46, 0.07, 6, 10), M(), HUESO);
-  return merge([ball, ring]);
-}
-
-function lanternMaterial() {
-  const mat = new THREE.MeshBasicMaterial({ vertexColors: true });
-  mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = { value: 0 };
-    shader.vertexShader =
-      "uniform float uTime;\n" +
-      shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
-#ifdef USE_INSTANCING
-         transformed.y += sin(uTime * 1.7 + instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.21) * 0.3;
-#endif`,
-      );
-    mat.userData.shader = shader;
-  };
-  return mat;
 }
 
 function stars() {
@@ -454,59 +431,104 @@ function vnoise(x: number, z: number) {
 }
 
 /**
- * Terreno de hierba toon morada a los lados de la pista: una malla de rejilla con relieve de ruido,
- * por debajo del talud, con la cuenca de la laguna excavada. Color por vértice #2E2547 → #5B4E7A.
+ * Altura del terreno en (x, z). Abraza la calzada: junto al borde queda a ras (justo por debajo) y baja
+ * con pendiente suave hacia el valle, así no hay un talud negro de 40 m a los lados. Lejos de todo
+ * camino se suman colinas de ruido. Nunca sube por encima de otro tramo de pista cercano (pasos a distinto nivel)
+ * y deja la cuenca de la laguna excavada.
  */
-export function terrainGeometry(track: Track, shape: LagoonShape, waterY: number, groundY: number): THREE.BufferGeometry {
+export function terrainHeightField(track: Track, shape: LagoonShape, waterY: number, groundY: number) {
+  const samples: { x: number; z: number; y: number; r: number; d: number }[] = [];
+  for (let i = 0; i < track.points.length; i += 3) {
+    const p = track.points[i]!;
+    samples.push({ x: p.x, z: p.z, y: p.y, r: p.w / 2 + track.verge, d: track.lengths[i]! });
+  }
+  return (x: number, z: number) => {
+    const c = closestPoint(track, x, z);
+    const edge = c.width / 2 + track.verge;
+    const lat = THREE.MathUtils.clamp(c.lateral, -edge, edge);
+    let out = Math.max(0, Math.abs(c.lateral) - edge);
+    let h = surfaceY({ y: c.y, lateral: lat, bank: c.bank }) - 0.35 - out * 0.42;
+    // Otros tramos de pista (por debajo o por encima): el terreno no los tapa ni los deja flotando.
+    for (const q of samples) {
+      let sep = Math.abs(q.d - c.distance);
+      sep = Math.min(sep, track.length - sep);
+      if (sep < 70) continue;
+      const dd = Math.max(0, Math.hypot(x - q.x, z - q.z) - q.r);
+      if (dd > 60) continue;
+      h = Math.min(h, q.y - 4.5 + dd * 0.45);
+      out = Math.min(out, dd);
+    }
+    const amp = 4 + 11 * vnoise(x * 0.012 + 3, z * 0.012);
+    const bumps = vnoise(x * 0.045, z * 0.045) * 0.65 + vnoise(x * 0.11, z * 0.11) * 0.35;
+    h += amp * bumps * THREE.MathUtils.smoothstep(out, 8, 42);
+    const { d, lift } = lagoonDistance(shape, x, z);
+    h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * 0.45);
+    return Math.max(h, groundY - 0.3);
+  };
+}
+
+/**
+ * Terreno de hierba toon morada a los lados de la pista: rejilla con la altura de `terrainHeightField`,
+ * partida en 5×5 trozos para que el frustum culling descarte lo que no se ve (cada trozo, una llamada).
+ * Color por vértice #2E2547 → #5B4E7A (más claro en las lomas). Normales por diferencias centrales: sin costuras.
+ */
+export function terrainMeshes(height: (x: number, z: number) => number, groundY: number, material: THREE.Material): THREE.Mesh[] {
   const x0 = -380;
   const z0 = -300;
   const n = 100;
+  const chunks = 5;
   const step = 760 / n;
-  const pos = new Float32Array((n + 1) * (n + 1) * 3);
-  const col = new Float32Array((n + 1) * (n + 1) * 3);
+  const stepZ = step * 1.05;
+  const W = n + 1;
+  const h = new Float32Array(W * W);
+  const px = (i: number) => x0 + i * step;
+  const pz = (j: number) => z0 + j * stepZ;
+  for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) h[j * W + i] = height(px(i), pz(j));
+  const at = (i: number, j: number) => h[Math.min(n, Math.max(0, j)) * W + Math.min(n, Math.max(0, i))]!;
   // Un tono por encima de la paleta: el sombreado toon y la niebla lo oscurecen hasta ~#2E2547 → #5B4E7A.
-  const lo = new THREE.Color(0x4a3d73);
-  const hi = new THREE.Color(0x8573b5);
+  const lo = new THREE.Color(0x5b3fb0);
+  const hi = new THREE.Color(0x9b6bff);
   const tmp = new THREE.Color();
-  for (let j = 0; j <= n; j++) {
-    for (let i = 0; i <= n; i++) {
-      const x = x0 + i * step;
-      const z = z0 + j * step * 1.05;
-      const c = closestPoint(track, x, z);
-      const away = Math.abs(c.lateral);
-      const amp = 4 + 11 * vnoise(x * 0.012 + 3, z * 0.012);
-      const bumps = vnoise(x * 0.045, z * 0.045) * 0.65 + vnoise(x * 0.11, z * 0.11) * 0.35;
-      let h = groundY + 0.5 + amp * bumps * THREE.MathUtils.smoothstep(away, 17, 55);
-      // Nunca por encima del talud ni de la vista desde la cámara.
-      h = Math.min(h, c.y - 3 + Math.max(0, away - 18) * 0.1);
-      // Cuenca de la laguna: bajo el agua en el cauce y orillas suaves.
-      const { d, lift } = lagoonDistance(shape, x, z);
-      h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * 0.45);
-      h = Math.max(h, groundY - 0.3);
-      const k = (j * (n + 1) + i) * 3;
-      pos[k] = x;
-      pos[k + 1] = h;
-      pos[k + 2] = z;
-      const t = THREE.MathUtils.clamp((h - groundY) / 16 + (vhash(i, j) - 0.5) * 0.12, 0, 1);
-      tmp.copy(lo).lerp(hi, t);
-      col[k] = tmp.r;
-      col[k + 1] = tmp.g;
-      col[k + 2] = tmp.b;
+  const meshes: THREE.Mesh[] = [];
+  const cells = n / chunks;
+  for (let cj = 0; cj < chunks; cj++) {
+    for (let ci = 0; ci < chunks; ci++) {
+      const pos: number[] = [];
+      const nor: number[] = [];
+      const col: number[] = [];
+      const idx: number[] = [];
+      for (let j = cj * cells; j <= (cj + 1) * cells; j++) {
+        for (let i = ci * cells; i <= (ci + 1) * cells; i++) {
+          const y = at(i, j);
+          pos.push(px(i), y, pz(j));
+          const nx = (at(i - 1, j) - at(i + 1, j)) / (2 * step);
+          const nz = (at(i, j - 1) - at(i, j + 1)) / (2 * stepZ);
+          const len = Math.hypot(nx, 1, nz);
+          nor.push(nx / len, 1 / len, nz / len);
+          const t = THREE.MathUtils.clamp(0.2 + 0.6 * vnoise(px(i) * 0.02 + 9, pz(j) * 0.02) + (y - groundY) * 0.004 + (vhash(i, j) - 0.5) * 0.12, 0, 1);
+          tmp.copy(lo).lerp(hi, t);
+          col.push(tmp.r, tmp.g, tmp.b);
+        }
+      }
+      const row = cells + 1;
+      for (let j = 0; j < cells; j++) {
+        for (let i = 0; i < cells; i++) {
+          const a = j * row + i;
+          idx.push(a, a + row, a + 1, a + 1, a + row, a + row + 1);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+      geo.setIndex(idx);
+      geo.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.name = "terreno";
+      meshes.push(mesh);
     }
   }
-  const idx: number[] = [];
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      const a = j * (n + 1) + i;
-      idx.push(a, a + n + 1, a + 1, a + 1, a + n + 1, a + n + 2);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  return geo;
+  return meshes;
 }
 
 const WATER_VERT = /* glsl */ `
@@ -588,28 +610,25 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const bone = sharedBoneToon();
 
   // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
-  const spot = pointAt(track, 42, 11);
+  // Se asienta sobre el terreno (ver más abajo), que abraza la pista y ya hace de cerro.
+  const spot = pointAt(track, 42, 20);
   const road = pointAt(track, 42, 0);
   const towerFoot = { x: spot.x, z: spot.z };
-  const tower = new THREE.Mesh(campanarioGeometry(), bone);
-  tower.position.set(spot.x, spot.y, spot.z);
-  tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
-  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
-  bell.position.set(0, 9.2, 1.85);
-  tower.add(bell);
-  const bellRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 8, 16), boneToonMaterial());
-  bellRing.position.copy(bell.position);
-  bellRing.rotation.x = Math.PI / 2;
-  tower.add(bellRing);
-  tower.name = "campanario";
-  scene.add(tower);
-  // Cerro bajo el campanario: sin él la torre flotaría sobre el valle. Pendiente 1:1.1, por debajo de la calzada.
-  const hillTop = spot.y - 0.3;
-  const hillH = hillTop - GROUND_Y;
-  const hill = new THREE.Mesh(new THREE.CylinderGeometry(5, 5 + hillH / 1.1, hillH, 16, 1, true), toonMaterial({ color: 0x2e2547 }));
-  hill.position.set(spot.x, GROUND_Y + hillH / 2, spot.z);
-  hill.name = "cerro-campanario";
-  scene.add(hill);
+  const placeTower = (groundY: number) => {
+    const tower = new THREE.Mesh(campanarioGeometry(), bone);
+    tower.position.set(spot.x, groundY - 0.4, spot.z);
+    tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
+    const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
+    bell.position.set(0, 9.2, 1.85);
+    tower.add(bell);
+    const bellRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.12, 8, 16), boneToonMaterial());
+    bellRing.position.copy(bell.position);
+    bellRing.rotation.x = Math.PI / 2;
+    tower.add(bellRing);
+    tower.name = "campanario";
+    scene.add(tower);
+  };
+  let towerPlaced = false;
 
   // Arco-calavera en la salida, en vez del arco genérico.
   const start = pointAt(track, 0);
@@ -695,13 +714,10 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     const mid = { x: (towerFoot.x + lip2.x) / 2 - 3, z: Math.max(towerFoot.z, lip2.z) + 32 };
     const shape = lagoonShape(mid, towerFoot);
     const lagoon = new THREE.Mesh(lagoonGeometry(shape), lagoonMaterial());
-    const terrain = new THREE.Mesh(
-      terrainGeometry(track, shape, waterY, GROUND_Y),
-      toonMaterial({ vertexColors: true }),
-    );
-    terrain.name = "terreno";
-    terrain.frustumCulled = false;
-    scene.add(terrain);
+    const height = terrainHeightField(track, shape, waterY, GROUND_Y);
+    for (const chunk of terrainMeshes(height, GROUND_Y, animasTerrainMaterial())) scene.add(chunk);
+    placeTower(height(towerFoot.x, towerFoot.z));
+    towerPlaced = true;
     lagoon.position.y = waterY;
     lagoon.renderOrder = 0; // después del cielo (-1): el río lejano queda a más de 230 m, fuera de la cúpula
     lagoon.frustumCulled = false;
@@ -711,59 +727,17 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       waterMat.uniforms.uTime!.value = performance.now() / 1000;
     };
     scene.add(lagoon);
+
+    // Árboles, farolillos y vallas de hueso. `height` es el mismo terreno que se dibuja.
+    for (const mesh of createTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
+    const lanterns = createLanterns(track, height);
+    scene.add(lanterns.bodies, lanterns.halos);
+    if (lanterns.poles) scene.add(lanterns.poles);
+    const fences = createFences(track);
+    scene.add(fences.posts, fences.rope);
   }
 
-  // Faroles flotantes, una sola malla.
-  const lanterns = new THREE.InstancedMesh(lanternGeometry(), lanternMaterial(), 40);
-  let n = 0;
-  const pts = track.points;
-  for (let i = 0; i < pts.length && n < 40; i += 16) {
-    const p = pts[i]!;
-    const side = i % 32 === 0 ? 1 : -1;
-    const off = p.w / 2 + track.verge + 2.2;
-    const c = closestPoint(track, p.x, p.z);
-    const left = pointAt(track, c.distance, off * side);
-    if (!clear(track, left.x, left.z, 0.4)) continue;
-    lanterns.setMatrixAt(n++, M(left.x, p.y + 3.1, left.z));
-  }
-  lanterns.count = n;
-  lanterns.frustumCulled = false;
-  lanterns.userData.animasLanterns = true;
-  lanterns.onBeforeRender = () => {
-    const shader = lanterns.material.userData.shader as { uniforms: { uTime: { value: number } } } | undefined;
-    if (shader) shader.uniforms.uTime.value = performance.now() / 1000;
-  };
-  scene.add(lanterns);
-
-  // Pinos de hueso y lápidas en el Pinar, linternas ya van en la subida con el mismo lote.
-  const trunks = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.28, 1.4, 2, 6), boneToonMaterial(), 16);
-  const crowns = new THREE.InstancedMesh(new THREE.SphereGeometry(0.9, 8, 6), toonMaterial({ color: ANIMA }), 16);
-  const tombs = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.35, 0.7, 2, 6), boneToonMaterial(), 12);
-  let trees = 0;
-  let graves = 0;
-  for (let i = 0; i < pts.length && (trees < 16 || graves < 12); i += 10) {
-    const dist = track.lengths[i]!;
-    const f = dist / track.length;
-    if (f < 0.54 || f > 0.66) continue;
-    const p = pts[i]!;
-    const c = closestPoint(track, p.x, p.z);
-    const spot = pointAt(track, c.distance, (trees % 2 === 0 ? 1 : -1) * (p.w / 2 + track.verge + 3));
-    if (!clear(track, spot.x, spot.z, 0.3)) continue;
-    if (trees < 16) {
-      trunks.setMatrixAt(trees, M(spot.x, p.y + 1, spot.z));
-      crowns.setMatrixAt(trees, M(spot.x, p.y + 2.5, spot.z, 0, 0, 0, 1.1, 0.8, 1.1));
-      trees++;
-    } else if (graves < 12) {
-      tombs.setMatrixAt(graves++, M(spot.x, p.y + 0.7, spot.z));
-    }
-  }
-  trunks.count = trees;
-  crowns.count = trees;
-  tombs.count = graves;
-  trunks.frustumCulled = false;
-  crowns.frustumCulled = false;
-  tombs.frustumCulled = false;
-  scene.add(trunks, crowns, tombs);
+  if (!towerPlaced) placeTower(spot.y);
 
   const pumpkinMark = def.landmarks?.find((m) => m.kind === "calabaza");
   if (pumpkinMark && clear(track, pumpkinMark.x, pumpkinMark.z, 0)) {

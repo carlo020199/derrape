@@ -203,8 +203,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(theme.horizon);
   scene.fog = new THREE.Fog(theme.horizon, theme.fog[0], theme.fog[1]);
-  scene.add(new THREE.HemisphereLight(lighten(theme.sky, 0.55), theme.ground, 1.15));
-  const moon = new THREE.DirectionalLight(0xcfc4ff, 1.05);
+  const lit = theme.light;
+  scene.add(
+    lit
+      ? new THREE.HemisphereLight(lit.hemiSky, lit.hemiGround, lit.hemi)
+      : new THREE.HemisphereLight(lighten(theme.sky, 0.55), theme.ground, 1.15),
+  );
+  const moon = new THREE.DirectionalLight(lit?.key ?? 0xcfc4ff, lit?.keyIntensity ?? 1.05);
   moon.position.set(-50, 80, 30);
   scene.add(moon);
   const sky = createGradientSky(theme.sky, theme.skyHorizon ?? theme.horizon, 230, theme.skyHorizon !== undefined ? 0x9b6bff : undefined);
@@ -377,6 +382,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
 
   // ?foto=<metros>[,<lateral>[,<giro en grados>]]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
   const foto = !online ? new URLSearchParams(location.search).get("foto") : null;
+  const vistaParam = foto ? new URLSearchParams(location.search).get("vista") : null;
+  const vista = vistaParam ? vistaParam.split(",").map(Number) : null;
   if (foto) {
     const [d, lat, giro] = foto.split(",").map(Number);
     const at = pointAt(track, d ?? 0, lat ?? 0);
@@ -946,6 +953,11 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           }
         : undefined,
     );
+    // ?vista=x,y,z,mirax,miray,miraz: cámara libre para depurar el paisaje (solo con ?foto).
+    if (vista) {
+      camera.position.set(vista[0]!, vista[1]!, vista[2]!);
+      camera.lookAt(vista[3]!, vista[4]!, vista[5]!);
+    }
     sky.position.copy(camera.position);
     blobs.update(track, [
       ...locals.map((r) => ({ x: r.model.root.position.x, z: r.model.root.position.z, on: true })),
