@@ -645,19 +645,6 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   };
   let towerPlaced = false;
 
-  // Arco-calavera en la salida, en vez del arco genérico.
-  const start = pointAt(track, 0);
-  const span = 4.6;
-  const arch = merge([
-    bake(new THREE.CapsuleGeometry(0.28, 2.6, 3, 10), M(-span, 1.7, 0), HUESO),
-    bake(new THREE.CapsuleGeometry(0.28, 2.6, 3, 10), M(span, 1.7, 0), HUESO),
-    bake(new THREE.CapsuleGeometry(0.32, span * 2, 3, 12), M(0, 3.35, 0, 0, 0, Math.PI / 2), HUESO),
-    bake(new THREE.SphereGeometry(0.7, 14, 12), M(0, 4.15, 0.15), HUESO),
-  ]);
-  const archMesh = new THREE.Mesh(arch, bone);
-  placeOnTrack(archMesh, start.x, start.y, start.z, start.heading);
-  scene.add(archMesh);
-
   // Salto L: mandíbula. Los ojos van aparte (un lit sin luz, color ánima).
   const big = track.zones.find((z) => z.type === "ramp" && z.size === "L");
   if (big) {
