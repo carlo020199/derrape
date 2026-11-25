@@ -19,10 +19,10 @@ export const PALETTE = {
   huesoSombra: 0xc8b597,
   marfil: 0x8c7b66,
   texto: 0xfff7ea,
-  turbo1: 0x5cc8ff,
-  turbo2: 0xff9a1f,
-  turbo3: 0xb57bff,
-  nitro: 0xfff2c2,
+  turbo1: 0x3ff2c8, // Espectro
+  turbo2: 0xffb423, // Llama
+  turbo3: 0x9b6bff, // Ánima
+  nitro: 0xfff7ea, // Texto
 } as const;
 
 export function markShared<T extends { userData: { shared?: boolean } }>(resource: T): T {

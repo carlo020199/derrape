@@ -213,8 +213,11 @@ export function paintExhaust(
   dt = 0,
 ) {
   const boost = mode === "boost";
-  const core = boost || mode === "drift" ? PALETTE.espectro : PALETTE.llama;
-  const edge = boost || mode === "drift" ? PALETTE.anima : PALETTE.brasa;
+  const turbo = boost || mode === "drift";
+  // Reposo: Llama en la boca, Brasa en medio y Ascua en la punta. Turbo: Espectro con borde Ánima.
+  const core = turbo ? PALETTE.espectro : PALETTE.llama;
+  const mid = turbo ? PALETTE.espectro : PALETTE.brasa;
+  const edge = turbo ? PALETTE.anima : PALETTE.ascua;
   const n = boost ? 8 : 6;
   _side.set(dir.z, 0, -dir.x);
   if (_side.lengthSq() < 1e-4) _side.set(1, 0, 0);
@@ -229,12 +232,13 @@ export function paintExhaust(
     _puff.addScaledVector(_side, Math.cos(ang) * spread);
     _puff.addScaledVector(_up, Math.sin(ang) * spread * 0.25);
     const size = length * (boost ? 0.12 + t * 0.16 : 0.28 + t * 0.32) * flicker;
-    fire.flame(_puff, t < 0.45 ? core : edge, size);
+    fire.flame(_puff, t < 0.3 ? core : t < 0.65 ? mid : edge, size);
   }
   if (dt > 0 && Math.floor(time * 12) !== Math.floor((time - dt) * 12)) {
     _puff.copy(at).addScaledVector(dir, length * 0.55);
     _side.copy(dir).multiplyScalar(length * 0.6);
-    fire.puff(_puff, edge, _side, length * (boost ? 0.12 : 0.07), 0.22);
+    // Chispas Espectro que se despegan de la llama.
+    fire.puff(_puff, PALETTE.espectro, _side, length * (boost ? 0.12 : 0.07), 0.22);
   }
 }
 
