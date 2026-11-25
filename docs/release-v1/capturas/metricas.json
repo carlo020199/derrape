@@ -1,86 +1,86 @@
 {
-  "fecha": "2026-11-25T10:40:04.722Z",
+  "fecha": "2026-11-25T15:00:13.743Z",
   "personaje": "lia",
   "kart": "hueso",
   "a-salida": {
-    "c2_moradoPct": 88.27,
-    "c2_casiNegroPct": 1.04,
-    "c3_lagunaPct": 2.17,
-    "c3_lagunaTercioMedioSuperiorPct": 2.15,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 17.19,
-    "c7_regionPlanaMayorPctPantalla": 5.29,
-    "c7_bloquesPlanosRelativoPct": 0,
+    "c2_moradoPct": 92.19,
+    "c2_casiNegroPct": 1.03,
+    "c3_lagunaPct": 0.91,
+    "c3_lagunaTercioMedioSuperiorPct": 0.89,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 55.21,
+    "c7_regionPlanaMayorPctPantalla": 30.8,
+    "c7_bloquesPlanosRelativoPct": 46.35,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 58,
-      "triangles": 101542
+      "calls": 55,
+      "triangles": 98702
     },
-    "msPorFotogramaSoftware": 44.9
+    "msPorFotogramaSoftware": 56.7
   },
   "b-recta-campanario": {
-    "c2_moradoPct": 90.3,
-    "c2_casiNegroPct": 1.08,
-    "c3_lagunaPct": 2.27,
-    "c3_lagunaTercioMedioSuperiorPct": 2.24,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 15.63,
-    "c7_regionPlanaMayorPctPantalla": 6.53,
-    "c7_bloquesPlanosRelativoPct": 0.52,
+    "c2_moradoPct": 91.61,
+    "c2_casiNegroPct": 1.02,
+    "c3_lagunaPct": 1.57,
+    "c3_lagunaTercioMedioSuperiorPct": 1.55,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 56.77,
+    "c7_regionPlanaMayorPctPantalla": 33.91,
+    "c7_bloquesPlanosRelativoPct": 50,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 56,
-      "triangles": 99578
+      "calls": 54,
+      "triangles": 97906
     },
-    "msPorFotogramaSoftware": 45.7
+    "msPorFotogramaSoftware": 46
   },
   "c-curva-valla": {
-    "c2_moradoPct": 91.85,
-    "c2_casiNegroPct": 1.2,
-    "c3_lagunaPct": 1,
-    "c3_lagunaTercioMedioSuperiorPct": 0.97,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 15.1,
-    "c7_regionPlanaMayorPctPantalla": 5.6,
-    "c7_bloquesPlanosRelativoPct": 0.52,
+    "c2_moradoPct": 92.39,
+    "c2_casiNegroPct": 1.12,
+    "c3_lagunaPct": 0.53,
+    "c3_lagunaTercioMedioSuperiorPct": 0.49,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 57.29,
+    "c7_regionPlanaMayorPctPantalla": 33.6,
+    "c7_bloquesPlanosRelativoPct": 51.04,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 56,
-      "triangles": 97216
+      "calls": 54,
+      "triangles": 94464
     },
-    "msPorFotogramaSoftware": 45.4
+    "msPorFotogramaSoftware": 43.8
   },
   "d-laguna": {
-    "c2_moradoPct": 83.65,
+    "c2_moradoPct": 83.29,
     "c2_casiNegroPct": 1.19,
-    "c3_lagunaPct": 8.21,
-    "c3_lagunaTercioMedioSuperiorPct": 7.76,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 21.35,
-    "c7_regionPlanaMayorPctPantalla": 5.91,
-    "c7_bloquesPlanosRelativoPct": 6.25,
+    "c3_lagunaPct": 7.98,
+    "c3_lagunaTercioMedioSuperiorPct": 7.27,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 44.27,
+    "c7_regionPlanaMayorPctPantalla": 17.11,
+    "c7_bloquesPlanosRelativoPct": 33.33,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 65,
-      "triangles": 103200
+      "calls": 61,
+      "triangles": 99576
     },
-    "msPorFotogramaSoftware": 51.3
+    "msPorFotogramaSoftware": 52.6
   },
   "e-frontal": {
-    "c2_moradoPct": 90.99,
-    "c2_casiNegroPct": 1.61,
-    "c3_lagunaPct": 0.89,
-    "c3_lagunaTercioMedioSuperiorPct": 0.86,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 33.85,
-    "c7_regionPlanaMayorPctPantalla": 17.11,
-    "c7_bloquesPlanosRelativoPct": 3.13,
+    "c2_moradoPct": 92.69,
+    "c2_casiNegroPct": 1.65,
+    "c3_lagunaPct": 0.58,
+    "c3_lagunaTercioMedioSuperiorPct": 0.56,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 59.9,
+    "c7_regionPlanaMayorPctPantalla": 33.91,
+    "c7_bloquesPlanosRelativoPct": 55.73,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
-      "calls": 51,
-      "triangles": 98222
+      "calls": 48,
+      "triangles": 94330
     },
-    "msPorFotogramaSoftware": 47.2
+    "msPorFotogramaSoftware": 48.1
   },
   "erroresDeConsola": [
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",

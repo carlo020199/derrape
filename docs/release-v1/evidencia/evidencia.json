@@ -1,9 +1,9 @@
 {
   "lia-hueso": {
     "a-salida_luna": {
-      "diametro_px": 117,
-      "pct_ancho": 15.0,
-      "circular": 0.9
+      "diametro_px": 116,
+      "pct_ancho": 14.9,
+      "circular": 0.91
     },
     "a-salida_cielo": {
       "salto_max_entre_filas": 1.0,
@@ -36,17 +36,17 @@
         151
       ]
     },
-    "a-salida_cálidos_fuera_del_kart": 2,
+    "a-salida_cálidos_fuera_del_kart": 5,
     "b-recta-campanario_cálidos_fuera_del_kart": 5,
-    "c_postes_calavera_detectados": 9,
-    "c_pixeles_linea_espectro": 4217,
-    "c_pixeles_bordillo_anima": 57960
+    "c_postes_calavera_detectados": 11,
+    "c_pixeles_linea_espectro": 3496,
+    "c_pixeles_bordillo_anima": 61766
   },
   "calavera-chispas-medianoche": {
     "a-salida_luna": {
-      "diametro_px": 117,
-      "pct_ancho": 15.0,
-      "circular": 0.9
+      "diametro_px": 116,
+      "pct_ancho": 14.9,
+      "circular": 0.91
     },
     "a-salida_cielo": {
       "salto_max_entre_filas": 1.0,
@@ -62,9 +62,9 @@
       ]
     },
     "b-recta-campanario_luna": {
-      "diametro_px": 116,
-      "pct_ancho": 14.9,
-      "circular": 0.88
+      "diametro_px": 115,
+      "pct_ancho": 14.7,
+      "circular": 0.89
     },
     "b-recta-campanario_cielo": {
       "salto_max_entre_filas": 1.0,
@@ -79,11 +79,11 @@
         151
       ]
     },
-    "a-salida_cálidos_fuera_del_kart": 2,
+    "a-salida_cálidos_fuera_del_kart": 5,
     "b-recta-campanario_cálidos_fuera_del_kart": 5,
-    "c_postes_calavera_detectados": 9,
-    "c_pixeles_linea_espectro": 1515,
-    "c_pixeles_bordillo_anima": 57944
+    "c_postes_calavera_detectados": 11,
+    "c_pixeles_linea_espectro": 1493,
+    "c_pixeles_bordillo_anima": 61764
   },
   "contraste_hud": {
     "pastilla_texto_sobre_ciruela80": 14.14,

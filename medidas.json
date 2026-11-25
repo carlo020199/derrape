@@ -212,6 +212,27 @@
       "lagunaObjetivo": true,
       "limiteDuro": true
     },
-    "fps": "pendiente de prueba en dispositivo (iPhone y Android): solo se dejan métricas proxy (renderer.info y ms/fotograma por software en docs/release-v1/capturas/metricas.json)."
+    "fps": "pendiente de prueba en dispositivo (iPhone y Android): solo se dejan métricas proxy (renderer.info y ms/fotograma por software en docs/release-v1/capturas/metricas.json).",
+    "pulidoT2": {
+      "fecha": "2026-11-25",
+      "nota": "Pulido visual (T2): sin arco de salida, asfalto plano, campanario oscuro, 58 árboles, nubes opacas, cámara ≤ 8°, coleta de Lía.",
+      "lagunaLlamadas": 53,
+      "lagunaTriangulos": 86082,
+      "rendererInfoCapturas": {
+        "llamadas": "45–61",
+        "triangulos": "92 480–99 576"
+      },
+      "arboles": 58,
+      "pilotoYkartCerca": 9802,
+      "pilotoYkartLejos": 586,
+      "casiNegroEscritorio1280x720Pct": "0,8–1,2",
+      "c7RegionPlanaPct": "30–34 (a, b, c, e) y 16–17 (d): sube porque la calzada es plana a propósito",
+      "antes": {
+        "lagunaLlamadas": 55,
+        "lagunaTriangulos": 85518,
+        "arboles": 38,
+        "pilotoYkartCerca": 9754
+      }
+    }
   }
 }
