@@ -510,7 +510,7 @@ export function terrainMeshes(height: (x: number, z: number) => number, groundY:
           const nz = (at(i, j - 1) - at(i, j + 1)) / (2 * stepZ);
           const len = Math.hypot(nx, 1, nz);
           nor.push(nx / len, 1 / len, nz / len);
-          const t = THREE.MathUtils.clamp(0.2 + 0.6 * vnoise(px(i) * 0.02 + 9, pz(j) * 0.02) + (y - groundY) * 0.004 + (vhash(i, j) - 0.5) * 0.12, 0, 1);
+          const t = THREE.MathUtils.clamp(0.18 + 0.5 * vnoise(px(i) * 0.02 + 9, pz(j) * 0.02) + 0.55 * (vnoise(px(i) * 0.085 + 5, pz(j) * 0.085) - 0.5) + (y - groundY) * 0.004 + (vhash(i, j) - 0.5) * 0.34, 0, 1);
           tmp.copy(lo).lerp(hi, t);
           col.push(tmp.r, tmp.g, tmp.b);
         }

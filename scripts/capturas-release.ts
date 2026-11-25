@@ -87,6 +87,10 @@ async function metricas(page: Page, png: Buffer) {
       // C7: laterales (15 % + 15 %) con varianza > 0 y regiones planas (bloques 32×32 con desviación < 3 %) fuera del cielo.
       const bs = 32 * 2;
       let bloques = 0, planosB = 0, planosRel = 0;
+      const by0 = Math.floor((H * 0.4) / bs);
+      const rowsN = Math.floor(H / bs) - by0;
+      const colsN = Math.floor(W / bs);
+      const flatGrid: boolean[] = new Array(rowsN * colsN).fill(false);
       for (let by = Math.floor(H * 0.4 / bs); by < Math.floor(H / bs); by++) {
         for (let bx = 0; bx < Math.floor(W / bs); bx++) {
           let s = 0, s2 = 0, n = 0;
@@ -98,12 +102,37 @@ async function metricas(page: Page, png: Buffer) {
             }
           const sd = Math.sqrt(Math.max(0, s2 / n - (s / n) ** 2));
           bloques++;
-          if (sd < 0.03) planosB++;
+          if (sd < 0.03) {
+            planosB++;
+            flatGrid[(by - by0) * colsN + bx] = true;
+          }
           if (sd / Math.max(1e-6, s / n) < 0.03) planosRel++;
         }
       }
       planos = planosB / bloques;
       const planosR = planosRel / bloques;
+      // Región plana contigua más grande (bloques planos conectados en 4 direcciones), en % de la pantalla.
+      const seen = new Array(flatGrid.length).fill(false);
+      let mayor = 0;
+      for (let k = 0; k < flatGrid.length; k++) {
+        if (!flatGrid[k] || seen[k]) continue;
+        let n = 0;
+        const pila = [k];
+        seen[k] = true;
+        while (pila.length) {
+          const c = pila.pop()!;
+          n++;
+          const cx = c % colsN, cy = Math.floor(c / colsN);
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const nx = cx + dx, ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= colsN || ny >= rowsN) continue;
+            const nk = ny * colsN + nx;
+            if (flatGrid[nk] && !seen[nk]) { seen[nk] = true; pila.push(nk); }
+          }
+        }
+        mayor = Math.max(mayor, n);
+      }
+      const regionMayor = (mayor * bs * bs) / (W * H);
       const pct = (n: number) => Math.round((n / (W * H)) * 10000) / 100;
       return {
         c2_moradoPct: pct(morado),
@@ -112,6 +141,8 @@ async function metricas(page: Page, png: Buffer) {
         c3_lagunaTercioMedioSuperiorPct: pct(lagunaSup),
         c7_bloquesPlanosPctDelTerrenoVisible: Math.round(planos * 10000) / 100,
         // Misma cuenta con «desviación < 3 %» en relativo (σ / media del bloque): es la lectura literal de DALI C7.
+        // Región plana contigua mayor (σ absoluta < 0,03) como % del área de la pantalla: DALI C7 pide ≤ 10 %.
+        c7_regionPlanaMayorPctPantalla: Math.round(regionMayor * 10000) / 100,
         c7_bloquesPlanosRelativoPct: Math.round(planosR * 10000) / 100,
         ancho: W,
         alto: H,

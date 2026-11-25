@@ -38,12 +38,12 @@ Ver `NOCHE_T1_HECHO.md` y la sección siguiente. Resumen del juicio sobre las ca
 | C4 Cielo | Pasa | Luna circular ≈ 15 % del ancho, degradado Ciruela→Niebla, nubes más claras arriba |
 | C5 Cálidos | Pasa | ≥ 4 farolillos/puntos Brasa–Llama en `a` y `b`; escapes y faros emisivos |
 | C6 Bordes | Pasa | `c-curva-valla`: > 8 postes-calavera con cuerda, bordillo Ánima/Hueso, línea Espectro |
-| C7 Relleno lateral | Pasa | Laterales con colinas, árboles, farolillos, laguna y valla. La calzada tiene textura de asfalto gastado (moteado + grano): `metricas.json` → `c7_bloquesPlanosRelativoPct` (σ/media < 3 % por bloque) = 3,7–5,7 % en `a`/`b`/`c` y 11–12,5 % en `d`, es decir, ninguna región plana > 10 % salvo el margen en `d`. El indicador absoluto `c7_bloquesPlanos…` (σ de luminancia < 0,03) sigue en 38–56 %: con un asfalto de luminancia ≈ 0,2 es inalcanzable sin ruido exagerado y el GOAL lo marca como solo orientativo |
+| C7 Relleno lateral | Pasa | Laterales con colinas, árboles, farolillos, laguna y valla. Regiones planas (σ de luminancia < 0,03 por bloque de 32 px CSS, bloques conectados): la **mayor región contigua ocupa 5,3–6,5 % de la pantalla** en las 8 capturas (`c7_regionPlanaMayorPctPantalla`; criterio DALI: ≤ 10 %). Ese cálculo incluye partes del kart y de la ladera. La calzada tiene asfalto gastado (moteado + grano). El conteo de bloques planos original (`c7_bloquesPlanosPctDelTerrenoVisible`) bajó de 52 % (antes de retexturizar) a 15–22 % de los bloques de la franja inferior, repartidos sin formar una región grande. Una métrica relativa (σ/media) que añadí a mitad de trabajo, `c7_bloquesPlanosRelativoPct`, da 0–6,3 %; se guarda solo como dato extra |
 | C8 Pilotos | Pasa | Cabeza 46,4 % (Lía) y 47,8 % (Chispas) de la altura sentado (test); coleta Espectro y ojos Llama; Hueso claro con morro de calavera; Medianoche oscuro con faros Llama; contorno Noche visible |
 | C9 Legibilidad | **Parcial** | Dientes y cuencas se leen en la selección y en los postes de valla; en carrera el piloto va de espaldas, así que su cara no se ve |
 | C10 Técnico | Pasa | Ver tabla de arriba |
 
-Veredicto (GOAL: C1, C2, C3, C7, C8, C10 y al menos 3 de C4/C5/C6/C9): **PASA** — cumple C1, C2, C3, C7, C8 y C10, y de C4/C5/C6/C9 cumple C4, C5 y C6 (C9 es parcial). Carlo puede decidir si quiere más textura en la calzada (ver «Decisiones» en `NOCHE_T1_HECHO.md`).
+Veredicto (GOAL: C1, C2, C3, C7, C8, C10 y al menos 3 de C4/C5/C6/C9): **PASA** — cumple C1, C2, C3, C7 (región plana mayor ≤ 6,5 % de la pantalla), C8 y C10, y de C4/C5/C6/C9 cumple C4, C5 y C6 (C9 es parcial). Carlo puede decidir si quiere más textura en la calzada (ver «Decisiones» en `NOCHE_T1_HECHO.md`).
 
 ## No verificado / fuera de alcance
 - Safari iOS (WebGL, `pixelRatio`, PWA) y táctil real.
