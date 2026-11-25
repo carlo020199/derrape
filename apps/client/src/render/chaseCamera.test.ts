@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
 import { TRACKS, buildTrackFromDef, closestPoint, pointAt, surfaceNormal, surfaceY } from "@derrape/shared";
-import { CAM_Y_STEP_MAX, ChaseCamera, ROLL_RATE_MAX, softFloor, type CameraCue } from "./chaseCamera";
+import { CAM_Y_STEP_MAX, ChaseCamera, ROLL_MAX_DEG, ROLL_RATE_MAX, softFloor, type CameraCue } from "./chaseCamera";
 
 describe("cámara de persecución", () => {
   it("softFloor es continuo, nunca baja del suelo y no cambia nada lejos de él", () => {
@@ -30,6 +30,7 @@ describe("cámara de persecución", () => {
     let prevY: number | null = null;
     let worstRate = 0;
     let worstY = 0;
+    let worstRoll = 0;
     for (let d = 0, frame = 0; d < track.length; d += speed * dt, frame++) {
       const p = pointAt(track, d);
       const c = closestPoint(track, p.x, p.z);
@@ -44,6 +45,7 @@ describe("cámara de persecución", () => {
       };
       chase.update(p.x, p.y, p.z, p.heading, 1, dt, cue);
       const roll = (chase as unknown as { rollDeg: number }).rollDeg;
+      worstRoll = Math.max(worstRoll, Math.abs(roll));
       if (frame > 5) {
         worstRate = Math.max(worstRate, Math.abs(roll - prevRoll!) / dt);
         worstY = Math.max(worstY, Math.abs(cam.position.y - prevY!));
@@ -53,5 +55,6 @@ describe("cámara de persecución", () => {
     }
     expect(worstRate).toBeLessThanOrEqual(ROLL_RATE_MAX + 1e-6);
     expect(worstY).toBeLessThanOrEqual(CAM_Y_STEP_MAX + 1e-6);
+    expect(worstRoll).toBeLessThanOrEqual(ROLL_MAX_DEG + 1e-6);
   });
 });
