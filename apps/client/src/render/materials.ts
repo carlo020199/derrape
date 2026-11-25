@@ -148,8 +148,11 @@ float mn(vec2 p) {
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-diffuseColor.rgb *= 0.9 + 0.2 * (mn(vWP.xz * 0.33) * 0.65 + mn(vWP.xz * 1.1) * 0.35);`,
-      );
+float mottle = 0.62 + 0.76 * (mn(vWP.xz * 0.2) * 0.5 + mn(vWP.xz * 0.9) * 0.3 + mn(vWP.xz * 2.7) * 0.2);
+diffuseColor.rgb *= mottle;`,
+      )
+      // El emisivo aporta casi toda la luz del asfalto: también se moteado.
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance *= mottle;");
   };
   return mat;
 }

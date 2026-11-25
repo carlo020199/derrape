@@ -162,7 +162,9 @@ export function skullPostGeometry(): THREE.BufferGeometry {
   p.push(piece(new THREE.CapsuleGeometry(0.12, 0.6, 1, 4), M(0, 0.42, 0), HUESO));
   p.push(piece(new THREE.SphereGeometry(0.27, 6, 4), M(0, 1.0, 0, 0, 0, 0, 1, 0.95, 1.05), HUESO));
   p.push(piece(new THREE.SphereGeometry(0.15, 4, 2), M(0, 0.8, 0.05, 0, 0, 0, 1.15, 0.6, 1), HUESO_SOMBRA));
-  for (const s of [-1, 1]) p.push(piece(new THREE.SphereGeometry(0.08, 4, 2), M(s * 0.1, 1.03, 0.22, 0, 0, 0, 1, 1.2, 0.5), NOCHE));
+  for (const s of [-1, 1]) p.push(piece(new THREE.SphereGeometry(0.1, 5, 3), M(s * 0.1, 1.04, 0.2, 0, 0, 0, 1, 1.25, 0.55), NOCHE));
+  // Dientes: tres bloques bajo la nariz.
+  for (let i = -1; i <= 1; i++) p.push(piece(new THREE.BoxGeometry(0.06, 0.07, 0.05), M(i * 0.075, 0.86, 0.22), HUESO));
   return merge(p);
 }
 
@@ -179,6 +181,9 @@ function headingKappa(track: Track, d: number) {
   while (dh < -Math.PI) dh += Math.PI * 2;
   return dh / 8;
 }
+
+/** Los postes se ven grandes (como en la referencia): cráneo ~0,5 m con cuencas y dientes legibles a 1×. */
+const POST_SCALE = 1.7;
 
 export interface FenceResult {
   posts: THREE.InstancedMesh;
@@ -229,7 +234,7 @@ export function createFences(track: Track, spacing = 3.4, maxPosts = 150): Fence
   const placed = all.filter((q) => keep.has(q.run));
   const posts = new THREE.InstancedMesh(skullPostGeometry(), sharedBoneToon(), Math.max(1, placed.length));
   const m = new THREE.Matrix4();
-  placed.forEach((q, i) => posts.setMatrixAt(i, m.compose(new THREE.Vector3(q.x, q.y, q.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), i * 1.7), new THREE.Vector3(1, 1, 1))));
+  placed.forEach((q, i) => posts.setMatrixAt(i, m.compose(new THREE.Vector3(q.x, q.y, q.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), i * 1.7), new THREE.Vector3(POST_SCALE, POST_SCALE, POST_SCALE))));
   posts.count = placed.length;
   posts.frustumCulled = false;
   posts.name = "vallas-hueso";
@@ -251,11 +256,11 @@ export function createFences(track: Track, spacing = 3.4, maxPosts = 150): Fence
     const a = placed[i]!;
     const b = placed[i + 1]!;
     if (a.run !== b.run) continue;
-    const mid = (a.y + b.y) / 2 + 0.52;
-    const pa = new THREE.Vector3(a.x, a.y + 0.62, a.z);
-    const pb = new THREE.Vector3(b.x, b.y + 0.62, b.z);
+    const mid = (a.y + b.y) / 2 + 0.52 * POST_SCALE;
+    const pa = new THREE.Vector3(a.x, a.y + 0.62 * POST_SCALE, a.z);
+    const pb = new THREE.Vector3(b.x, b.y + 0.62 * POST_SCALE, b.z);
     const pm = new THREE.Vector3((a.x + b.x) / 2, mid, (a.z + b.z) / 2);
-    const r = 0.045;
+    const r = 0.06;
     // Dos prismas (a→m, m→b), sección triangular.
     for (const [s, e] of [[pa, pm], [pm, pb]] as const) {
       const up = new THREE.Vector3(0, r, 0);
@@ -317,6 +322,15 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
     }
     k++;
   }
+  // Refuerzo junto a la salida: los laterales del primer encuadre llevan árboles a los dos lados.
+  for (let i = 0; i < 8; i++) {
+    const d = 36 + i * 13;
+    const side = i % 2 === 0 ? 1 : -1;
+    const p = pointAt(track, d);
+    const at = pointAt(track, d, side * (p.width / 2 + track.verge + 3.2 + rnd() * 3));
+    if (!lagoonClear(at.x, at.z)) continue;
+    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: i % 3, s: 1.2 + rnd() * 0.5, rot: rnd() * Math.PI * 2 });
+  }
   const out: THREE.InstancedMesh[] = [];
   const m = new THREE.Matrix4();
   geos.forEach((geo, model) => {
@@ -342,7 +356,7 @@ void main() {
   vec3 c = aOffset;
   c.y += sin(uTime * 1.7 + c.x * 0.37 + c.z * 0.21) * 0.15;
   vec4 mv = viewMatrix * vec4(c, 1.0);
-  mv.xy += position.xy * 3.2;
+  mv.xy += position.xy * 5.2;
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -397,26 +411,37 @@ export interface Lanterns {
  * Farolillos: 15–30, flotando junto a la pista (oscilan ±0,15 m y ±4°), algunos colgados de postes de Sombra en las curvas.
  * Cada farolillo lleva un halo aditivo (sprite instanciado, un solo dibujo). Sin luces reales.
  */
-export function createLanterns(track: Track, height: (x: number, z: number) => number, count = 26): Lanterns {
+export function createLanterns(track: Track, height: (x: number, z: number) => number, over: { x: number; z: number; y: number; rx: number; rz: number } | null, count = 30): Lanterns {
   const spots: { x: number; y: number; z: number; pole: boolean; heading: number }[] = [];
-  const stride = track.length / count;
-  for (let i = 0; i < count; i++) {
-    const d = i * stride + stride * 0.3;
+  // 7 farolillos en los primeros 140 m (se ven desde la salida) y el resto repartido por la vuelta.
+  const near = 8;
+  // 6 más flotan sobre la laguna, delante de la recta de salida.
+  const lake = over ? 6 : 0;
+  const stride = (track.length - 160) / (count - near - lake);
+  for (let i = 0; i < count - lake; i++) {
+    const d = i < near ? 14 + i * 21 : 160 + (i - near) * stride + stride * 0.3;
     const p = pointAt(track, d);
     const curve = outerSide(p.bank, headingKappa(track, d));
     // En las curvas, colgados de un poste en el interior; en recta, flotando a uno u otro lado.
     const side = curve !== 0 ? -curve : i % 2 === 0 ? 1 : -1;
-    const lat = side * (p.width / 2 + track.verge + (curve !== 0 ? 1.2 : 3.5 + (i % 3) * 2.5));
+    const lat = side * (p.width / 2 + track.verge + (curve !== 0 ? 1.2 : i < near ? 2.4 + (i % 2) * 1.2 : 3.5 + (i % 3) * 2.5));
     const at = pointAt(track, d, lat);
     const ground = Math.max(height(at.x, at.z), at.y - 1.5);
     const pole = curve !== 0;
-    spots.push({ x: at.x, y: pole ? at.y + 3.6 : ground + 2.6 + (i % 4) * 0.35, z: at.z, pole, heading: p.heading });
+    spots.push({ x: at.x, y: pole ? at.y + 3.6 : Math.max(ground + 2.6, at.y + 3.4) + (i % 3) * 0.6, z: at.z, pole, heading: p.heading });
+  }
+  if (over) {
+    for (let k = 0; k < lake; k++) {
+      const a = (k / lake) * Math.PI * 2 + 0.4;
+      const rr = 0.35 + 0.4 * ((k * 7) % 5) / 5;
+      spots.push({ x: over.x + Math.cos(a) * over.rx * rr, y: over.y + 5 + (k % 3) * 4, z: over.z + Math.sin(a) * over.rz * rr, pole: false, heading: 0 });
+    }
   }
   const bodies = new THREE.InstancedMesh(lanternGeometry(), lanternMaterial(), spots.length);
   const offsets = new Float32Array(spots.length * 3);
   const m = new THREE.Matrix4();
   spots.forEach((s, i) => {
-    bodies.setMatrixAt(i, m.compose(new THREE.Vector3(s.x, s.y, s.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.sin(i * 1.3) * 0.06), new THREE.Vector3(1.25, 1.25, 1.25)));
+    bodies.setMatrixAt(i, m.compose(new THREE.Vector3(s.x, s.y, s.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.sin(i * 1.3) * 0.06), new THREE.Vector3(2.3, 2.3, 2.3)));
     offsets.set([s.x, s.y, s.z], i * 3);
   });
   bodies.count = spots.length;

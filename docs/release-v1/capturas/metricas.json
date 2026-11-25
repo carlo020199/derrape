@@ -1,0 +1,87 @@
+{
+  "fecha": "2026-11-25T10:13:12.706Z",
+  "personaje": "lia",
+  "kart": "hueso",
+  "a-salida": {
+    "c2_moradoPct": 88.12,
+    "c2_casiNegroPct": 1,
+    "c3_lagunaPct": 2.18,
+    "c3_lagunaTercioMedioSuperiorPct": 2.15,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 51.04,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 58,
+      "triangles": 101566
+    },
+    "msPorFotogramaSoftware": 51.4
+  },
+  "b-recta-campanario": {
+    "c2_moradoPct": 90.16,
+    "c2_casiNegroPct": 1.01,
+    "c3_lagunaPct": 2.21,
+    "c3_lagunaTercioMedioSuperiorPct": 2.19,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 54.69,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 56,
+      "triangles": 99602
+    },
+    "msPorFotogramaSoftware": 44.2
+  },
+  "c-curva-valla": {
+    "c2_moradoPct": 91.75,
+    "c2_casiNegroPct": 1.11,
+    "c3_lagunaPct": 1.01,
+    "c3_lagunaTercioMedioSuperiorPct": 0.97,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 55.21,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 56,
+      "triangles": 97240
+    },
+    "msPorFotogramaSoftware": 44.8
+  },
+  "d-laguna": {
+    "c2_moradoPct": 83.57,
+    "c2_casiNegroPct": 1.16,
+    "c3_lagunaPct": 8.23,
+    "c3_lagunaTercioMedioSuperiorPct": 7.78,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 37.5,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 65,
+      "triangles": 103200
+    },
+    "msPorFotogramaSoftware": 51.7
+  },
+  "erroresDeConsola": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ]
+}

@@ -303,8 +303,8 @@ export interface LagoonShape {
 }
 
 export function lagoonShape(mid: { x: number; z: number }, end: { x: number; z: number }): LagoonShape {
-  const rx = 48;
-  const rz = 24;
+  const rx = 78;
+  const rz = 38;
   const dx = end.x - mid.x;
   const dz = end.z - mid.z;
   const len = Math.hypot(dx, dz) || 1;
@@ -436,7 +436,7 @@ function vnoise(x: number, z: number) {
  * camino se suman colinas de ruido. Nunca sube por encima de otro tramo de pista cercano (pasos a distinto nivel)
  * y deja la cuenca de la laguna excavada.
  */
-export function terrainHeightField(track: Track, shape: LagoonShape, waterY: number, groundY: number) {
+export function terrainHeightField(track: Track, shape: LagoonShape, waterY: number, groundY: number, hill?: { x: number; z: number; top: number }) {
   const samples: { x: number; z: number; y: number; r: number; d: number }[] = [];
   for (let i = 0; i < track.points.length; i += 3) {
     const p = track.points[i]!;
@@ -463,6 +463,11 @@ export function terrainHeightField(track: Track, shape: LagoonShape, waterY: num
     h += amp * bumps * THREE.MathUtils.smoothstep(out, 8, 42);
     const { d, lift } = lagoonDistance(shape, x, z);
     h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * 0.45);
+    // Isla-colina del campanario, al final del río: el agua la rodea.
+    if (hill) {
+      const hd = Math.hypot(x - hill.x, z - hill.z);
+      if (hd < 40) h = Math.max(h, hill.top - Math.max(0, hd - 7) * 0.6);
+    }
     return Math.max(h, groundY - 0.3);
   };
 }
@@ -601,8 +606,8 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     dome.add(createClouds(0x8a7cb0, 0x4a3f66));
     dome.add(createHills());
     const moon = createAnimasMoon(10);
-    // Delante del kart en la salida (la recta mira a +z), alta y a la izquierda.
-    moon.position.set(95, 72, 190).setLength(214);
+    // Delante del kart en la salida (la recta mira a +z), alta y algo a la izquierda del eje.
+    moon.position.set(40, 62, 200).setLength(214);
     moon.lookAt(0, 0, 0);
     dome.add(moon);
   }
@@ -611,12 +616,13 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
 
   // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
   // Se asienta sobre el terreno (ver más abajo), que abraza la pista y ya hace de cerro.
-  const spot = pointAt(track, 42, 20);
-  const road = pointAt(track, 42, 0);
+  const spot = pointAt(track, 92, 16);
+  const road = pointAt(track, 92, 0);
   const towerFoot = { x: spot.x, z: spot.z };
   const placeTower = (groundY: number) => {
     const tower = new THREE.Mesh(campanarioGeometry(), bone);
     tower.position.set(spot.x, groundY - 0.4, spot.z);
+    tower.scale.setScalar(1.6);
     tower.rotation.y = Math.atan2(road.x - spot.x, road.z - spot.z);
     const bell = new THREE.Mesh(new THREE.SphereGeometry(0.95, 16, 12), new THREE.MeshBasicMaterial({ color: LLAMA }));
     bell.position.set(0, 9.2, 1.85);
@@ -711,10 +717,10 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     const waterY = low - 1.8;
     // El óvalo queda en el interior del gancho que forma la pista, entre la recta de salida y el salto.
     const lip2 = pointAt(track, big.to);
-    const mid = { x: (towerFoot.x + lip2.x) / 2 - 3, z: Math.max(towerFoot.z, lip2.z) + 32 };
+    const mid = { x: (towerFoot.x + lip2.x) / 2 - 2, z: Math.max(towerFoot.z, lip2.z) + 15 };
     const shape = lagoonShape(mid, towerFoot);
     const lagoon = new THREE.Mesh(lagoonGeometry(shape), lagoonMaterial());
-    const height = terrainHeightField(track, shape, waterY, GROUND_Y);
+    const height = terrainHeightField(track, shape, waterY, GROUND_Y, { x: spot.x, z: spot.z, top: road.y - 6 });
     for (const chunk of terrainMeshes(height, GROUND_Y, animasTerrainMaterial())) scene.add(chunk);
     placeTower(height(towerFoot.x, towerFoot.z));
     towerPlaced = true;
@@ -730,7 +736,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
 
     // Árboles, farolillos y vallas de hueso. `height` es el mismo terreno que se dibuja.
     for (const mesh of createTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
-    const lanterns = createLanterns(track, height);
+    const lanterns = createLanterns(track, height, { x: shape.mid.x, z: shape.mid.z, y: waterY, rx: shape.rx, rz: shape.rz });
     scene.add(lanterns.bodies, lanterns.halos);
     if (lanterns.poles) scene.add(lanterns.poles);
     const fences = createFences(track);

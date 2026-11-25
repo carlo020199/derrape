@@ -82,12 +82,12 @@ function count(scene: THREE.Scene, camera: THREE.Camera) {
 }
 
 const karts = [
-  ["lia", "chispa", 0xff6a1f],
-  ["kiko", "pulga", 0x2e86de],
-  ["toni", "bolido", 0xffd23f],
+  ["lia", "hueso", 0xff6a1f],
+  ["calavera-chispas", "medianoche", 0x2e86de],
+  ["lia", "hueso", 0xffd23f],
   ["tocho", "tanque", 0x2ecc71],
   ["nonna-pina", "furgo", 0x9b5de5],
-  ["lia", "centella", 0xe63946],
+  ["calavera-chispas", "medianoche", 0xe63946],
   ["kiko", "mosquito", 0x00b4d8],
   ["toni", "grillo", 0xf472b6],
 ] as const;
@@ -106,11 +106,15 @@ async function one(id: string) {
   theme.decorate(scene, track, def);
   new BlobShadows(scene);
   const pose = gridPose(track, 0);
-  const cam = new THREE.PerspectiveCamera(CAMERA.baseFov + CAMERA.portraitExtraFov, 390 / 844, 0.1, 260);
+  const cam = new THREE.PerspectiveCamera(CAMERA.baseFov + (track.relief ? CAMERA.reliefPortraitExtraFov : CAMERA.portraitExtraFov), 390 / 844, 0.1, 260);
   const fx = Math.sin(pose.heading);
   const fz = Math.cos(pose.heading);
-  cam.position.set(pose.x - fx * CAMERA.portraitDistance, pose.y + CAMERA.portraitHeight, pose.z - fz * CAMERA.portraitDistance);
-  cam.lookAt(pose.x + fx * CAMERA.lookAhead, pose.y + 0.8, pose.z + fz * CAMERA.lookAhead);
+  // Misma cámara que la carrera: en circuitos con relieve (Ánimas) es la de relieve en vertical.
+  const dist = track.relief ? CAMERA.reliefPortraitDistance : CAMERA.portraitDistance;
+  const height = track.relief ? CAMERA.reliefPortraitHeight : CAMERA.portraitHeight;
+  const look = track.relief ? CAMERA.reliefPortraitLookAhead : CAMERA.lookAhead;
+  cam.position.set(pose.x - fx * dist, pose.y + height, pose.z - fz * dist);
+  cam.lookAt(pose.x + fx * look, pose.y + 0.8, pose.z + fz * look);
   cam.updateProjectionMatrix();
   for (let i = 0; i < karts.length; i++) {
     const [c, k, color] = karts[i] ?? karts[0]!;
@@ -136,3 +140,38 @@ const ids = TRACKS.map((t) => t.id);
 const rows = [];
 for (const id of ids) rows.push(await one(id));
 console.log(JSON.stringify(rows, null, 2));
+
+// Piloto + coche: triángulos de cerca (sin contorno) y lejos (modelo barato), peor pareja del catálogo.
+{
+  const { CHARACTERS, KARTS } = await import("@derrape/shared");
+  const tris = (m: ReturnType<typeof createKartModel>) => {
+    let n = 0;
+    m.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      let p: THREE.Object3D | null = o;
+      let visible = true;
+      while (p) {
+        if (!p.visible) visible = false;
+        p = p.parent;
+      }
+      if (mesh.isMesh && mesh.name !== "contorno" && mesh !== m.shield && visible) n += trisOf(mesh.geometry);
+    });
+    return n;
+  };
+  let near = { n: 0, par: "" };
+  let far = { n: 0, par: "" };
+  const pairs: Record<string, { cerca: number; lejos: number }> = {};
+  for (const c of CHARACTERS) {
+    for (const k of KARTS) {
+      const m = createKartModel(0xff6a1f, c.id, k.id);
+      m.setDetail(true);
+      const cerca = tris(m);
+      m.setDetail(false);
+      const lejos = tris(m);
+      if (cerca > near.n) near = { n: cerca, par: `${c.id}+${k.id}` };
+      if (lejos > far.n) far = { n: lejos, par: `${c.id}+${k.id}` };
+      if ((c.id === "lia" && k.id === "hueso") || (c.id === "calavera-chispas" && k.id === "medianoche")) pairs[`${c.id}+${k.id}`] = { cerca, lejos };
+    }
+  }
+  console.log(JSON.stringify({ pilotoYkart: { parejaMaxCerca: near, parejaMaxLejos: far, release1: pairs } }, null, 2));
+}

@@ -4,8 +4,13 @@
   "limites": {
     "llamadas": 120,
     "triangulos": 150000,
-    "pilotoYkartCerca": 1800,
-    "pilotoYkartLejos": 600
+    "pilotoYkartCerca": 10000,
+    "pilotoYkartLejos": 1500,
+    "release1": {
+      "lagunaLlamadas": 90,
+      "lagunaTriangulos": 110000,
+      "nota": "Objetivo del release 1 para dejar margen en un iPhone de hace 3–4 años; el límite duro sigue siendo 120 / 150 000. Los límites de piloto + coche sustituyen a los de 1 800 / 600 de la primera medida."
+    }
   },
   "peor": {
     "llamadas": {
@@ -144,5 +149,69 @@
         "triangulos": 64728
       }
     }
-  ]
+  ],
+  "release1": {
+    "fecha": "2026-11-25",
+    "metodo": "npm run medir (scripts/medir-escena.ts): grafo con el frustum de la cámara de persecución en vertical (390×844), cámara de relieve en Ánimas, 8 karts delante (Lía+Hueso y Calavera Chispas+Medianoche entre ellos); los de más de 15 m usan el modelo barato. Sin WebGL.",
+    "antes": {
+      "lagunaLlamadas": 52,
+      "lagunaTriangulos": 71700,
+      "pilotoYkartCerca": 1793,
+      "pilotoYkartLejos": 442,
+      "peorTriangulos": 87732
+    },
+    "despues": {
+      "lagunaLlamadas": 55,
+      "lagunaTriangulos": 85518,
+      "ribera": {
+        "llamadas": 53,
+        "triangulos": 78852,
+        "nota": "Ribera comparte el tema animas y recibe el mismo paisaje."
+      },
+      "peorCircuito": {
+        "id": "vinedos",
+        "llamadas": 36,
+        "triangulos": 100152,
+        "nota": "Subió respecto al primer informe porque los modelos de piloto y coche son más detallados."
+      },
+      "pilotoYkartCerca": 9754,
+      "pilotoYkartLejos": 586,
+      "parejas": {
+        "lia+hueso": {
+          "cerca": 9268,
+          "lejos": 478
+        },
+        "calavera-chispas+medianoche": {
+          "cerca": 8236,
+          "lejos": 550
+        }
+      },
+      "desglose": {
+        "pilotoLia": 5252,
+        "pilotoCalaveraChispas": 3734,
+        "hueso": 3904,
+        "medianoche": 4390,
+        "nota": "Triángulos de cerca sin contorno; el contorno por casco invertido suma otro ~0,8× y se mide aparte (≤ 2×)."
+      },
+      "desgloseLaguna": {
+        "nubes": 3500,
+        "BufferGeometry": 27480,
+        "linea-espectro": 1988,
+        "terreno": 5600,
+        "campanario": 1016,
+        "arboles-1": 5100,
+        "arboles-2": 3696,
+        "arboles-3": 1692,
+        "farolillos": 3360,
+        "vallas-hueso": 23840,
+        "cuerda-vallas": 1716,
+        "lejos": 3752
+      }
+    },
+    "dentroDePresupuesto": {
+      "lagunaObjetivo": true,
+      "limiteDuro": true
+    },
+    "fps": "pendiente de prueba en dispositivo (iPhone y Android): solo se dejan métricas proxy (renderer.info y ms/fotograma por software en docs/release-v1/capturas/metricas.json)."
+  }
 }

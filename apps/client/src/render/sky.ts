@@ -177,8 +177,16 @@ export function createHills(radius = 204): THREE.Mesh {
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(pos), 3));
     parts.push({ geo: g, color: L.color });
   }
+  const hills = flatColored(parts);
+  // Las crestas son más claras que la base: nada de siluetas de un solo color.
+  const hp = hills.getAttribute("position");
+  const hc = hills.getAttribute("color");
+  for (let i = 0; i < hp.count; i++) {
+    const k = THREE.MathUtils.lerp(0.8, 1.22, THREE.MathUtils.smoothstep(hp.getY(i), -6, 30));
+    hc.setXYZ(i, Math.min(1, hc.getX(i) * k), Math.min(1, hc.getY(i) * k), Math.min(1, hc.getZ(i) * k));
+  }
   const mesh = new THREE.Mesh(
-    flatColored(parts),
+    hills,
     new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, fog: false, depthWrite: false }),
   );
   // Telón de fondo: se pinta antes que el mundo y no tapa lo que quede más lejos (el río lejano).

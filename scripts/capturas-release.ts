@@ -18,12 +18,16 @@ const kart = process.argv[5] ?? (character === "calavera-chispas" ? "medianoche"
 const TRACK = "laguna-de-las-animas";
 
 // ?foto=<metros>,<lateral>,<giro°>. Ajustar al trazado si cambia la Laguna.
-const SHOTS = [
-  { name: "a-salida", foto: "0,0,0" },
-  { name: "b-recta-campanario", foto: "120,0,0" },
-  { name: "c-curva-valla", foto: "520,0,0" },
-  { name: "d-laguna", foto: "300,0,0" },
+const SHOTS_BASE = [
+  { name: "a-salida", foto: "-16,0,0" }, // detrás del arco de salida
+  { name: "b-recta-campanario", foto: "14,0,0" }, // recta de salida con el campanario a la izquierda
+  { name: "c-curva-valla", foto: "740,0,0" }, // curva peraltada con vallas de calaveras
+  { name: "d-laguna", foto: "197,0,64" }, // eses con la laguna delante
 ];
+// FOTOS="nombre:metros,lateral,giro;otra:…" sustituye las posiciones (para probar encuadres).
+const SHOTS = process.env.FOTOS
+  ? process.env.FOTOS.split(";").map((t) => ({ name: t.split(":")[0]!, foto: t.split(":")[1]! }))
+  : SHOTS_BASE;
 
 // --- Color ---
 const PALETA_MORADOS = ["#120F1E", "#1E1830", "#2E2547", "#5B4E7A", "#9B6BFF", "#6B3FD6", "#4A3F66", "#3A3352"];
@@ -146,14 +150,27 @@ page.on("console", (m) => m.type() === "error" && errores.push(m.text()));
 for (const s of SHOTS) {
   await page.goto(`${base}/?track=${TRACK}&foto=${s.foto}`);
   await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 60000 });
-  await page.waitForTimeout(2500); // cámara asentada
+  await page.waitForTimeout(Number(process.env.ASENTAR ?? 6000)); // cámara asentada (por software va a ~20 fps)
   await page.addStyleTag({ content: "#countdown, #wrong-way, #loading, #touch-help { display: none !important }" });
   const png = await page.screenshot({ path: `${out}/${s.name}.png` });
+  // ms/fotograma con WebGL por software (SwiftShader): orientativo, no es un iPhone.
+  const ms = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const t0 = performance.now();
+        let n = 0;
+        const tick = () => {
+          if (++n >= 20) resolve((performance.now() - t0) / n);
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
   const info = await page.evaluate(() => {
     const e = (window as unknown as { __escena: { renderer: { info: { render: { calls: number; triangles: number } } } } }).__escena;
     return { calls: e.renderer.info.render.calls, triangles: e.renderer.info.render.triangles };
   });
-  resultado[s.name] = { ...(await metricas(page, png)), renderInfo: info };
+  resultado[s.name] = { ...(await metricas(page, png)), renderInfo: info, msPorFotogramaSoftware: Math.round(ms * 10) / 10 };
 }
 
 // Selección de piloto (pantalla «Piloto y coche»).
