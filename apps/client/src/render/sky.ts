@@ -120,8 +120,8 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
       const pos = new THREE.Vector3(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)).multiplyScalar(radius);
       place.lookAt(pos, new THREE.Vector3(), new THREE.Vector3(0, 1, 0)).setPosition(pos);
       // Opacas: los discos se pisan sin mezclarse. Arriba, borde claro Niebla con un toque de Ánima; abajo, Sombra.
-      // Las capas bajas se oscurecen para recortarse contra el horizonte, que es casi Niebla.
-      const top = base.clone().lerp(shade, L.mix * 0.6).lerp(anima, 0.18 * (1 - L.mix)).getHex();
+      // El borde claro es el mismo en las tres capas (más Ánima que antes): contra el horizonte, que es casi Niebla, el de las capas bajas se perdía y solo quedaba la base oscura.
+      const top = base.clone().lerp(anima, 0.34 - 0.08 * L.mix).getHex();
       const bot = shade.clone().getHex();
       const puffs = 4 + Math.floor(r() * 3);
       const w = L.size * (0.8 + r() * 0.5);
