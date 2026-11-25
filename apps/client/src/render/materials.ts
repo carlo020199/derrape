@@ -126,8 +126,9 @@ function animasAsphaltGradient(): THREE.DataTexture {
 }
 
 /**
- * Moteado del asfalto: ±7 % de luminosidad con ruido de valor en coordenadas de mundo (manchas de ~3 m)
- * y dos carriles algo más claros. Sin texturas ni triángulos extra; evita el plano de color uniforme.
+ * Manchas del asfalto: Ciruela #1E1830 liso y, como mucho, manchas grandes y suaves en Sombra #2E2547
+ * (×1,5 de luminosidad) cortadas en 3 escalones toon, con ruido de valor en coordenadas de mundo (4–14 m).
+ * Sin ruido fino: el grano de alta frecuencia se leía como estática gris. Sin texturas ni triángulos extra.
  */
 function mottle(mat: THREE.MeshToonMaterial) {
   mat.onBeforeCompile = (shader) => {
@@ -148,25 +149,26 @@ float mn(vec2 p) {
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-float mottle = 0.55 + 0.7 * (mn(vWP.xz * 0.2) * 0.55 + mn(vWP.xz * 0.9) * 0.45) + 1.1 * (mn(vWP.xz * 3.6) - 0.5) + 0.7 * (mn(vWP.xz * 9.0) - 0.5);
+float blot = mn(vWP.xz * 0.07) * 0.65 + mn(vWP.xz * 0.19) * 0.35;
+float mottle = 1.0 + 0.25 * smoothstep(0.52, 0.6, blot) + 0.25 * smoothstep(0.64, 0.72, blot);
 diffuseColor.rgb *= mottle;`,
       )
-      // El emisivo aporta casi toda la luz del asfalto: también se moteado.
+      // El emisivo aporta casi toda la luz del asfalto: también lleva las manchas.
       .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance *= mottle;");
   };
   return mat;
 }
 
 let animasRoad: THREE.MeshToonMaterial | null = null;
-/** Asfalto de Ánimas: base #3A3352, sombra #2A2440 y un emisivo bajo para no fundirse con el cielo. */
+/** Asfalto de Ánimas: Ciruela #1E1830 con un emisivo bajo para no fundirse con el cielo. */
 export function animasAsphaltMaterial(): THREE.MeshToonMaterial {
   if (!animasRoad) {
     animasRoad = markShared(
       mottle(
         new THREE.MeshToonMaterial({
-          color: 0x3a3352,
-          emissive: 0x3a3352,
-          emissiveIntensity: 0.7,
+          color: PALETTE.ciruela,
+          emissive: PALETTE.ciruela,
+          emissiveIntensity: 1.4,
           gradientMap: animasAsphaltGradient(),
           side: THREE.DoubleSide,
         }),
