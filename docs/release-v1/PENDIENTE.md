@@ -49,3 +49,20 @@ Veredicto (GOAL: C1, C2, C3, C7, C8, C10 y al menos 3 de C4/C5/C6/C9): **PASA**,
 - Safari iOS (WebGL, `pixelRatio`, PWA) y táctil real.
 - Multijugador online con los dos pilotos nuevos (la lógica de red no se ha tocado; el servidor acepta el id `calavera-chispas` y el coche `medianoche`/`hueso` por el catálogo compartido, con tests).
 - Los otros circuitos no se han tocado, **salvo Ribera de las Ánimas**, que comparte el tema `animas` y recibe el mismo paisaje (terreno, árboles, farolillos y vallas).
+
+## Propuesta (sin aplicar): cómo medir C7 solo en los laterales
+**Problema.** `c7_regionPlanaMayorPctPantalla` cuenta bloques de 64 px con σ de luminancia < 0,03 y toma la región conectada mayor de *toda* la pantalla bajo el 40 % de alto. Desde que la calzada es Ciruela plana (pedido de Dalí, punto 5), esa región es el asfalto (30–34 %; 16–17 % en `d`), no un lateral vacío. C7 habla de los laterales, no de la calzada.
+
+**Probado en el box (prototipo en Python sobre las capturas ya hechas, no entra en el repo).** Recortar solo las franjas laterales (x < 30 % y x > 70 %, desde el 40 % de alto hasta encima del minimapa) **no basta**: abajo el asfalto entra en las esquinas y da 53–71 % de bloques planos y una región mayor del 23–40 % de la franja. Hace falta quitar la calzada de la medida.
+
+**Opciones, de más a menos robusta:**
+1. **Máscara por render (recomendada).** `capturas-release.ts` hace una segunda captura de la misma toma con `?mascara=1`: calzada y bordillos en magenta plano, kart/piloto en otro color y sin HUD (`MeshBasicMaterial` con `onBeforeCompile` o `scene.overrideMaterial` por capas). C7 = región plana mayor entre los píxeles que **no** son calzada, kart, cielo ni HUD, en % de esa área. Es exacto, cuesta ~20 líneas en el script y ~5 en `raceSession.ts` bajo el flag (sin tocar el render normal).
+2. **Máscara por color (sin tocar el cliente).** Excluir bloques cuya media está a ΔE < 8 de Ciruela `#1E1830` / Sombra `#2E2547` *y* cuyo centro cae dentro de la calzada proyectada. Más frágil: el morado del terreno y la calzada son parientes.
+3. **Máscara geométrica.** Proyectar en el script el borde de la calzada con la cámara de la toma (`?foto=`) y descartar lo de dentro. Exacto pero acopla el script a la cámara.
+
+**Umbral sugerido.** Región plana mayor ≤ 10 % del área lateral visible (el 10 % de Dalí, ahora sobre el área correcta), más el recuento de objetos (≥ 4 árboles o vallas visibles por lado) que ya mide `scripts/foto-rapida.ts` con `ESCRITORIO=1`.
+
+**Qué decidir (Carlo/Dalí).** Si vale la opción 1 y el umbral anterior. Hasta entonces C7 sigue «pasa a ojo; el proxy antiguo no aplica». No se ha tocado el script ni la escena.
+
+## Árboles de salida y agua visible (C3 fuera de `d`)
+Medido quitando los árboles (flag temporal, ya revertido): `a` 0,91 → 2,02 %, `b` 1,57 → 1,85 %, `c` 0,53 → 0,52 %, `d` 7,98 → 7,97 %. Los árboles tapan como mucho ~1 punto; el agua no se ve en `a`–`c` porque la calzada elevada y la cresta la ocultan, no por los árboles. Se dejan como están: C3 se mide en `d` (8,0 % / 7,4 %).
