@@ -1046,8 +1046,7 @@ const animas: ThemeKit = {
     wall: 0x2e2547,
     groundY: ANIMAS_GROUND_Y,
     curbWidth: 0.8,
-    racingLine: 0x433b5e,
-    centreDash: { color: 0xc8b597, opacity: 0.45, length: 3, period: 6 },
+    // Sin línea central: bajo el kart se leía como una franja oscura hasta el borde inferior de la pantalla.
     animasAsphalt: true,
     bankEdge: true,
   },
