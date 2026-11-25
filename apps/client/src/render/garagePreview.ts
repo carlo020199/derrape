@@ -33,17 +33,20 @@ export class GaragePreview {
     const rim = new THREE.DirectionalLight(PALETTE.anima, 0.45);
     rim.position.set(-3.5, 2.4, -4);
     this.scene.add(rim);
-    // Pedestal de hueso en dos escalones con un foco cálido (Llama) desde arriba.
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, 0.3, 32), toonMaterial({ color: PALETTE.sombra }));
-    base.position.y = -0.15;
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.1, 0.22, 32), toonMaterial({ color: PALETTE.huesoSombra }));
-    top.position.y = 0.11;
+    // Pedestal de hueso en dos escalones. La tapa queda a y=0, que es donde apoyan las ruedas
+    // del kart (el origen del modelo). Si la tapa queda más alta, el coche atraviesa la peana.
+    const topH = 0.22;
+    const baseH = 0.3;
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, baseH, 32), toonMaterial({ color: PALETTE.sombra }));
+    base.position.y = -topH - baseH / 2;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.1, topH, 32), toonMaterial({ color: PALETTE.huesoSombra }));
+    top.position.y = -topH / 2;
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(2.0, 0.05, 6, 32),
       new THREE.MeshBasicMaterial({ color: PALETTE.espectro, toneMapped: false }),
     );
     ring.rotation.x = Math.PI / 2;
-    ring.position.y = 0.23;
+    ring.position.y = 0.01;
     // Foco cálido: resplandor aditivo en Llama detrás del piloto (sin luz real).
     const glowCanvas = document.createElement("canvas");
     glowCanvas.width = glowCanvas.height = 128;
@@ -64,7 +67,7 @@ export class GaragePreview {
       new THREE.MeshBasicMaterial({ color: PALETTE.llama, transparent: true, opacity: 0.07, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
     );
     pool.rotation.x = -Math.PI / 2;
-    pool.position.y = 0.235;
+    pool.position.y = 0.015;
     this.scene.add(base, top, ring, spot, pool);
     const warm = new THREE.DirectionalLight(PALETTE.llama, 0.3);
     warm.position.set(-1.5, 6, 2);

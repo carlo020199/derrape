@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, type ThemeId, type Track, type TrackDef } from "@derrape/shared";
 import { PALETTE, sharedVertexToon, toonMaterial } from "./materials";
-import { decorateAnimas } from "./animas";
+import { ANIMAS_GROUND_Y, decorateAnimas } from "./animas";
 import { dressTrack, unitSoft } from "./props";
 import { leftNormals, type TrackColors } from "./trackMesh";
 
@@ -1044,7 +1044,7 @@ const animas: ThemeKit = {
     innerCurbB: 0x2e2547,
     verge: 0x4a3f66,
     wall: 0x2e2547,
-    groundY: -8,
+    groundY: ANIMAS_GROUND_Y,
     curbWidth: 0.8,
     racingLine: 0x433b5e,
     centreDash: { color: 0xc8b597, opacity: 0.45, length: 3, period: 6 },
