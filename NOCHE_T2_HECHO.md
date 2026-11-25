@@ -4,6 +4,7 @@ ESTADO: PARCIAL
 - [x] 1. Arco de salida y esfera lisa quitados de `d = 0` (`animas.ts`).
 - [x] 5. Asfalto Ciruela #1E1830 liso con manchas grandes suaves en Sombra #2E2547 (3 escalones), sin ruido fino (`materials.ts`).
 - [x] 6. Franja oscura bajo el kart: era la línea central del asfalto (no la sombra blob); eliminada en el tema `animas` (`themes.ts`).
+- [x] 2. Campanario oscuro (cuerpo #2E2547, tejado #1E1830) con campana y ventanas Llama emisivas, de cara a la parrilla.
 
 ## Qué falta
 - 2 campanario oscuro, 3 relleno lateral/farolillos/escritorio, 7 balanceo de cámara ≤ 8°, 4 nubes, 8 coleta de Lía.
