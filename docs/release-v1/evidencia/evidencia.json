@@ -1,0 +1,93 @@
+{
+  "lia-hueso": {
+    "a-salida_luna": {
+      "diametro_px": 117,
+      "pct_ancho": 15.0,
+      "circular": 0.9
+    },
+    "a-salida_cielo": {
+      "salto_max_entre_filas": 1.0,
+      "r_g_b_arriba": [
+        60,
+        51,
+        84
+      ],
+      "r_g_b_abajo": [
+        102,
+        80,
+        152
+      ]
+    },
+    "b-recta-campanario_luna": {
+      "diametro_px": 115,
+      "pct_ancho": 14.7,
+      "circular": 0.89
+    },
+    "b-recta-campanario_cielo": {
+      "salto_max_entre_filas": 1.0,
+      "r_g_b_arriba": [
+        60,
+        51,
+        84
+      ],
+      "r_g_b_abajo": [
+        102,
+        80,
+        151
+      ]
+    },
+    "a-salida_cálidos_fuera_del_kart": 2,
+    "b-recta-campanario_cálidos_fuera_del_kart": 5,
+    "c_postes_calavera_detectados": 9,
+    "c_pixeles_linea_espectro": 4217,
+    "c_pixeles_bordillo_anima": 57960
+  },
+  "calavera-chispas-medianoche": {
+    "a-salida_luna": {
+      "diametro_px": 117,
+      "pct_ancho": 15.0,
+      "circular": 0.9
+    },
+    "a-salida_cielo": {
+      "salto_max_entre_filas": 1.0,
+      "r_g_b_arriba": [
+        60,
+        51,
+        84
+      ],
+      "r_g_b_abajo": [
+        102,
+        80,
+        152
+      ]
+    },
+    "b-recta-campanario_luna": {
+      "diametro_px": 116,
+      "pct_ancho": 14.9,
+      "circular": 0.88
+    },
+    "b-recta-campanario_cielo": {
+      "salto_max_entre_filas": 1.0,
+      "r_g_b_arriba": [
+        60,
+        51,
+        84
+      ],
+      "r_g_b_abajo": [
+        102,
+        80,
+        151
+      ]
+    },
+    "a-salida_cálidos_fuera_del_kart": 2,
+    "b-recta-campanario_cálidos_fuera_del_kart": 5,
+    "c_postes_calavera_detectados": 9,
+    "c_pixeles_linea_espectro": 1515,
+    "c_pixeles_bordillo_anima": 57944
+  },
+  "contraste_hud": {
+    "pastilla_texto_sobre_ciruela80": 14.14,
+    "numeros_texto_con_trazo_noche": 17.74,
+    "minimo_exigido": 4.5
+  }
+}

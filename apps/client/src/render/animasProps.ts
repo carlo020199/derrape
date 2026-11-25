@@ -413,13 +413,13 @@ export interface Lanterns {
  */
 export function createLanterns(track: Track, height: (x: number, z: number) => number, over: { x: number; z: number; y: number; rx: number; rz: number } | null, count = 30): Lanterns {
   const spots: { x: number; y: number; z: number; pole: boolean; heading: number }[] = [];
-  // 7 farolillos en los primeros 140 m (se ven desde la salida) y el resto repartido por la vuelta.
-  const near = 8;
+  // 10 farolillos en los primeros 140 m (se ven desde la salida) y el resto repartido por la vuelta.
+  const near = 10;
   // 6 más flotan sobre la laguna, delante de la recta de salida.
   const lake = over ? 6 : 0;
   const stride = (track.length - 160) / (count - near - lake);
   for (let i = 0; i < count - lake; i++) {
-    const d = i < near ? 14 + i * 21 : 160 + (i - near) * stride + stride * 0.3;
+    const d = i < near ? 12 + i * 15 : 160 + (i - near) * stride + stride * 0.3;
     const p = pointAt(track, d);
     const curve = outerSide(p.bank, headingKappa(track, d));
     // En las curvas, colgados de un poste en el interior; en recta, flotando a uno u otro lado.

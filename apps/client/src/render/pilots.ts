@@ -85,19 +85,31 @@ function skullHead(p: Parts, o: SkullOpts) {
   p.add(new THREE.SphereGeometry(r * 0.075, 6, 4), HUESO_SOMBRA, [-r * 0.07 * sx, ny + r * 0.04, nz]);
   p.add(new THREE.SphereGeometry(r * 0.075, 6, 4), HUESO_SOMBRA, [r * 0.07 * sx, ny + r * 0.04, nz]);
   p.add(new THREE.ConeGeometry(r * 0.095, r * 0.16, 4), HUESO_SOMBRA, [0, ny - r * 0.06, nz], [Math.PI, 0, 0]);
-  // Boca: ranura Noche y dientes cuadrados siguiendo una sonrisa.
+  // Boca: ranura Noche y dientes cuadrados siguiendo una sonrisa. Todo se apoya en la superficie real
+  // (cráneo o mandíbula, la que sobresalga) para que los dientes de los extremos no queden enterrados.
   const my = -r * 0.45 * sy;
-  const mz = r * 0.82 * sz;
+  const jawY = -r * 0.5 * sy;
+  const jawZ = r * 0.28 * sz;
+  const surfZ = (x: number, y: number) => {
+    const cx = x / (r * sx);
+    const cy = y / (r * sy);
+    const cranium = r * sz * Math.sqrt(Math.max(0, 1 - cx * cx - cy * cy));
+    const jx = x / (r * 0.62 * sx * 1.15);
+    const jy = (y - jawY) / (r * 0.62 * sy * 0.72);
+    const jaw = jawZ + r * 0.62 * sz * 0.9 * Math.sqrt(Math.max(0, 1 - jx * jx - jy * jy));
+    return Math.max(cranium, jaw);
+  };
   const n = o.teeth;
   const tw = o.blocky ? r * 0.17 : r * 0.13;
   const th = o.blocky ? r * 0.22 : r * 0.17;
   const span = o.blocky ? r * 0.22 : r * 0.17;
-  p.add(new THREE.BoxGeometry(n * span + r * 0.06, th * (o.blocky ? 1.5 : 1.15), r * 0.1), NOCHE, [0, my - th * 0.15, mz + r * 0.02]);
+  const slabW = n * span + r * 0.06;
+  const slabH = th * (o.blocky ? 1.5 : 1.15);
+  p.add(new THREE.BoxGeometry(slabW, slabH, r * 0.08), NOCHE, [0, my - th * 0.15, surfZ(slabW * 0.3, my) - r * 0.01]);
   for (let i = 0; i < n; i++) {
     const x = (i - (n - 1) / 2) * span;
-    const lift = Math.abs(x) * 0.28;
-    const z = mz + r * 0.07 - Math.abs(x) * 0.22;
-    p.add(new THREE.BoxGeometry(tw, th, r * 0.09), HUESO, [x * sx, my + lift * 0.6, z]);
+    const ty = my + Math.abs(x) * 0.17;
+    p.add(new THREE.BoxGeometry(tw, th, r * 0.09), HUESO, [x * sx, ty, surfZ(Math.abs(x) + tw / 2, ty) + r * 0.04]);
   }
 }
 

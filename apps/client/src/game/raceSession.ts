@@ -383,7 +383,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   // ?foto=<metros>[,<lateral>[,<giro en grados>]]: deja el kart quieto en ese punto de la pista (capturas de pantalla).
   const foto = !online ? new URLSearchParams(location.search).get("foto") : null;
   const vistaParam = foto ? new URLSearchParams(location.search).get("vista") : null;
-  const vista = vistaParam ? vistaParam.split(",").map(Number) : null;
+  const vistaRel = vistaParam?.startsWith("k,") ? vistaParam.slice(2).split(",").map(Number) : null;
+  const vista = vistaParam && !vistaRel ? vistaParam.split(",").map(Number) : null;
   if (foto) {
     const [d, lat, giro] = foto.split(",").map(Number);
     const at = pointAt(track, d ?? 0, lat ?? 0);
@@ -962,6 +963,11 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     if (vista) {
       camera.position.set(vista[0]!, vista[1]!, vista[2]!);
       camera.lookAt(vista[3]!, vista[4]!, vista[5]!);
+    } else if (vistaRel) {
+      // ?vista=k,distancia,altura,giro°: cámara delante del kart (giro 0) mirando a la cabeza del piloto.
+      const a = me.heading + (vistaRel[2]! * Math.PI) / 180;
+      camera.position.set(root.position.x + Math.sin(a) * vistaRel[0]!, root.position.y + vistaRel[1]!, root.position.z + Math.cos(a) * vistaRel[0]!);
+      camera.lookAt(root.position.x, root.position.y + 1.15, root.position.z);
     }
     sky.position.copy(camera.position);
     blobs.update(track, [

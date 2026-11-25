@@ -23,10 +23,12 @@ const SHOTS_BASE = [
   { name: "b-recta-campanario", foto: "14,0,0" }, // recta de salida con el campanario a la izquierda
   { name: "c-curva-valla", foto: "740,0,0" }, // curva peraltada con vallas de calaveras
   { name: "d-laguna", foto: "197,0,64" }, // eses con la laguna delante
+  // Extra para C9: cámara delante del kart (?vista=k,distancia,altura,giro°) para ver la cara del piloto y el morro del coche.
+  { name: "e-frontal", foto: "14,0,0", vista: "k,6.2,2.3,28" },
 ];
 // FOTOS="nombre:metros,lateral,giro;otra:…" sustituye las posiciones (para probar encuadres).
-const SHOTS = process.env.FOTOS
-  ? process.env.FOTOS.split(";").map((t) => ({ name: t.split(":")[0]!, foto: t.split(":")[1]! }))
+const SHOTS: { name: string; foto: string; vista?: string }[] = process.env.FOTOS
+  ? process.env.FOTOS.split(";").map((t) => ({ name: t.split(":")[0]!, foto: t.split(":")[1]!, vista: t.split(":")[2] }))
   : SHOTS_BASE;
 
 // --- Color ---
@@ -183,7 +185,7 @@ page.on("pageerror", (e) => errores.push(String(e)));
 page.on("console", (m) => m.type() === "error" && errores.push(m.text()));
 
 for (const s of SHOTS) {
-  await page.goto(`${base}/?track=${TRACK}&foto=${s.foto}`);
+  await page.goto(`${base}/?track=${TRACK}&foto=${s.foto}${s.vista ? `&vista=${s.vista}` : ""}`);
   await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 60000 });
   await page.waitForTimeout(Number(process.env.ASENTAR ?? 6000)); // cámara asentada (por software va a ~20 fps)
   await page.addStyleTag({ content: "#countdown, #wrong-way, #loading, #touch-help { display: none !important }" });

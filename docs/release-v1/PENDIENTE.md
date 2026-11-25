@@ -28,22 +28,22 @@ URL (cliente en local, misma Wi-Fi que el móvil): `http://IP-DEL-PC:5173/?track
 Detalle en `medidas.json` (campos `limites` y `release1`) y en `docs/release-v1/capturas/metricas.json`.
 
 ## Verificación (V1–V6) y criterios C1–C10
-Ver `NOCHE_T1_HECHO.md` y la sección siguiente. Resumen del juicio sobre las capturas (`docs/release-v1/capturas/`, copiadas a `docs/screenshots/release1/`):
+La evidencia criterio por criterio (medidas, guías y recortes @1×) está en **`docs/release-v1/evidencia/EVIDENCIA.md`**. Resumen:
 
-| Criterio | Resultado | Evidencia |
+| Criterio | Resultado | Evidencia clave |
 |---|---|---|
-| C1 Encuadre | Pasa | Kart ≈ 37 % del ancho, centro ≈ 66 % de la altura, horizonte ≈ 38 %, calzada y paisaje delante > 40 %; se ve el techo del kart y la cabeza entera (de espaldas) |
-| C2 Color | Pasa | Morado 83–94 %, casi negro 1–1,4 % (`metricas.json`) |
-| C3 Laguna | Pasa | `d-laguna`: 8,2 % (Lía) y 6,9 % (Calavera Chispas); `a`/`b` ≈ 2 % (franja lejana) |
-| C4 Cielo | Pasa | Luna circular ≈ 15 % del ancho, degradado Ciruela→Niebla, nubes más claras arriba |
-| C5 Cálidos | Pasa | ≥ 4 farolillos/puntos Brasa–Llama en `a` y `b`; escapes y faros emisivos |
-| C6 Bordes | Pasa | `c-curva-valla`: > 8 postes-calavera con cuerda, bordillo Ánima/Hueso, línea Espectro |
-| C7 Relleno lateral | Pasa | Laterales con colinas, árboles, farolillos, laguna y valla. Regiones planas (σ de luminancia < 0,03 por bloque de 32 px CSS, bloques conectados): la **mayor región contigua ocupa 5,3–6,5 % de la pantalla** en las 8 capturas (`c7_regionPlanaMayorPctPantalla`; criterio DALI: ≤ 10 %). Ese cálculo incluye partes del kart y de la ladera. La calzada tiene asfalto gastado (moteado + grano). El conteo de bloques planos original (`c7_bloquesPlanosPctDelTerrenoVisible`) bajó de 52 % (antes de retexturizar) a 15–22 % de los bloques de la franja inferior, repartidos sin formar una región grande. Una métrica relativa (σ/media) que añadí a mitad de trabajo, `c7_bloquesPlanosRelativoPct`, da 0–6,3 %; se guarda solo como dato extra |
-| C8 Pilotos | Pasa | Cabeza 46,4 % (Lía) y 47,8 % (Chispas) de la altura sentado (test); coleta Espectro y ojos Llama; Hueso claro con morro de calavera; Medianoche oscuro con faros Llama; contorno Noche visible |
-| C9 Legibilidad | **Parcial** | Dientes y cuencas se leen en la selección y en los postes de valla; en carrera el piloto va de espaldas, así que su cara no se ve |
-| C10 Técnico | Pasa | Ver tabla de arriba |
+| C1 Encuadre | Pasa | Kart ≈ 37 % del ancho, centro ≈ 66 %, horizonte ≈ 38 % (guías en `evidencia/c1-guias-*.png`; juicio visual) |
+| C2 Color | Pasa | Morado 83,7–93,4 %, casi negro ≤ 1,35 % |
+| C3 Laguna | Pasa | `d-laguna`: 8,2 % (Lía) y 6,9 % (Chispas) |
+| C4 Cielo | Pasa | Luna 15,0 % del ancho, circular; degradado con salto ≤ 1/255 entre filas |
+| C5 Cálidos | Pasa | 5 puntos Brasa/Llama en `b` (≥ 4) |
+| C6 Bordes | Pasa | 9 postes-calavera con cuerda, línea Espectro y bordillo Ánima/Hueso |
+| C7 Relleno lateral | Pasa | Mayor región plana contigua 5,3–6,5 % de la pantalla (límite 10 %), en las 8 capturas |
+| C8 Pilotos | Pasa | Cabeza 46,4 % / 47,8 % de la altura sentado (test); colores y contorno en las selecciones |
+| C9 Legibilidad | Pasa | Captura `e-frontal` a 1× (cuencas y 5 dientes de ambas calaveras, morro de Hueso) y contraste HUD 14,1:1 y 17,7:1. En carrera normal la cámara va detrás: solo se ven las calaveras de las vallas |
+| C10 Técnico | Pasa | 55 llamadas / 85 518 triángulos; 188 tests |
 
-Veredicto (GOAL: C1, C2, C3, C7, C8, C10 y al menos 3 de C4/C5/C6/C9): **PASA** — cumple C1, C2, C3, C7 (región plana mayor ≤ 6,5 % de la pantalla), C8 y C10, y de C4/C5/C6/C9 cumple C4, C5 y C6 (C9 es parcial). Carlo puede decidir si quiere más textura en la calzada (ver «Decisiones» en `NOCHE_T1_HECHO.md`).
+Veredicto (GOAL: C1, C2, C3, C7, C8, C10 y al menos 3 de C4/C5/C6/C9): **PASA**, con los cuatro opcionales.
 
 ## No verificado / fuera de alcance
 - Safari iOS (WebGL, `pixelRatio`, PWA) y táctil real.
