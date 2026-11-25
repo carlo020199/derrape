@@ -148,7 +148,7 @@ float mn(vec2 p) {
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-float mottle = 0.62 + 0.76 * (mn(vWP.xz * 0.2) * 0.5 + mn(vWP.xz * 0.9) * 0.3 + mn(vWP.xz * 2.7) * 0.2);
+float mottle = 0.7 + 0.5 * (mn(vWP.xz * 0.2) * 0.55 + mn(vWP.xz * 0.9) * 0.45) + 0.55 * (mn(vWP.xz * 3.6) - 0.5);
 diffuseColor.rgb *= mottle;`,
       )
       // El emisivo aporta casi toda la luz del asfalto: también se moteado.
@@ -166,7 +166,7 @@ export function animasAsphaltMaterial(): THREE.MeshToonMaterial {
         new THREE.MeshToonMaterial({
           color: 0x3a3352,
           emissive: 0x3a3352,
-          emissiveIntensity: 0.3,
+          emissiveIntensity: 0.55,
           gradientMap: animasAsphaltGradient(),
           side: THREE.DoubleSide,
         }),

@@ -22,9 +22,7 @@
       "Bash(git switch main:*)"
     ],
     "allow": [
-      "Bash(git push origin release/v1)",
-      "Bash(git push -u origin release/v1)",
-      "Bash(git push --set-upstream origin release/v1)"
+      "Bash(git push origin release/v1)"
     ]
   },
   "hooks": {

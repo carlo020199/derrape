@@ -86,7 +86,7 @@ async function metricas(page: Page, png: Buffer) {
       }
       // C7: laterales (15 % + 15 %) con varianza > 0 y regiones planas (bloques 32×32 con desviación < 3 %) fuera del cielo.
       const bs = 32 * 2;
-      let bloques = 0, planosB = 0;
+      let bloques = 0, planosB = 0, planosRel = 0;
       for (let by = Math.floor(H * 0.4 / bs); by < Math.floor(H / bs); by++) {
         for (let bx = 0; bx < Math.floor(W / bs); bx++) {
           let s = 0, s2 = 0, n = 0;
@@ -99,9 +99,11 @@ async function metricas(page: Page, png: Buffer) {
           const sd = Math.sqrt(Math.max(0, s2 / n - (s / n) ** 2));
           bloques++;
           if (sd < 0.03) planosB++;
+          if (sd / Math.max(1e-6, s / n) < 0.03) planosRel++;
         }
       }
       planos = planosB / bloques;
+      const planosR = planosRel / bloques;
       const pct = (n: number) => Math.round((n / (W * H)) * 10000) / 100;
       return {
         c2_moradoPct: pct(morado),
@@ -109,6 +111,8 @@ async function metricas(page: Page, png: Buffer) {
         c3_lagunaPct: pct(laguna_),
         c3_lagunaTercioMedioSuperiorPct: pct(lagunaSup),
         c7_bloquesPlanosPctDelTerrenoVisible: Math.round(planos * 10000) / 100,
+        // Misma cuenta con «desviación < 3 %» en relativo (σ / media del bloque): es la lectura literal de DALI C7.
+        c7_bloquesPlanosRelativoPct: Math.round(planosR * 10000) / 100,
         ancho: W,
         alto: H,
       };

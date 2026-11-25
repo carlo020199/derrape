@@ -1,62 +1,66 @@
 {
-  "fecha": "2026-11-25T10:13:59.427Z",
+  "fecha": "2026-11-25T10:21:31.533Z",
   "personaje": "calavera-chispas",
   "kart": "medianoche",
   "a-salida": {
-    "c2_moradoPct": 89.58,
+    "c2_moradoPct": 89.63,
     "c2_casiNegroPct": 1.06,
-    "c3_lagunaPct": 1.4,
-    "c3_lagunaTercioMedioSuperiorPct": 1.38,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 51.56,
+    "c3_lagunaPct": 1.42,
+    "c3_lagunaTercioMedioSuperiorPct": 1.39,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 52.6,
+    "c7_bloquesPlanosRelativoPct": 3.65,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 55,
-      "triangles": 99776
+      "triangles": 99800
     },
-    "msPorFotogramaSoftware": 47.2
+    "msPorFotogramaSoftware": 57.3
   },
   "b-recta-campanario": {
-    "c2_moradoPct": 91.6,
-    "c2_casiNegroPct": 1.07,
+    "c2_moradoPct": 91.57,
+    "c2_casiNegroPct": 1.06,
     "c3_lagunaPct": 1.43,
-    "c3_lagunaTercioMedioSuperiorPct": 1.4,
+    "c3_lagunaTercioMedioSuperiorPct": 1.41,
     "c7_bloquesPlanosPctDelTerrenoVisible": 55.73,
+    "c7_bloquesPlanosRelativoPct": 5.21,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 53,
       "triangles": 97836
     },
-    "msPorFotogramaSoftware": 42.3
+    "msPorFotogramaSoftware": 44
   },
   "c-curva-valla": {
-    "c2_moradoPct": 93.37,
-    "c2_casiNegroPct": 1.24,
-    "c3_lagunaPct": 0.21,
-    "c3_lagunaTercioMedioSuperiorPct": 0.17,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 56.77,
+    "c2_moradoPct": 93.31,
+    "c2_casiNegroPct": 1.21,
+    "c3_lagunaPct": 0.2,
+    "c3_lagunaTercioMedioSuperiorPct": 0.16,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 53.13,
+    "c7_bloquesPlanosRelativoPct": 5.21,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 53,
       "triangles": 95446
     },
-    "msPorFotogramaSoftware": 51.7
+    "msPorFotogramaSoftware": 49.8
   },
   "d-laguna": {
-    "c2_moradoPct": 85.93,
+    "c2_moradoPct": 85.94,
     "c2_casiNegroPct": 1.34,
-    "c3_lagunaPct": 6.86,
-    "c3_lagunaTercioMedioSuperiorPct": 6.41,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 39.06,
+    "c3_lagunaPct": 6.92,
+    "c3_lagunaTercioMedioSuperiorPct": 6.47,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 40.1,
+    "c7_bloquesPlanosRelativoPct": 12.5,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 62,
       "triangles": 101422
     },
-    "msPorFotogramaSoftware": 49.1
+    "msPorFotogramaSoftware": 53.9
   },
   "erroresDeConsola": [
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
