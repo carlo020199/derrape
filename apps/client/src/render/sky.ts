@@ -214,8 +214,9 @@ export function createAnimasMoon(radius = 17): THREE.Group {
   }
   const disc = new THREE.Mesh(
     flatColored(parts),
-    new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, depthWrite: false, transparent: true }),
   );
+  // El halo aditivo va antes que el disco: si se pintara encima, el Ánima teñiría de rosa el Hueso de la luna.
   const c = document.createElement("canvas");
   c.width = c.height = 128;
   const g = c.getContext("2d")!;
@@ -233,6 +234,8 @@ export function createAnimasMoon(radius = 17): THREE.Group {
   );
   halo.scale.setScalar(radius * 4.2);
   halo.position.z = -0.1;
+  halo.renderOrder = -0.7;
+  disc.renderOrder = -0.6;
   const group = new THREE.Group();
   group.add(halo, disc);
   group.name = "luna-animas";

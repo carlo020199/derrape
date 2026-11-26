@@ -25,3 +25,14 @@ Capturas regeneradas (Lía+Hueso y Calavera Chispas+Medianoche) en `docs/release
 - **C7 (métrica proxy)**: «región plana contigua» sube de 5,3–6,5 % a **30–34 %** (16–17 % en `d`) porque la calzada es ahora Ciruela plana, que es justo lo que pidió Dalí en el punto 5. T1 había pasado esa métrica añadiendo grano al asfalto. No lo he vuelto a ensuciar para cumplirla. A ojo, los laterales sí están rellenos (árboles, farolillos, colinas, vallas). Hay que decidir si el proxy pasa a medir solo los laterales; consta en `EVIDENCIA.md`.
 - **C3 fuera de `d`**: la laguna baja a 0,2–1,6 % en `a`, `b` y `c` (los árboles de la salida tapan algo de agua); `d-laguna` da 8,0 % y 7,4 % (límite 6 %), que es donde se mide.
 - La ventana nocturna de esta sesión se cortó antes de ver las capturas con calma; no hay incidencias técnicas.
+
+## Revisión nocturna (pendientes A y B) — sin cambios de código
+- **A) Capturas con el criterio de Dalí** (`a-salida`, `b-recta-campanario`, `c-curva-valla`, `d-laguna`, `e-frontal`): no he visto defectos visuales claros nuevos. Encuadre, luna, nubes opacas, campanario oscuro con campana Llama, farolillos con halo, vallas de calaveras con cuerda y bordillo Ánima/Hueso se leen bien. Detalle menor, no tocado: el recuadro del hueco de objeto del HUD cae sobre el paisaje en el lado derecho.
+- **¿Árboles de salida tapan agua?** Experimento con un flag temporal (revertido, no está en el repo): sin árboles `a` 0,91→2,02 %, `b` 1,57→1,85 %, `c` 0,53→0,52 %, `d` 7,98→7,97 %. Tapan ≤ ~1 punto. El agua no se ve en `a`–`c` porque la calzada elevada y la cresta la ocultan. Se dejan los 58 árboles. C3 (≥ 6 %) pasa en `d`: 8,0 % (Lía) / 7,4 % (Chispas).
+- **B) C7 solo en laterales:** propuesta en `docs/release-v1/PENDIENTE.md` (sin aplicar). Una franja lateral simple no basta (probado: 53–71 % plano porque entra asfalto); se recomienda una captura con máscara (`?mascara=1`) que excluya calzada, kart, cielo y HUD, con umbral ≤ 10 % del área lateral.
+- Comprobado de nuevo: `npm test` 191/191, lint 0, build 0, `npm run medir` Laguna 53 llamadas · 86 082 triángulos (≤ 90 / ≤ 110 000).
+- Archivo tocado: `docs/release-v1/PENDIENTE.md`, `NOCHE_T2_HECHO.md`.
+
+## Decisiones para Carlo
+- Elegir la métrica de C7 (opción 1, máscara por render, recomendada) y si quieres que la implemente.
+- Seguir con la prueba en iPhone/Android (fps reales), única parte que no se puede cerrar en el box.
