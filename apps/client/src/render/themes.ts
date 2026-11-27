@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { closestPoint, pointAt, type ThemeId, type Track, type TrackDef } from "@derrape/shared";
 import { PALETTE, sharedVertexToon, toonMaterial } from "./materials";
 import { ANIMAS_GROUND_Y, decorateAnimas } from "./animas";
+import { groundBoostMesh } from "./groundBoost";
 import { dressTrack, unitSoft } from "./props";
 import { leftNormals, type TrackColors } from "./trackMesh";
 
@@ -1024,6 +1025,8 @@ function withDress(id: ThemeId, kit: ThemeKit): ThemeKit {
     decorate(scene, track, def) {
       kit.decorate(scene, track, def);
       dressTrack(scene, track, id);
+      const groundPads = groundBoostMesh(track);
+      if (groundPads) scene.add(groundPads);
     },
   };
 }

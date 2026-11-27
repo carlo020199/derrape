@@ -62,7 +62,8 @@ describe("pista", () => {
     expect(lap).toBeLessThan(75);
   });
 
-  for (const entry of TRACKS.filter((t) => t.number >= 2)) {
+  // El 13 (Desván de las Maravillas) es más largo a propósito (≈74 s por vuelta): su test está en desvan.test.ts.
+  for (const entry of TRACKS.filter((t) => t.number >= 2 && t.number <= 12)) {
     it(`${entry.name}: vuelta de 50–75 s a un ritmo realista`, async () => {
       const track = buildTrackFromDef(await entry.load());
       const lap = track.length / (KART.maxSpeed * 0.85);

@@ -11,6 +11,7 @@
     "typecheck": "tsc -p packages/shared && tsc -p apps/server && tsc -p apps/client",
     "lint": "tsc -p packages/shared --noUnusedLocals --noUnusedParameters && tsc -p apps/server --noUnusedLocals --noUnusedParameters && tsc -p apps/client --noUnusedLocals --noUnusedParameters",
     "medir": "tsx scripts/medir-escena.ts",
+    "cadenas": "tsx scripts/cadenas.ts",
     "capturas": "tsx scripts/capturas-release.ts",
     "build": "npm run typecheck && npm run build -w @derrape/client && npm run build -w @derrape/server"
   },
