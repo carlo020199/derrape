@@ -99,7 +99,7 @@ describe("Desván de las Maravillas: trazado", () => {
 describe("Desván de las Maravillas: turbos de suelo (datos)", () => {
   it("13 azules y 6 naranjas, dentro de la vuelta y sin solaparse", async () => {
     const { track } = await load();
-    const pads = track.zones.filter((z) => isPadType(z.type));
+    const pads = track.zones.filter((z) => isPadType(z.type) && z.type !== "boostTri");
     expect(pads).toHaveLength(19);
     expect(pads.filter((z) => z.type.startsWith("boostBlue"))).toHaveLength(13);
     expect(pads.filter((z) => z.type.startsWith("boostOrange"))).toHaveLength(6);
@@ -116,7 +116,7 @@ describe("Desván de las Maravillas: turbos de suelo (datos)", () => {
 
   it("el nombre del tipo coincide con el ancho: ancho = ≥ 12 m, franja = ≤ 6 m", async () => {
     const { track } = await load();
-    for (const z of track.zones.filter((z) => isPadType(z.type))) {
+    for (const z of track.zones.filter((z) => isPadType(z.type) && z.type !== "boostTri")) {
       const span = z.lateralMax - z.lateralMin;
       if (z.type.endsWith("Narrow")) expect(span, z.type).toBeLessThanOrEqual(6);
       else expect(span, z.type).toBeGreaterThanOrEqual(12);
@@ -168,7 +168,8 @@ describe("turbos de suelo: reglas de multiplicador y duración", () => {
     expect(PADS.boostBlueNarrow).toEqual({ mult: 1.5, time: 2 });
     expect(PADS.boostOrange).toEqual({ mult: 1.75, time: 2.5 });
     expect(PADS.boostOrangeNarrow).toEqual({ mult: 1.75, time: 3 });
-    for (const type of Object.keys(PADS) as (keyof typeof PADS)[]) {
+    // El raíl triturbo lleva su propio contador (`triTime`): ver triturbo.test.ts.
+    for (const type of Object.keys(PADS).filter((t) => t !== "boostTri") as (keyof typeof PADS)[]) {
       const s = stepOn(type);
       expect(s.boostMult).toBe(PADS[type].mult);
       // El paso ya gastó 1/60 s.

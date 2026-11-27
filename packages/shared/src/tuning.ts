@@ -163,7 +163,25 @@ export const PADS = {
   boostBlueNarrow: { mult: 1.5, time: 2 },
   boostOrange: { mult: 1.75, time: 2.5 },
   boostOrangeNarrow: { mult: 1.75, time: 3 },
+  /** Raíl triturbo: ×3 (78 m/s). Se refresca mientras estás encima y dura 0,8 s más al salir. */
+  boostTri: { mult: 3, time: 0.8 },
 } as const;
+
+/**
+ * Raíl triturbo. `halfWidth`: semiancho de la franja (m) medido desde el centro del kart; el kart mide ±0,9,
+ * así que ±1,0 es «exactamente del ancho de un kart» (subir hasta 1,4 si resulta demasiado duro).
+ * `decel`: frenada (m/s²) al acabar el turbo mientras vas por encima de la punta del naranja, para que la
+ * inercia no dure 4 s y 220 m (con la frenada normal, `coastDrag·2` = 12 m/s²).
+ */
+export const TRI_RAIL = {
+  halfWidth: 1.0,
+  decel: 20,
+};
+
+/** Velocidad máxima que se espera de un kart legítimo (m/s): la del triturbo. */
+export const TOP_SPEED = KART.maxSpeed * PADS.boostTri.mult;
+/** El servidor da por «salto sospechoso» lo que pase de esto entre dos estados (TOP_SPEED con un 15 % de margen). */
+export const MAX_PLAUSIBLE_SPEED = TOP_SPEED * 1.15;
 
 export type PadType = keyof typeof PADS;
 
@@ -268,6 +286,12 @@ export const ITEMS = {
   rocketLife: 6,
   rocketHitRadius: 2,
   rocketHoming: 5,
+  /**
+   * Barrido de objetos estáticos (cajas, aceite): el kart recoge lo que toca su segmento entre dos
+   * posiciones. Un salto mayor que esto (m) es un teletransporte (reaparecer) y no barre nada.
+   * A 78 m/s y 20 Hz el segmento mide 3,9 m, más que el diámetro de una caja.
+   */
+  sweepMax: 24,
 };
 
 /**

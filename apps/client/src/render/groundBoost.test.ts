@@ -25,6 +25,16 @@ describe("turbos de suelo: celdas", () => {
     expect(padColor("boostBlueNarrow")).toBe("blue");
     expect(padColor("boostOrange")).toBe("orange");
     expect(padColor("boostOrangeNarrow")).toBe("orange");
+    expect(padColor("boostTri")).toBe("tri");
+  });
+
+  it("el raíl triturbo se pinta con celdas propias, una columna de 2 m de ancho y 50 m de largo", async () => {
+    const tri = groundBoostCells(await desvan()).filter((c) => c.color === "tri");
+    expect(tri).toHaveLength(Math.round(50 / CELL_LENGTH));
+    for (const cell of tri) {
+      const [a, b] = cell.corners;
+      expect(Math.hypot(a![0] - b![0], a![2] - b![2])).toBeCloseTo(2, 1);
+    }
   });
 
   it("el centro de cada celda cae sobre la superficie de turbo del mismo color", async () => {

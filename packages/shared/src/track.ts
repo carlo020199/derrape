@@ -30,7 +30,9 @@ export type ZoneType =
   | "boostBlue"
   | "boostBlueNarrow"
   | "boostOrange"
-  | "boostOrangeNarrow";
+  | "boostOrangeNarrow"
+  // Raíl triturbo ×3: franja de ±TRI_RAIL.halfWidth m.
+  | "boostTri";
 
 export interface TrackZone {
   type: ZoneType;
