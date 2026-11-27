@@ -174,7 +174,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   height: 16px;
   border-radius: 50%;
   background: rgb(30 24 48 / 0.72);
-  box-shadow: 0 0 0 2px var(--noche);
+  box-shadow: 0 0 0 2px var(--noche), inset 0 0 0 2px var(--hueso-sombra);
 }
 #hud-turbo span.on { box-shadow: 0 0 0 2px var(--noche), inset 0 0 0 2px var(--brasa); }
 #hud[data-level="1"] #hud-turbo span.on { background: var(--turbo-1); }
@@ -267,7 +267,7 @@ body.in-menu #touch-help,
   z-index: 4;
   transition: transform 120ms ease-out, box-shadow 120ms ease-out;
 }
-#item-slot.empty { opacity: 0.5; }
+#item-slot.empty { background: rgb(30 24 48 / 0.7); }
 #item-slot.ready {
   box-shadow: 0 0 0 3px var(--noche), 0 0 16px var(--brasa);
   transform: scale(1.06);
