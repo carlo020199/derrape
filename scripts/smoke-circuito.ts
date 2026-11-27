@@ -107,34 +107,50 @@ const speeds: { t: number; race: string; kmh: number }[] = [];
   await page.close();
   await ctx1.close();
 }
-// --- Cadena de 3 S recorrida de verdad: ?foto deja el kart a 60 m; con un dedo apoyado acelera y salta las tres rampas ---
-const cadena: { saltos: number; boostAlAterrizar: { mult: number; time: number }[]; capturas: string[] } = { saltos: 0, boostAlAterrizar: [], capturas: [] };
+// --- Cadena de 3 S recorrida de verdad: ?foto deja el kart a 96 m, `correr=bot` lo conduce el piloto automático ---
+// Un registrador en requestAnimationFrame anota cada despegue y aterrizaje (con WebGL por software el muestreo desde fuera se saltaba vuelos).
+type Vuelo = { despegue: number; aterriza?: number; mult?: number; time?: number };
+const cadena: { saltos: number; vuelos: Vuelo[]; capturas: string[] } = { saltos: 0, vuelos: [], capturas: [] };
 {
   const ctx1 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   const page = await ctx1.newPage();
   hook(page, "cadena-en-vuelo");
-  await page.goto(`${base}/?track=${TRACK}&foto=96,0,0&correr`);
+  await page.goto(`${base}/?track=${TRACK}&foto=96,0,0&correr=bot`);
   await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
-  await page.waitForTimeout(1500);
-  const cdp = await ctx1.newCDPSession(page);
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 195, y: 620, id: 1 }] });
-  type K = { airborne: boolean; boostMult: number; boostTime: number; speed: number };
-  const kart = () => page.evaluate(() => (window as unknown as { __escena: { kart: K } }).__escena.kart) as Promise<K>;
-  let was = false;
+  // Como texto: tsx inyecta `__name` en las funciones y no existe dentro de la página.
+  await page.evaluate(`(() => {
+    window.__vuelos = [];
+    let was = false;
+    const tick = () => {
+      const k = window.__escena.kart;
+      if (k.airborne && !was) window.__vuelos.push({ despegue: k.along });
+      if (!k.airborne && was) {
+        const v = window.__vuelos[window.__vuelos.length - 1];
+        v.aterriza = k.along;
+        v.mult = k.boostMult;
+        v.time = k.boostTime;
+      }
+      was = k.airborne;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  })()`);
   const t0 = Date.now();
-  while (Date.now() - t0 < 60000 && cadena.saltos < 3) {
-    const k = await kart();
-    if (k.airborne && !was) {
-      cadena.saltos++;
-      const name = `15-cadena-en-vuelo-${cadena.saltos}.png`;
+  let shots = 0;
+  while (Date.now() - t0 < 90000) {
+    const vuelos = (await page.evaluate(() => (window as unknown as { __vuelos: Vuelo[] }).__vuelos)) as Vuelo[];
+    const vuelo = vuelos[vuelos.length - 1];
+    if (vuelos.length > shots && vuelo) {
+      shots = vuelos.length;
+      const name = `15-cadena-en-vuelo-${shots}.png`;
       await page.screenshot({ path: `${out}/${name}` });
       cadena.capturas.push(name);
     }
-    if (!k.airborne && was) cadena.boostAlAterrizar.push({ mult: +k.boostMult.toFixed(2), time: +k.boostTime.toFixed(2) });
-    was = k.airborne;
-    await page.waitForTimeout(40);
+    if (vuelos.length >= 3 && vuelos[2]!.aterriza !== undefined) break;
+    await page.waitForTimeout(30);
   }
-  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  cadena.vuelos = (await page.evaluate(() => (window as unknown as { __vuelos: Vuelo[] }).__vuelos)) as Vuelo[];
+  cadena.saltos = cadena.vuelos.length;
   await page.close();
   await ctx1.close();
 }
@@ -144,4 +160,6 @@ const vmax = Math.max(...speeds.map((s) => s.kmh));
 const summary = { errores: errors, cadena3S: cadena, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
 writeFileSync(`${out}/smoke.json`, JSON.stringify({ ...summary, velocidades: speeds }, null, 1));
 console.log(JSON.stringify(summary, null, 1));
-process.exit(errors.length ? 1 : 0);
+const cadenaOk = cadena.vuelos.length >= 3 && cadena.vuelos.slice(0, 3).every((v) => v.aterriza !== undefined && v.mult === 1.5 && (v.time ?? 0) > 0.3);
+if (!cadenaOk) console.error("La cadena de 3 S no se recorrió completa con turbo ×1,5 al aterrizar");
+process.exit(errors.length || !cadenaOk ? 1 : 0);

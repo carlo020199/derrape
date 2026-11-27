@@ -393,7 +393,10 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     player.prev = { ...s };
     countdown = -1e6;
     // ?correr (con ?foto): sin cuenta atrás, el kart conduce desde ese punto (smoke de rampas y turbos).
-    if (new URLSearchParams(location.search).has("correr")) phase = "racing";
+    const correr = new URLSearchParams(location.search).get("correr");
+    if (correr !== null) phase = "racing";
+    // ?correr=bot: el piloto automático conduce al jugador (el smoke recorre rampas sin dedo).
+    if (correr === "bot") player.bot = { lane: 0, lookAhead: 12 };
     // `kart` (solo con ?foto): estado vivo del kart, para que el smoke compruebe saltos y turbos.
     (window as unknown as { __escena: unknown }).__escena = {
       scene,
