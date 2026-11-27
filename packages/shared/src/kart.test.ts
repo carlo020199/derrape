@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { bounceKart, collideKarts, createKart, driftLevel, giveBoost, hopHeight, stepKart, type KartInput } from "./kart";
+import {
+  bounceKart,
+  collideKarts,
+  createKart,
+  driftLevel,
+  driftVisualSlip,
+  giveBoost,
+  hopHeight,
+  stepKart,
+  type KartInput,
+} from "./kart";
 import { closestPoint, collideKartWithTrack, createOvalTrack } from "./track";
-import { KART, PHYSICS_DT } from "./tuning";
+import { KART, PADS, PHYSICS_DT } from "./tuning";
 
 const GAS: KartInput = { steer: 0, throttle: true, brake: false, drift: false };
 
@@ -56,14 +66,45 @@ describe("kart", () => {
     expect(s.driftDir).toBe(0);
   });
 
-  it("el derrape empieza al aterrizar del salto, no antes", () => {
+  it("el derrape arranca durante el hop sin esperar al aterrizaje", () => {
     const s = createKart();
     run(s, GAS, 4);
     const drifting: KartInput = { steer: -1, throttle: true, brake: false, drift: true };
     stepKart(s, drifting, PHYSICS_DT);
-    expect(s.driftDir).toBe(0);
-    run(s, drifting, KART.hopTime);
+    expect(s.hopTime).toBeGreaterThan(0);
     expect(s.driftDir).toBe(1);
+    expect(hopHeight(s)).toBeGreaterThan(0);
+  });
+
+  it("no carga el mini-turbo mientras dura el hop ni en el aire", () => {
+    const s = createKart();
+    run(s, GAS, 4);
+    const drifting: KartInput = { steer: -1, throttle: true, brake: false, drift: true };
+    run(s, drifting, KART.hopTime * 0.5);
+    expect(s.driftDir).toBe(1);
+    expect(s.hopTime).toBeGreaterThan(0);
+    expect(s.driftCharge).toBe(0);
+
+    run(s, drifting, KART.hopTime);
+    expect(s.hopTime).toBe(0);
+    const beforeAir = s.driftCharge;
+    expect(beforeAir).toBeGreaterThan(0);
+    s.airborne = true;
+    s.vy = 5;
+    run(s, drifting, 0.2);
+    expect(s.driftCharge).toBe(beforeAir);
+  });
+
+  it("con driftSide del gesto arranca el derrape aunque steer sea ~0", () => {
+    const s = createKart();
+    run(s, GAS, 4);
+    stepKart(s, { steer: 0.02, throttle: true, brake: false, drift: true, driftSide: -1 }, PHYSICS_DT);
+    expect(s.driftDir).toBe(1);
+
+    const sRight = createKart();
+    run(sRight, GAS, 4);
+    stepKart(sRight, { steer: -0.02, throttle: true, brake: false, drift: true, driftSide: 1 }, PHYSICS_DT);
+    expect(sRight.driftDir).toBe(-1);
   });
 
   it("el derrape carga los niveles en orden y al soltar da turbo", () => {
@@ -85,7 +126,46 @@ describe("kart", () => {
     expect(s.boostTime).toBeGreaterThan(KART.boostTime3 - 0.05);
     run(s, GAS, 0.5);
     expect(s.speed).toBeGreaterThan(KART.maxSpeed);
-    expect(s.speed).toBeLessThanOrEqual(KART.maxSpeed * KART.boostSpeedMult + 1e-9);
+    expect(s.speed).toBeLessThanOrEqual(KART.maxSpeed * KART.boostMult3 + 1e-9);
+  });
+
+  it("el mini-turbo III queda por debajo del turbo azul de suelo (el azul se sigue notando)", () => {
+    expect(KART.boostMult1).toBeLessThan(KART.boostMult2);
+    expect(KART.boostMult2).toBeLessThan(KART.boostMult3);
+    expect(KART.boostMult3).toBeLessThan(PADS.boostBlue.mult);
+  });
+
+  it("el turbo de nivel 3 da más velocidad y dura más que el de nivel 1", () => {
+    const chargeAndRelease = (holdSeconds: number) => {
+      const s = createKart();
+      run(s, GAS, 4);
+      run(s, { steer: -1, throttle: true, brake: false, drift: true }, KART.hopTime + holdSeconds);
+      stepKart(s, GAS, PHYSICS_DT);
+      return s;
+    };
+    const lv1 = chargeAndRelease(KART.driftLevel1 / KART.driftChargeFast + 0.05);
+    const lv3 = chargeAndRelease(KART.driftLevel3 / KART.driftChargeFast + 0.05);
+    expect(lv3.boostTime).toBeGreaterThan(lv1.boostTime);
+    expect(lv3.boostMult).toBeGreaterThan(lv1.boostMult);
+    expect(lv3.speed).toBeGreaterThan(lv1.speed);
+    run(lv1, GAS, 0.3);
+    run(lv3, GAS, 0.3);
+    expect(lv3.speed).toBeGreaterThan(lv1.speed);
+  });
+
+  it("empujón inicial al soltar el derrape", () => {
+    const custom = { ...KART, maxSpeed: 30 };
+    const s = createKart();
+    s.speed = custom.maxSpeed;
+    const drifting: KartInput = { steer: -1, throttle: true, brake: false, drift: true };
+    const steps = Math.round((custom.hopTime + custom.driftLevel2 / custom.driftChargeFast + 0.05) / PHYSICS_DT);
+    for (let i = 0; i < steps; i++) stepKart(s, drifting, PHYSICS_DT, custom);
+    expect(driftLevel(s, custom)).toBe(2);
+    const speedBeforeRelease = s.speed;
+    stepKart(s, GAS, PHYSICS_DT, custom);
+    const expectedPunch = custom.maxSpeed + (custom.boostMult2 - 1) * custom.maxSpeed * 0.75;
+    expect(speedBeforeRelease).toBeLessThan(custom.maxSpeed);
+    expect(s.speed).toBeGreaterThanOrEqual(expectedPunch);
   });
 
   it("girar hacia dentro carga más rápido que abrir el derrape", () => {
@@ -112,10 +192,33 @@ describe("kart", () => {
   it("el turbo dura lo que toca y vuelve a la punta normal", () => {
     const s = createKart();
     run(s, GAS, 4);
-    giveBoost(s, KART.boostTime2, KART.boostSpeedMult);
+    giveBoost(s, KART.boostTime2, KART.boostMult2);
     run(s, GAS, KART.boostTime2 + 3);
     expect(s.boostTime).toBe(0);
     expect(s.speed).toBeCloseTo(KART.maxSpeed, 3);
+  });
+
+  it("driftVisualSlip crece al cerrar y baja al abrir", () => {
+    const s = createKart();
+    expect(driftVisualSlip(s)).toBe(0);
+    s.driftDir = 1;
+    s.driftSteer = -1; // cierra a la izquierda
+    const close = driftVisualSlip(s);
+    s.driftSteer = 0; // neutro
+    const neutral = driftVisualSlip(s);
+    s.driftSteer = 1; // abre (contravolante)
+    const open = driftVisualSlip(s);
+    expect(close).toBeCloseTo(0.6, 5);
+    expect(neutral).toBeCloseTo(0.44, 5);
+    expect(open).toBeCloseTo(0.28, 5);
+    expect(close).toBeGreaterThan(neutral);
+    expect(neutral).toBeGreaterThan(open);
+
+    s.driftDir = -1;
+    s.driftSteer = 1;
+    expect(Math.abs(driftVisualSlip(s))).toBeCloseTo(0.6, 5);
+    s.driftSteer = -1;
+    expect(Math.abs(driftVisualSlip(s))).toBeCloseTo(0.28, 5);
   });
 });
 
@@ -126,7 +229,7 @@ describe("pista", () => {
     // Acelerar recto hacia fuera desde varios puntos y comprobar que nunca sale.
     for (const p of track.points.filter((_, i) => i % 7 === 0)) {
       const s = createKart(p.x, p.z, Math.atan2(p.x, p.z)); // mirando hacia fuera del óvalo
-      s.speed = KART.maxSpeed * KART.boostSpeedMult;
+      s.speed = KART.maxSpeed * KART.boostMult3;
       for (let i = 0; i < 60 * 3; i++) {
         stepKart(s, GAS, PHYSICS_DT);
         collideKartWithTrack(s, track);

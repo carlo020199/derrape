@@ -190,7 +190,7 @@ describe("turbos de suelo: reglas de multiplicador y duración", () => {
   });
 
   it("no se multiplican con un mini-turbo en marcha: gana el mayor", () => {
-    const mini = (s: ReturnType<typeof createKart>) => giveBoost(s, 1, KART.boostSpeedMult);
+    const mini = (s: ReturnType<typeof createKart>) => giveBoost(s, 1, KART.boostMult1);
     expect(stepOn("boostBlue", mini).boostMult).toBe(1.5);
     expect(stepOn("boostOrange", mini).boostMult).toBe(1.75);
     // Un mini-turbo mayor que el suelo manda sobre el azul.
