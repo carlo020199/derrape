@@ -21,6 +21,12 @@ export interface RaceKart {
   raceDistance: number;
   /** Última distancia en la vuelta (0..length), para detectar el paso por meta. */
   trackDistance: number;
+  /**
+   * Posición que se tuvo en cuenta en el último `stepItems`: el barrido de cajas y aceite va de aquí a la
+   * posición actual (ver `distanceToSegment`). Sin definir, el kart solo cuenta en su posición.
+   */
+  prevX?: number;
+  prevZ?: number;
 }
 
 export interface ItemBox {
@@ -71,6 +77,29 @@ export interface ItemWorld {
   random: () => number;
   /** Siguiente id para aceite y cohetes. */
   nextId?: number;
+}
+
+/** Distancia (m) del punto (px, pz) al segmento (ax, az)→(bx, bz). */
+export function distanceToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const len2 = dx * dx + dz * dz;
+  const u = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / len2));
+  return Math.hypot(px - (ax + dx * u), pz - (az + dz * u));
+}
+
+/**
+ * Distancia de un kart a un punto fijo (caja, aceite) por barrido: mínima entre el punto y el segmento que
+ * recorrió desde el último paso. Con el servidor a 20 Hz y un kart a 78 m/s, el segmento mide 3,9 m (más que
+ * el diámetro de una caja): sin barrido las atraviesa sin recogerlas. Un salto de más de `ITEMS.sweepMax`
+ * (reaparecer) es un teletransporte y no barre nada.
+ */
+function sweptDistance(k: RaceKart, x: number, z: number): number {
+  const { x: bx, z: bz } = k.state;
+  const ax = k.prevX ?? bx;
+  const az = k.prevZ ?? bz;
+  if (Math.hypot(bx - ax, bz - az) > ITEMS.sweepMax) return Math.hypot(bx - x, bz - z);
+  return distanceToSegment(x, z, ax, az, bx, bz);
 }
 
 function newId(world: ItemWorld): number {
@@ -207,7 +236,7 @@ export function stepItems(world: ItemWorld, dt: number): ItemEvent[] {
       continue;
     }
     for (const k of karts) {
-      if (Math.hypot(k.state.x - box.x, k.state.z - box.z) > ITEMS.boxRadius) continue;
+      if (sweptDistance(k, box.x, box.z) > ITEMS.boxRadius) continue;
       box.respawn = ITEMS.boxRespawn;
       if (k.item === null) {
         k.item = rollItem(positions.get(k.id)!, karts.length, world.random);
@@ -223,7 +252,7 @@ export function stepItems(world: ItemWorld, dt: number): ItemEvent[] {
     oil.safeTime = Math.max(0, oil.safeTime - dt);
     for (const k of karts) {
       if (k.id === oil.owner && oil.safeTime > 0) continue;
-      if (Math.hypot(k.state.x - oil.x, k.state.z - oil.z) <= ITEMS.oilRadius) {
+      if (sweptDistance(k, oil.x, oil.z) <= ITEMS.oilRadius) {
         hitKart(k, "oil", oil.owner, events);
         return false;
       }
@@ -255,6 +284,12 @@ export function stepItems(world: ItemWorld, dt: number): ItemEvent[] {
     }
     return true;
   });
+
+  // El siguiente barrido empieza donde acaba este. Los cohetes no barren: se pegan a su objetivo.
+  for (const k of karts) {
+    k.prevX = k.state.x;
+    k.prevZ = k.state.z;
+  }
 
   return events;
 }

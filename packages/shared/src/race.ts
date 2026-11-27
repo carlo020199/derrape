@@ -73,6 +73,7 @@ export function respawnKart(s: KartState, p: LapProgress, track: Track): void {
   s.hopTotal = 0;
   s.spinTime = 0;
   s.boostTime = 0;
+  s.triTime = 0;
   s.airborne = false;
   s.vy = 0;
   s.y = 0;

@@ -1,4 +1,4 @@
-// Smoke del Desván de las Maravillas (fases 1 y 2: turbos de suelo y rampas-mueble) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
+// Smoke del Desván de las Maravillas (fases 1 a 3: turbos de suelo, rampas-mueble y raíl triturbo) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
 // con un dedo simulado (CDP) mientras se vigilan los errores de consola.
 //
 // Uso (con el cliente en marcha: `npm run dev -w @derrape/client`):
@@ -9,7 +9,7 @@ import { chromium, type Page } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const base = process.argv[2] ?? "http://localhost:5173";
-const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase2";
+const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase3";
 const TRACK = "desvan-de-las-maravillas";
 mkdirSync(out, { recursive: true });
 
@@ -26,6 +26,9 @@ const SHOTS = [
   { name: "13-cadena-2M-entre", foto: "1110,0,0" },
   { name: "14-rampa-lado", foto: "104,9,-50" }, // desde un lado: la cuña y el cabecero/cómoda
   { name: "06-eses", foto: "588,3,0" }, // la franja azul de la ese 2 (600–606 m, lateral 2–5)
+  { name: "16-rail-antes", foto: "1780,0,0" }, // el raíl triturbo empieza en 1.812 m
+  { name: "17-rail-dentro", foto: "1830,0,0" }, // encima del raíl
+  { name: "18-rail-lado", foto: "1800,6,-15" }, // desde el lado: el raíl es una línea de 2 m en una calzada de 16
 ];
 
 const errors: string[] = [];
@@ -154,12 +157,54 @@ const cadena: { saltos: number; vuelos: Vuelo[]; capturas: string[] } = { saltos
   await page.close();
   await ctx1.close();
 }
+// --- Raíl triturbo recorrido de verdad: ?foto deja el kart en la salida de la curva I, `correr=bot` lo conduce el piloto automático ---
+const rail = { velocidadMax: 0, mult: 0, capturas: [] as string[] };
+{
+  const ctx1 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await ctx1.newPage();
+  hook(page, "rail-triturbo");
+  await page.goto(`${base}/?track=${TRACK}&foto=1745,0,0&correr=bot`);
+  await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
+  await page.evaluate(`(() => {
+    window.__rail = { max: 0, along: 0, tri: false };
+    const tick = () => {
+      const k = window.__escena.kart;
+      if (k.speed > window.__rail.max) { window.__rail.max = k.speed; window.__rail.along = k.along; }
+      if (k.triTime > 0) window.__rail.tri = true;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  })()`);
+  const t0 = Date.now();
+  let shot = 0;
+  let despues = 0;
+  while (Date.now() - t0 < 60000) {
+    const r = (await page.evaluate(() => (window as unknown as { __rail: { max: number; along: number; tri: boolean } }).__rail)) as { max: number; along: number; tri: boolean };
+    rail.velocidadMax = r.max;
+    if (r.tri && shot === 0) {
+      shot = 1;
+      await page.screenshot({ path: `${out}/19-rail-en-marcha.png` });
+      rail.capturas.push("19-rail-en-marcha.png");
+    }
+    if (r.max > 77 && shot === 1) {
+      shot = 2;
+      await page.screenshot({ path: `${out}/20-rail-a-78.png` });
+      rail.capturas.push("20-rail-a-78.png");
+    }
+    if (shot === 2 && ++despues > 40) break; // ~1,2 s después de llegar a 78 m/s
+    await page.waitForTimeout(30);
+  }
+  await page.close();
+  await ctx1.close();
+}
 await browser.close();
 
 const vmax = Math.max(...speeds.map((s) => s.kmh));
-const summary = { errores: errors, cadena3S: cadena, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
+const summary = { errores: errors, cadena3S: cadena, railTriturbo: rail, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
 writeFileSync(`${out}/smoke.json`, JSON.stringify({ ...summary, velocidades: speeds }, null, 1));
 console.log(JSON.stringify(summary, null, 1));
 const cadenaOk = cadena.vuelos.length >= 3 && cadena.vuelos.slice(0, 3).every((v) => v.aterriza !== undefined && v.mult === 1.5 && (v.time ?? 0) > 0.3);
 if (!cadenaOk) console.error("La cadena de 3 S no se recorrió completa con turbo ×1,5 al aterrizar");
-process.exit(errors.length || !cadenaOk ? 1 : 0);
+const railOk = rail.velocidadMax > 77 && rail.velocidadMax <= 78.1;
+if (!railOk) console.error(`El raíl triturbo no llegó a 78 m/s (máx. ${rail.velocidadMax.toFixed(1)})`);
+process.exit(errors.length || !cadenaOk || !railOk ? 1 : 0);

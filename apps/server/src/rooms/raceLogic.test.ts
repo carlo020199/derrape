@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CUP,
   KART,
+  MAX_PLAUSIBLE_SPEED,
   RACE,
   buildTrackFromDef,
   findTrack,
@@ -240,6 +241,26 @@ describe("carrera", () => {
     expect(room.snapshot(now + 2200).karts.find((k) => k.id === "a")!.s.respawns).toBe(1);
   });
 
+  it("el raíl triturbo (78 m/s) no es un salto sospechoso: su progreso cuenta", async () => {
+    expect(MAX_PLAUSIBLE_SPEED).toBeGreaterThan(78);
+    expect(MAX_PLAUSIBLE_SPEED).toBeLessThan(150);
+    const { room, now } = await racingRoom();
+    const track = await loadTrack("pruebas");
+    // «a» rueda a 78 m/s y «b» a 30: si el servidor descartara los estados de «a», «b» iría primero.
+    const sim = new Sim(room, track);
+    sim.now = now;
+    sim.run(3, { a: 78, b: 30 });
+    expect(room.snapshot(sim.now).karts.find((k) => k.id === "a")!.position).toBe(1);
+  });
+
+  it("a 150 m/s (más de lo que da ningún turbo) el servidor descarta los estados: no cuentan para el progreso", async () => {
+    const { room, now } = await racingRoom();
+    const sim = new Sim(room, await loadTrack("pruebas"));
+    sim.now = now;
+    sim.run(3, { a: 150, b: 30 });
+    expect(room.snapshot(sim.now).karts.find((k) => k.id === "a")!.position).toBe(2);
+  });
+
   it("ignora estados con datos basura", async () => {
     const { room, now } = await racingRoom();
     room.onState("a", { ...net(0, 0), x: Number.NaN }, now);
@@ -294,6 +315,12 @@ async function itemRace() {
 }
 
 describe("objetos en red", () => {
+  it("a 78 m/s (3,9 m entre estados) un kart que pasa por una fila de cajas igualmente recoge una", async () => {
+    const sim = await itemRace();
+    sim.run((sim.track.length * 0.12 + 20) / 78, { a: 78 });
+    expect(sim.events).toContainEqual({ type: "pickup", kart: "a" });
+  });
+
   it("pasar por una fila de cajas da un objeto (lo decide el servidor) tras la ruleta", async () => {
     const sim = await itemRace();
     // La primera fila de cajas está al 12 % de la vuelta.

@@ -3,11 +3,12 @@
 // Muebles viejos en un mundo de fantasía. Un circuito largo (≈1.880 m, vuelta de bot ≈74 s) en sentido
 // horario: recta de meta subiendo, curva ancha norte, tres eses, diagonal larga hacia el suroeste, horquilla
 // interior, segunda diagonal hacia el este, curva grande al sureste, recta inferior y curva con abanico hacia meta.
-// Fase 1: trazado y turbos de suelo (azul ×1,5 y naranja ×1,75). Rampas, raíl triturbo, plataforma y arte de
-// muebles llegan en fases posteriores (ver docs/circuito-nuevo/). El tema es `animas` de momento.
+// Fase 1: trazado y turbos de suelo (azul ×1,5 y naranja ×1,75). Fase 2: rampas-mueble. Fase 3: raíl triturbo ×3.
+// Plataforma y arte de muebles llegan en fases posteriores (ver docs/circuito-nuevo/). El tema es `animas` de momento.
 // Plan y vista previa: /workspace/derrape-plan-circuito (PLAN.md §1.2 y §2.3).
 
 import { smoothTrack } from "../track";
+import { TRI_RAIL } from "../tuning";
 import type { TrackDef, ZoneDef } from "./types";
 
 /** Escala del plano del boceto (0,8 da vuelta de ≈74 s; con menos las eses no caben). */
@@ -92,6 +93,11 @@ const zones: ZoneDef[] = [
   pad("boostBlueNarrow", 1670, 1678, -3, 0),
   pad("boostBlueNarrow", 1700, 1708, 0, 3),
   pad("boostOrangeNarrow", 1735, 1745, -1.5, 1.5),
+  // Raíl triturbo ×3 (PLAN §2.6): 50 m del ancho de un kart en el tramo más recto antes de meta (de 1.820 m en
+  // adelante el rumbo casi no cambia; antes, la salida de la curva I y una ondulación a 1.800 m lo hacían derivar
+  // 2,5 m), a 67 m del naranja de franja que lo centra. Sin cajas ni rampas encima. La parrilla (1.845…1.878 m)
+  // cae dentro, pero sale a ±3 m del eje, fuera de la franja de ±1 m.
+  pad("boostTri", 1812, 1862, -TRI_RAIL.halfWidth, TRI_RAIL.halfWidth),
 ];
 
 /** Rampa-mueble: con tamaño (vuelo balístico) y turbo al aterrizar (`landBoost`). Largo S = 4 m, M = 8 m. */

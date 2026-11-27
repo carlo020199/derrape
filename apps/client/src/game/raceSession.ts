@@ -25,6 +25,7 @@ import {
   findKart,
   formatTime,
   giveBoost,
+  isBoosting,
   gridPose,
   hopHeight,
   needsRespawn,
@@ -607,7 +608,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       hop: hopHeight(s),
       y: player.y,
       vy: s.vy,
-      boosting: s.boostTime > 0,
+      boosting: isBoosting(s),
       spinning: s.spinTime > 0,
       shield: s.shieldTime > 0,
       respawns: player.respawns,
@@ -923,7 +924,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           driftDir: s.driftDir,
           level: driftLevel(s),
           spinning: s.spinTime > 0,
-          boosting: s.boostTime > 0,
+          boosting: isBoosting(s),
           shield: s.shieldTime > 0,
           shieldLeft: s.shieldTime,
           finished: r.progress.finishTime !== null,
@@ -998,7 +999,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     ];
     minimap.draw(dots, 0, track);
 
-    updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), me.boostTime > 0);
+    updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), isBoosting(me));
     if (online) updateItemSlot(serverMe?.item ?? null, serverMe?.rolling ?? false, time);
     else updateItemSlot(player.race.item, player.race.rollTime > 0, time);
     updateRaceHud();
