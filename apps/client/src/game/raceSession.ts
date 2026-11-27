@@ -44,6 +44,7 @@ import {
   updateProgress,
   useItem,
   type BotDriver,
+  driftVisualSlip,
   type CountdownMessage,
   type ItemEvent,
   type ItemEventsMessage,
@@ -745,6 +746,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     heading: number,
     view: {
       driftDir: number;
+      driftSteer?: number;
       level: number;
       spinning: boolean;
       boosting: boolean;
@@ -757,7 +759,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   ) {
     m.root.position.set(x, y, z);
     m.root.rotation.y = heading;
-    r.driftVisual += (view.driftDir * KART.driftVisualAngle - r.driftVisual) * Math.min(1, dt * 10);
+    const slip = driftVisualSlip({ driftDir: view.driftDir, driftSteer: view.driftSteer ?? 0 });
+    r.driftVisual += (slip - r.driftVisual) * Math.min(1, dt * 10);
     // Trompo: dos vueltas completas mientras dura.
     r.spinVisual = view.spinning ? r.spinVisual + dt * Math.PI * 4 : 0;
     m.body.rotation.y = r.driftVisual + r.spinVisual;
@@ -922,6 +925,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         heading,
         {
           driftDir: s.driftDir,
+          driftSteer: s.driftSteer,
           level: driftLevel(s),
           spinning: s.spinTime > 0,
           boosting: isBoosting(s),

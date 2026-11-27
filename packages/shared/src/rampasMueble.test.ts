@@ -132,7 +132,7 @@ describe("rampas-mueble: turbo al aterrizar", () => {
     expect(naranja.boostMult).toBe(PADS.boostOrange.mult);
     expect(naranja.boostTime).toBeGreaterThan(2);
     // Y el turbo de aterrizaje es el mayor frente a un mini-turbo (×1,3): ×1,5, no ×1,5×1,3.
-    const mini = aterrizar(rectaConRampa(true), (s) => giveBoost(s, 5, KART.boostSpeedMult));
+    const mini = aterrizar(rectaConRampa(true), (s) => giveBoost(s, 5, KART.boostMult1));
     expect(mini.boostMult).toBe(1.5);
   });
 

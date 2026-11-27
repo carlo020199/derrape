@@ -639,7 +639,7 @@ function landKart(s: KartState, track: Track, c: ClosestPoint) {
   // Rampa-mueble: el aterrizaje (sin clavar el morro: `LANDING.maxPitch`) regala ×1,5 durante 0,5 s y el truco lo alarga a ×1,5 (no ×1,3).
   // `giveBoost` se queda con el mayor: no se apila con un turbo de suelo ni con un mini-turbo.
   if (s.flightLandBoost && pitchError < (LANDING.maxPitch * Math.PI) / 180) giveBoost(s, LANDING.time, LANDING.mult);
-  if (s.trick && s.flightRamp) giveBoost(s, RAMP[s.flightRamp].trick, s.flightLandBoost ? LANDING.mult : KART.boostSpeedMult);
+  if (s.trick && s.flightRamp) giveBoost(s, RAMP[s.flightRamp].trick, s.flightLandBoost ? LANDING.mult : KART.boostMult1);
   s.airborne = false;
   s.y = ground;
   s.vy = 0;
