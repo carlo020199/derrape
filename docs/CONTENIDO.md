@@ -91,7 +91,7 @@ Cada circuito tiene **una mecánica propia** para que se sienta distinto. Vuelta
 |---|---|---|---|---|
 | 11 | **Laguna de las Ánimas** | Noche de difuntos junto a una laguna espectral | ★★★ | Peralte, cuestas y saltos S/M/L con vuelo real. Se abre directo con `?track=laguna-de-las-animas` |
 | 12 | **Ribera de las Ánimas** | La misma laguna espectral, por la orilla | ★★ | Vuelta más llana y abierta: curvas peraltadas y tres saltos (S, M, L). 1.466 m, ~56 s por vuelta. `?track=ribera-de-las-animas` |
-| 13 | **Desván de las Maravillas** | Muebles viejos en un mundo de fantasía (de momento con el tema `animas`) | ★★★ | Circuito largo (1.884 m, ≈74 s por vuelta sin turbos, ≈60 s de bot con ellos): eses, horquilla y curva grande. 13 turbos de suelo azules (×1,5) y 6 naranjas (×1,75), en ancho completo o franja estrecha. `?track=desvan-de-las-maravillas` |
+| 13 | **Desván de las Maravillas** | Muebles viejos en un mundo de fantasía (de momento con el tema `animas`) | ★★★ | Circuito largo (1.884 m, ≈74 s por vuelta sin turbos, ≈60 s de bot con ellos): eses, horquilla y curva grande. 13 turbos de suelo azules (×1,5) y 6 naranjas (×1,75), en ancho completo o franja estrecha. 6 rampas-mueble (cadena de 3 S, S sola, cadena de 2 M) que dan ×1,5 durante 0,5 s al aterrizar. `?track=desvan-de-las-maravillas` |
 
 Cómo hacer 10 circuitos sin volverse loco:
 - Cada circuito es **un archivo de datos** (`packages/shared/src/tracks/NN-nombre.ts`): puntos de la spline,

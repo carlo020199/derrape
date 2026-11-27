@@ -1,4 +1,4 @@
-// Smoke del Desván de las Maravillas en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
+// Smoke del Desván de las Maravillas (fases 1 y 2: turbos de suelo y rampas-mueble) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
 // con un dedo simulado (CDP) mientras se vigilan los errores de consola.
 //
 // Uso (con el cliente en marcha: `npm run dev -w @derrape/client`):
@@ -9,7 +9,7 @@ import { chromium, type Page } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const base = process.argv[2] ?? "http://localhost:5173";
-const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase1";
+const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase2";
 const TRACK = "desvan-de-las-maravillas";
 mkdirSync(out, { recursive: true });
 
@@ -19,6 +19,12 @@ const SHOTS = [
   { name: "03-turbo-azul-franja", foto: "322,2.5,0" }, // franja azul en 330–338 m (lateral 1–4)
   { name: "04-turbo-naranja-ancho", foto: "460,0,0" }, // naranja ancho en 470–478 m
   { name: "05-turbo-naranja-franja", foto: "62,4.5,0" }, // naranja en franja en 70–78 m (lateral 3–6)
+  { name: "09-cadena-3S-antes", foto: "96,0,0" }, // cadena de 3 rampas S (116 / 146 / 192 m), justo delante
+  { name: "10-cadena-3S-entre", foto: "132,0,0" }, // entre la 1.ª y la 2.ª
+  { name: "11-rampa-S-eses", foto: "696,0,0" }, // S sola a la salida de las eses (715 m)
+  { name: "12-cadena-2M-antes", foto: "1066,0,0" }, // cadena de 2 M (1.090 / 1.130 m)
+  { name: "13-cadena-2M-entre", foto: "1110,0,0" },
+  { name: "14-rampa-lado", foto: "104,9,-50" }, // desde un lado: la cuña y el cabecero/cómoda
   { name: "06-eses", foto: "588,3,0" }, // la franja azul de la ese 2 (600–606 m, lateral 2–5)
 ];
 
