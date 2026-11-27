@@ -175,8 +175,8 @@ float edgeW = smoothstep(0.5, 1.8, vRoad.z - abs(vRoad.x));
   vec2 off = vec2(mh(ci + 1.7), mh(ci + 5.1)) * 0.5 + 0.25;
   float rad = 0.18 + 0.14 * mh(ci + 9.9);
   float aa = max(fwidth(cell.x), fwidth(cell.y));
-  float dot_ = (1.0 - smoothstep(rad - aa, rad + aa, length(fract(cell) - off))) * step(0.58, mh(ci + 7.3));
-  mottle += 1.35 * dot_ * (1.0 - smoothstep(24.0, 40.0, cam)) * edgeW * (0.7 + 0.6 * mh(ci + 3.3));
+  float dot_ = (1.0 - smoothstep(rad - aa, rad + aa, length(fract(cell) - off))) * step(0.55, mh(ci + 7.3));
+  mottle += 1.6 * dot_ * (1.0 - smoothstep(24.0, 40.0, cam)) * edgeW * (0.7 + 0.6 * mh(ci + 3.3));
 }
 {
   vec2 cell = vWP.xz * 1.0 + 40.0;
