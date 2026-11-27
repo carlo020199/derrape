@@ -645,7 +645,7 @@ body.in-menu #touch-help,
   touch-action: pan-y;
 }
 .screen[hidden] { display: none; }
-/* Inicio: noche de la Laguna (luna Hueso con halo Ánima, estrellas y colinas lejanas) en vez de un fondo liso. Solo CSS. */
+/* Inicio (la sala tiene el card más alto y taparía la luna): noche de la Laguna (luna Hueso con halo Ánima, estrellas y colinas lejanas) en vez de un fondo liso. Solo CSS. */
 #home {
   background:
     radial-gradient(circle 31px at 76% 13%, var(--hueso) 0 29px, transparent 31px),

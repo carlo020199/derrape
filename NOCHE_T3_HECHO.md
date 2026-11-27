@@ -21,6 +21,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 8 · pantalla de inicio (UI).** El fondo liso de `#home` pasa a noche de la Laguna: luna Hueso con halo Ánima, estrellas y colinas Sombra/Ciruela, todo con gradientes CSS (sin imágenes ni coste de render). Captura en `docs/release-v1/capturas/menu-inicio.png`.
 
+- **Vuelta 9 · color del fuego del escape (C5).** En reposo el borde de la llama era Ascua (#D9362B); sumado al fondo morado salía rosa/magenta (se veía sobre todo en Medianoche). Ahora Llama→Brasa→Brasa, todo naranja. Turbo (Espectro/Ánima) sin cambios.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts
 - /workspace/derrape-release/docs/release-v1/capturas/ y /workspace/derrape-release/docs/screenshots/release1/ (regeneradas en cada vuelta)
