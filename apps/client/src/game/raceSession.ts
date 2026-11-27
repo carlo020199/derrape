@@ -26,6 +26,7 @@ import {
   formatTime,
   giveBoost,
   isBoosting,
+  isPadType,
   gridPose,
   hopHeight,
   needsRespawn,
@@ -76,7 +77,8 @@ import { Minimap } from "../render/minimap";
 import { createGradientSky, createMoon, lighten } from "../render/sky";
 import { createNameTag } from "../render/nameTag";
 import { showDriverOutline, type AutoQuality } from "../render/quality";
-import { Fire, TURBO_COLORS, paintExhaust, paintHair } from "../render/flames";
+import { Fire, TINT_COLORS, TURBO_COLORS, boostTint, paintExhaust, paintHair, type BoostTint } from "../render/flames";
+import { padColor } from "../render/groundBoost";
 import { HIT_SPARK, NITRO_SPARK } from "../render/sparks";
 import { THEMES } from "../render/themes";
 import { createTrackMesh } from "../render/trackMesh";
@@ -153,7 +155,12 @@ interface LocalRacer {
   stall: number;
   wrongWay: number;
   respawns: number;
+  /** Destello al pisar un turbo de suelo: tiempo restante (s) y tinte. */
+  flash?: { t: number; tint: BoostTint };
 }
+
+/** Duración del destello al pisar un turbo de suelo (s). */
+const PAD_FLASH = 0.32;
 
 /** Kart de otro jugador, que llega por red. */
 interface RemoteRacer {
@@ -669,6 +676,18 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       }
       r.bank = c.bank;
       r.y = s.airborne ? s.y : surfaceY(c) + s.climb;
+      // Turbos de suelo y aterrizajes: destello, chispas y sonido (solo suena el del jugador).
+      if (isPadType(s.surface) && !isPadType(r.prev.surface)) {
+        const tint = padColor(s.surface);
+        r.flash = { t: PAD_FLASH, tint };
+        fire.spark(new THREE.Vector3(s.x, r.y + 0.4, s.z), TINT_COLORS[tint].spark, tint === "tri" ? 18 : 12, 9);
+        if (r === player) sfx.pad(tint);
+      }
+      if (r.prev.airborne && !s.airborne) {
+        const boosted = r.prev.flightLandBoost;
+        if (r === player) sfx.landing(boosted);
+        fire.spark(new THREE.Vector3(s.x, r.y + 0.2, s.z), boosted ? PALETTE.espectro : PALETTE.huesoSombra, boosted ? 10 : 6, 5);
+      }
 
       const event = updateProgress(r.progress, track, c.distance, raceTime, laps);
       if (r === player) {
@@ -713,17 +732,18 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
   const localFlame = new THREE.Vector3(0, 0.28, -1).normalize();
   function paintKartFire(
     m: KartModel,
-    view: { driftDir: number; level: number; spinning: boolean; boosting: boolean },
+    view: { driftDir: number; level: number; spinning: boolean; boosting: boolean; tint?: BoostTint },
     time: number,
     dt: number,
   ) {
     const grow = 1;
+    const tint = view.tint ?? "blue";
     const mode = view.boosting ? "boost" : view.driftDir !== 0 && view.level > 0 ? "drift" : "idle";
-    const reach = (mode === "boost" ? 1.2 : mode === "drift" ? 0.45 : 0.35) * (m.detail ? 1 : 0.4);
+    const reach = (mode === "boost" ? (tint === "tri" ? 1.6 : tint === "orange" ? 1.4 : 1.2) : mode === "drift" ? 0.45 : 0.35) * (m.detail ? 1 : 0.4);
     for (const a of m.exhausts) {
       a.updateWorldMatrix(true, false);
       flameDir.copy(localFlame).transformDirection(a.matrixWorld);
-      paintExhaust(fire, a.getWorldPosition(flameAt), flameDir, m.flameLength * reach * grow, mode, time, dt);
+      paintExhaust(fire, a.getWorldPosition(flameAt), flameDir, m.flameLength * reach * grow, mode, time, dt, tint);
     }
     for (const a of m.lamps) {
       // Halo aditivo de los faros (sin luces reales).
@@ -760,6 +780,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       level: number;
       spinning: boolean;
       boosting: boolean;
+      tint?: BoostTint;
       shield: boolean;
       shieldLeft: number;
       finished: boolean;
@@ -939,6 +960,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           level: driftLevel(s),
           spinning: s.spinTime > 0,
           boosting: isBoosting(s),
+          tint: boostTint(s),
           shield: s.shieldTime > 0,
           shieldLeft: s.shieldTime,
           finished: r.progress.finishTime !== null,
@@ -946,6 +968,12 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
         dt,
         time,
       );
+      if (r.flash) {
+        // Destello al pisar el turbo: un sprite grande aditivo que se apaga en ~0,3 s.
+        r.flash.t -= dt;
+        if (r.flash.t <= 0) r.flash = undefined;
+        else fire.flame(flameAt.set(r.prev.x + (s.x - r.prev.x) * alpha, r.y + 0.5, r.prev.z + (s.z - r.prev.z) * alpha), TINT_COLORS[r.flash.tint].core, 3.4 * (r.flash.t / PAD_FLASH));
+      }
       const pitch = s.airborne
         ? Math.atan2(s.vy, Math.max(1, Math.abs(s.speed)))
         : Math.asin(Math.max(-1, Math.min(1, s.grade)));

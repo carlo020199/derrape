@@ -238,6 +238,56 @@ const rail = { velocidadMax: 0, mult: 0, capturas: [] as string[] };
   await page.close();
   await ctx1.close();
 }
+// --- Fase 6, VFX de turbos: flechas animadas (misma vista, dos instantes), destello al pisar y llama de cada turbo ---
+const vfx: Record<string, unknown> = {};
+{
+  const ctx1 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await ctx1.newPage();
+  hook(page, "flechas-animadas");
+  await page.goto(`${base}/?track=${TRACK}&foto=10,0,0`);
+  await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
+  await page.addStyleTag({ content: "#countdown, #wrong-way, #loading, #touch-help { display: none !important }" });
+  const frames: Buffer[] = [];
+  for (const n of [1, 2, 3]) {
+    await page.waitForTimeout(n === 1 ? 2500 : 330);
+    const png = await page.screenshot({ path: `${out}/5${n}-flechas-animadas-${n}.png` });
+    frames.push(png);
+  }
+  // Si las flechas corren, los tres cuadros son distintos entre sí.
+  vfx.flechasAnimadas = frames[0]!.compare(frames[1]!) !== 0 && frames[1]!.compare(frames[2]!) !== 0;
+  await page.close();
+  await ctx1.close();
+}
+for (const [clave, desde, superficie, tint] of [
+  ["azul", 0, "boostBlue", "blue"],
+  ["naranja", 440, "boostOrange", "orange"],
+] as const) {
+  const ctx1 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await ctx1.newPage();
+  hook(page, `destello-${clave}`);
+  await page.goto(`${base}/?track=${TRACK}&foto=${desde},0,0&correr=bot`);
+  await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
+  await page.addStyleTag({ content: "#countdown, #wrong-way, #loading, #touch-help { display: none !important }" });
+  const t0 = Date.now();
+  let hecho = false;
+  while (Date.now() - t0 < 60000 && !hecho) {
+    const k = (await page.evaluate(() => {
+      const e = (window as unknown as { __escena: { kart: { surface: string; boostMult: number } } }).__escena.kart;
+      return { surface: e.surface, mult: e.boostMult };
+    })) as { surface: string; mult: number };
+    if (k.surface.startsWith(superficie)) {
+      await page.screenshot({ path: `${out}/5${clave === "azul" ? 4 : 6}-destello-${clave}.png` });
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${out}/5${clave === "azul" ? 5 : 7}-llama-${clave}.png` });
+      vfx[clave] = { tinte: tint, mult: k.mult };
+      hecho = true;
+    }
+    await page.waitForTimeout(25);
+  }
+  if (!hecho) errors.push(`[destello-${clave}] el piloto automático no pisó ${superficie}`);
+  await page.close();
+  await ctx1.close();
+}
 // --- Rampas gigantes recorridas de verdad: el piloto automático sube a la plataforma (XL a 1.420 m) y salta la XL de la diagonal (770 m) ---
 type VueloXL = { despegue: number; aterriza?: number; y?: number; cae?: boolean };
 const gigantes: Record<string, { vuelos: VueloXL[]; capturas: string[] }> = {};
@@ -321,7 +371,7 @@ const caida = { reaparecio: false, along: 0, groundY: 0, surface: "", respawns: 
 await browser.close();
 
 const vmax = Math.max(...speeds.map((s) => s.kmh));
-const summary = { errores: errors, cadena3S: cadena, railTriturbo: rail, gigantes, caidaPlataforma: caida, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
+const summary = { errores: errors, vfxTurbos: vfx, cadena3S: cadena, railTriturbo: rail, gigantes, caidaPlataforma: caida, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
 writeFileSync(`${out}/smoke.json`, JSON.stringify({ ...summary, velocidades: speeds }, null, 1));
 console.log(JSON.stringify(summary, null, 1));
 const cadenaOk = cadena.vuelos.length >= 3 && cadena.vuelos.slice(0, 3).every((v) => v.aterriza !== undefined && v.mult === 1.5 && (v.time ?? 0) > 0.3);
@@ -334,4 +384,6 @@ const diagOk = (gigantes.diagonal?.vuelos[0]?.aterriza ?? 0) - (gigantes.diagona
 if (!diagOk) console.error("La rampa gigante de la diagonal no terminó en un salto largo");
 const caidaOk = caida.reaparecio && caida.respawns === 1 && caida.surface === "road" && caida.groundY > 2.5 && caida.along > 1486 && caida.along < 1502;
 if (!caidaOk) console.error("Caer de la plataforma no reapareció bien en la meseta");
-process.exit(errors.length || !cadenaOk || !railOk || !platOk || !diagOk || !caidaOk ? 1 : 0);
+const vfxOk = vfx.flechasAnimadas === true && !!vfx.azul && !!vfx.naranja;
+if (!vfxOk) console.error("VFX de turbos: las flechas no se animan o no se pisó el azul/naranja");
+process.exit(errors.length || !vfxOk || !cadenaOk || !railOk || !platOk || !diagOk || !caidaOk ? 1 : 0);

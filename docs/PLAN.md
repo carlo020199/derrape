@@ -137,7 +137,8 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   - [x] CN·Fase 3 — Raíl triturbo ×3 (50 m, del ancho de un kart) con barrido de cajas/aceite a 78 m/s.
   - [x] CN·Fase 4 — Rampas gigantes XL (a la plataforma flotante y la que termina en salto) y plataforma como tramo elevado de la pista con zonas `fall`.
   - [x] CN·Fase 5 — Asfalto pintado decorativo rosa y morado entre tramos (sin efecto de juego, 1 llamada de dibujo).
-  - [ ] CN·Fases 6–8 — Cohete v2, arte de muebles, pulido.
+  - [x] CN·Fase 6 — Arte de fantasía del Desván (tema `desvan`: muebles gigantes, ambiente) + VFX/SFX de turbos (flechas animadas, destello, llamas por color, sonidos por código) + `PR.md`.
+  - [ ] CN·Fases 7–8 — Cohete v2, pulido.
 - [ ] **Después de la 1.0:** bots, contrarreloj con fantasma, circuitos espejo, más objetos.
 
 Consejo: aunque la 1.0 sea con todo el contenido, no esperes a tenerlo todo para probar: la sensación
