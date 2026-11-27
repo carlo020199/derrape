@@ -41,6 +41,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Probado y descartado · mantener el agua lejana elevada más tramo** (el fundido de `FAR_LIFT` de t = 0,6 a t = 0,82): laguna `a` 0,89 % / `b` 1,55 %, sin cambio. Tres vías (anchura, pendiente de orilla y tramo elevado) dan lo mismo: la limitación es la cresta de la calzada, no el agua.
 
+- **Por qué las nubes no necesitan ser traslúcidas.** El telón de fondo (cúpula, nubes, colinas) tiene que pintarse en el pase opaco, antes del mundo, para que el terreno lo tape bien; en ese pase no hay mezcla alfa. Lo único que la traslucidez aportaría es ver estrellas y luna a través de la nube, y los colores de la nube ya están elegidos contra el degradado del cielo. Se da por cerrado: no es una mejora pendiente.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
@@ -55,7 +57,6 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 - Laguna ancha visible desde la salida (C3 en `a`/`b`: 0,9 % / 1,5 % de píxeles): se mitigó con el resplandor del río (vuelta 12), pero la métrica no sube porque el agua sigue tapada por el final de la calzada elevada; un cambio real exige rediseñar la calzada o el terreno (en `d` pasa: 8,0 % / 7,3 %).
 - (Hecho en la vuelta 11: un árbol grande a la izquierda de la salida, abierto, que no tapa el campanario.)
 - Los «cortes» negros junto a la coleta de Lía no son un fallo del contorno: son la goma Noche (torus) entre el nudo y la cúpula, deliberada en el diseño.
-- Nubes opacas (no traslúcidas): probado en la vuelta 12 bis; las colinas y el terreno, opacos, se pintan antes y las nubes traslúcidas se cuelan delante. Requiere reordenar el telón de fondo.
 
 ## Cómo comprobarlo
 - `git log --oneline -12` (una vuelta por commit), `npm test` (191), `npm run lint`, `npm run build`, `npm run medir` (Laguna 55 llamadas · 92 688 tris).
