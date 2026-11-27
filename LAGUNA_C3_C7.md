@@ -24,3 +24,20 @@ Capturas y `metricas.json` en `docs/screenshots/release1-c3c7/{antes,despues}`.
 ## Pendiente
 - C3 en `a-salida` queda en 2,5 %: el objetivo (≥ 6 %) se cumple en `b`.
 - 60 fps en móvil real sin verificar (los ms/fotograma de las capturas son de render por software).
+
+## v2 (corrección tras la revisión de Dalí del PR 18)
+El río alto de la v1 flotaba en el cielo (una losa Espectro por encima del horizonte). Se retira: el río lejano vuelve a su altura original y **ningún píxel Espectro queda por encima de la línea de colinas**.
+
+- **C3**: la laguna se agranda hacia la salida (óvalo 62×72 en lugar de 78×38, desplazado 56 m hacia la salida) y la isleta del campanario baja de 19 a ~16 m, así que se ve desde la recta, a ras de suelo. La recta está en un terraplén 30 m por encima del valle y la propia calzada tapa el agua que queda justo delante, así que en a/b solo se ve una franja baja (≈ 1 %); en d la laguna ocupa el 18 %. Se prefiere esto a cualquier cosa flotante.
+- **C7**: arcén ancho de 7 m en la recta de salida (el terreno sigue a la altura de la calzada antes de caer) y orilla de la laguna en talud empinado junto a la salida; lomas de 3–6 m a 8–25 m del borde (nunca bajo rampas ni junto a la laguna); 80 arbolillos (6 agrupados en la recta de salida a 2–6 m del arcén, el resto a 4–11 m) que ahora se ven en las bandas laterales de a y b.
+- **Coste**: mismas llamadas de dibujo que main (61 en b, 74 en d); +2 000 / +3 400 triángulos (89 048 en b, 104 358 en d). Los ms por software dependen de la carga del equipo (main y esta rama dan lo mismo en la misma pasada: 74/110 vs 80/101).
+
+| Toma | Laguna % | Región plana mayor % | Llamadas | Triángulos |
+|---|---|---|---|---|
+| a-salida | 1,0 | 4,0 | 63 | 91 564 |
+| b-recta-campanario | 0,9 | 3,1 | 61 | 89 048 |
+| c-curva-valla | 0,5 | 2,8 | 66 | 97 934 |
+| d-laguna | 17,8 | 6,8 | 74 | 104 358 |
+| e-frontal | 0,6 | 7,2 | 58 | 92 668 |
+
+Capturas en `docs/screenshots/release1-c3c7/v2/`. No se alcanza ≥ 6 % de laguna en a/b sin flotar.

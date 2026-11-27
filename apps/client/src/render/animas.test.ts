@@ -42,10 +42,9 @@ function animasHeight(track: ReturnType<typeof buildTrackFromDef>) {
   }
   const waterY = low - 1.8;
   const spot = pointAt(track, 92, 16);
-  const road = pointAt(track, 92, 0);
   const lip2 = pointAt(track, big.to);
-  const mid = { x: (spot.x + lip2.x) / 2 - 2, z: Math.max(spot.z, lip2.z) + 15 };
-  return terrainHeightField(track, lagoonShape(mid, { x: spot.x, z: spot.z }), waterY, ANIMAS_GROUND_Y, { x: spot.x, z: spot.z, top: road.y - 6 });
+  const mid = { x: (spot.x + lip2.x) / 2 + 6, z: Math.max(spot.z, lip2.z) - 56 };
+  return terrainHeightField(track, lagoonShape(mid, { x: spot.x, z: spot.z }), waterY, ANIMAS_GROUND_Y, { x: spot.x, z: spot.z, top: waterY + 14 });
 }
 
 describe("suelo de Ánimas", () => {

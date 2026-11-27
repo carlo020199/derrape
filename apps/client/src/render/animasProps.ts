@@ -373,11 +373,11 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
 }
 
 /**
- * Arbolillos de relleno a los dos lados de la pista, a 8–25 m del borde exterior del arcén: los laterales de las curvas y de la recta
+ * Arbolillos de relleno a los dos lados de la pista, a 6–15 m del eje, sobre las lomas bajas del terreno: los laterales de las curvas y de la recta
  * de salida no quedan vacíos. El modelo retorcido pequeño, repartido en sectores de pista con su propia
  * esfera de límites: lo que queda fuera de cámara no se dibuja (el presupuesto de triángulos no sube más que con lo visible).
  */
-export function createFillTrees(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, count = 56, sectors = 8): THREE.InstancedMesh[] {
+export function createFillTrees(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, count = 80, sectors = 8): THREE.InstancedMesh[] {
   const geos = treeGeometries();
   const mat = toonMaterial({ vertexColors: true });
   type Slot = { x: number; y: number; z: number; model: number; s: number; rot: number; sector: number };
@@ -387,18 +387,23 @@ export function createFillTrees(track: Track, height: (x: number, z: number) => 
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   };
-  const stride = track.length / count;
+  // Una parte va agrupada en la recta de salida (los dos laterales de a y b); el resto, repartida por la pista.
+  const starts: number[] = [];
+  for (let i = 0; i < 6; i++) starts.push(14 + i * 17 + rnd() * 4);
+  const stride = track.length / (count - starts.length);
   for (let i = 0; i < count; i++) {
-    const d = (i * stride + rnd() * stride * 0.7) % track.length;
+    const near = i < starts.length;
+    const d = near ? (starts[i]! + track.length) % track.length : ((i - starts.length) * stride + rnd() * stride * 0.7) % track.length;
     const side = i % 2 === 0 ? 1 : -1;
     const p = pointAt(track, d);
-    const lat = side * (p.width / 2 + track.verge + 8 + rnd() * 17);
+    // 6–15 m del eje de la pista contando el arcén: en las lomas que se levantan junto a la calzada.
+    const lat = side * (p.width / 2 + track.verge + (near ? 2.2 + rnd() * 3.5 : 4 + rnd() * 7));
     const at = pointAt(track, d, lat);
     const c = closestPoint(track, at.x, at.z);
     // Más cerca de otro tramo de pista que de este (cruces a distinto nivel): no se planta.
-    if (Math.abs(c.lateral) < c.width / 2 + track.verge + 6) continue;
+    if (Math.abs(c.lateral) < c.width / 2 + track.verge + 1.5) continue;
     if (!lagoonClear(at.x, at.z)) continue;
-    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: 2, s: 0.9 + rnd() * 0.7, rot: rnd() * Math.PI * 2, sector: Math.floor((d / track.length) * sectors) });
+    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: 2, s: 0.85 + rnd() * 0.4, rot: rnd() * Math.PI * 2, sector: Math.floor((d / track.length) * sectors) });
   }
   const out: THREE.InstancedMesh[] = [];
   const m = new THREE.Matrix4();
