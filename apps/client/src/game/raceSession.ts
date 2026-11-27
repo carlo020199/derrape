@@ -392,7 +392,17 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     player.race = createRaceKart(player.race.id, s, track);
     player.prev = { ...s };
     countdown = -1e6;
-    (window as unknown as { __escena: unknown }).__escena = { scene, camera, renderer };
+    // ?correr (con ?foto): sin cuenta atrás, el kart conduce desde ese punto (smoke de rampas y turbos).
+    if (new URLSearchParams(location.search).has("correr")) phase = "racing";
+    // `kart` (solo con ?foto): estado vivo del kart, para que el smoke compruebe saltos y turbos.
+    (window as unknown as { __escena: unknown }).__escena = {
+      scene,
+      camera,
+      renderer,
+      get kart() {
+        return player.race.state;
+      },
+    };
     // Los demás, detrás de la cámara.
     locals.filter((r) => r !== player).forEach((r, i) => {
       const b = pointAt(track, ((d ?? 0) - 40 - i * 8 + track.length) % track.length);

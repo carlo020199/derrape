@@ -62,7 +62,7 @@ function botLap(track: Track): { time: number | null; respawns: number; aterriza
 }
 
 /** Recta larga con relieve y una rampa S (labio en 100 m). */
-function rectaConRampa(landBoost: boolean): Track {
+function rectaConRampa(landBoost: boolean, azulDesde?: number): Track {
   const def: TrackDef = {
     id: "t",
     name: "t",
@@ -84,13 +84,16 @@ function rectaConRampa(landBoost: boolean): Track {
     ],
     itemRows: [],
     seed: 1,
-    zones: [{ type: "ramp", size: "S", from: 96 / 2900, to: 100 / 2900, landBoost }],
+    zones: [
+      { type: "ramp", size: "S", from: 96 / 2900, to: 100 / 2900, landBoost },
+      ...(azulDesde === undefined ? [] : [{ type: "boostBlue" as const, from: azulDesde / 2900, to: (azulDesde + 40) / 2900 }]),
+    ],
   };
   return buildTrackFromDef(def);
 }
 
 /** Sube un kart a la rampa a velocidad normal y devuelve el estado justo al aterrizar. */
-function aterrizar(track: Track, antes?: (s: KartState) => void): KartState {
+function aterrizar(track: Track, antes?: (s: KartState) => void, pasosDespues = 0): KartState {
   const pose = pointAt(track, 60);
   const s = createKart(pose.x, pose.z, pose.heading);
   s.speed = 26;
@@ -98,7 +101,11 @@ function aterrizar(track: Track, antes?: (s: KartState) => void): KartState {
   let was = false;
   for (let i = 0; i < 60 * 8; i++) {
     stepKartOnTrack(s, { steer: 0, throttle: true, brake: false, drift: false }, PHYSICS_DT, track);
-    if (was && !s.airborne) return s;
+    if (was && !s.airborne) {
+      // El turbo de suelo se lee de la superficie en el paso siguiente: se dan unos pasos a fondo tras tocar suelo.
+      for (let k = 0; k < pasosDespues; k++) stepKartOnTrack(s, { steer: 0, throttle: true, brake: false, drift: false }, PHYSICS_DT, track);
+      return s;
+    }
     was = s.airborne;
   }
   throw new Error("el kart no llegó a saltar");
@@ -127,6 +134,27 @@ describe("rampas-mueble: turbo al aterrizar", () => {
     // Y el turbo de aterrizaje es el mayor frente a un mini-turbo (×1,3): ×1,5, no ×1,5×1,3.
     const mini = aterrizar(rectaConRampa(true), (s) => giveBoost(s, 5, KART.boostSpeedMult));
     expect(mini.boostMult).toBe(1.5);
+  });
+
+  it("aterrizar DENTRO de un turbo azul de suelo (×1,5) no se apila: sigue ×1,5 y dura lo del azul", () => {
+    // La S vuela ≈ 17 m desde el labio (100 m): el azul de 105 a 145 m cubre el aterrizaje.
+    const track = rectaConRampa(true, 105);
+    const s = aterrizar(track, undefined, 3);
+    expect(s.surface).toBe("boostBlue");
+    expect(s.boostMult).toBe(PADS.boostBlue.mult);
+    expect(s.boostMult).toBe(LANDING.mult);
+    // El azul (1,5 s) manda sobre el aterrizaje (0,5 s): la duración es la mayor, nunca la suma.
+    expect(s.boostTime).toBeGreaterThan(LANDING.time + 0.5);
+    expect(s.boostTime).toBeLessThanOrEqual(PADS.boostBlue.time);
+  });
+
+  it("aterrizar dentro de un naranja de suelo (×1,75) conserva el naranja", () => {
+    const track = rectaConRampa(true, 105);
+    const orange = { ...track, zones: track.zones.map((z) => (z.type === "boostBlue" ? { ...z, type: "boostOrange" as const } : z)) };
+    const s = aterrizar(orange, undefined, 3);
+    expect(s.surface).toBe("boostOrange");
+    expect(s.boostMult).toBe(PADS.boostOrange.mult);
+    expect(s.boostTime).toBeGreaterThan(2);
   });
 
   it("el kart acelera de verdad hacia ×1,5 tras aterrizar", () => {
