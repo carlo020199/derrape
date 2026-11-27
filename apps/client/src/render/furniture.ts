@@ -24,7 +24,7 @@ const HALF = 8;
 const FLANK = 12.4;
 const LIFT = 0.04;
 
-class Pieces {
+export class Pieces {
   readonly list: THREE.BufferGeometry[] = [];
   add(g: THREE.BufferGeometry, color: number) {
     const flat = g.index ? g.toNonIndexed() : g;
@@ -41,6 +41,12 @@ class Pieces {
   box(m: THREE.Matrix4, w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0, rotY = 0) {
     const g = new THREE.BoxGeometry(w, h, d);
     g.applyMatrix4(new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y + h / 2, z));
+    g.applyMatrix4(m);
+    this.add(g, color);
+  }
+  /** Cualquier geometría ya construida, con su centro en (x, y, z) del marco `m`. */
+  solid(m: THREE.Matrix4, g: THREE.BufferGeometry, color: number, x: number, y: number, z: number, rotY = 0) {
+    g.applyMatrix4(new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y, z));
     g.applyMatrix4(m);
     this.add(g, color);
   }

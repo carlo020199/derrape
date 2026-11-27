@@ -16,7 +16,8 @@ export type ThemeId =
   | "canon"
   | "volcan"
   | "neon"
-  | "animas";
+  | "animas"
+  | "desvan";
 
 export interface ZoneDef {
   type: ZoneType;

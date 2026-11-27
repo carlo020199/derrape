@@ -3,6 +3,7 @@ import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type 
 import { createAnimasMoon, createClouds, createHaze, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 import { createFences, createFireflies, createLanterns, createRocks, createTrees } from "./animasProps";
+import { desvanScenery } from "./desvanProps";
 import { groundBoostMesh } from "./groundBoost";
 import { furnitureMesh } from "./furniture";
 import { paintedAsphaltMesh } from "./paintedAsphalt";
@@ -788,7 +789,10 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     scene.add(fences.posts, fences.rope);
   }
 
-  if (!towerPlaced) placeTower(spot.y);
+  if (def.theme === "desvan") {
+    // Sin campanario ni laguna: muebles gigantes de juguete a los lados (una malla por celda de 170 m).
+    for (const mesh of desvanScenery(track, def)) scene.add(mesh);
+  } else if (!towerPlaced) placeTower(spot.y);
 
   const pumpkinMark = def.landmarks?.find((m) => m.kind === "calabaza");
   if (pumpkinMark && clear(track, pumpkinMark.x, pumpkinMark.z, 0)) {

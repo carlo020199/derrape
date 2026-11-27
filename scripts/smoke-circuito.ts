@@ -9,7 +9,7 @@ import { chromium, type Page } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const base = process.argv[2] ?? "http://localhost:5173";
-const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase5";
+const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase6";
 const TRACK = "desvan-de-las-maravillas";
 mkdirSync(out, { recursive: true });
 
@@ -44,6 +44,15 @@ const SHOTS = [
   { name: "34-morada-desde-pista", foto: "1160,-5,0" }, // en la diagonal F, la morada queda al sur
   { name: "35-rosa-lateral", foto: "0,0,0&vista=-60,14,-170,-119,0,-199", libre: true },
   { name: "36-morada-lateral", foto: "0,0,0&vista=75,12,-215,39,0,-231", libre: true },
+  // Fase 6: decorado de muebles gigantes (cámara de carrera) y vistas libres con niebla.
+  { name: "40-decorado-salida", foto: "20,0,0" },
+  { name: "41-decorado-recta", foto: "200,0,0" },
+  { name: "42-decorado-curva-norte", foto: "420,-3,0" },
+  { name: "43-decorado-eses", foto: "620,0,0" },
+  { name: "44-decorado-diagonal", foto: "860,0,0" },
+  { name: "45-decorado-inferior", foto: "1620,0,0" },
+  { name: "46-decorado-libre-1", foto: "0,0,0&vista=-150,60,-60,-170,10,60", libre: true },
+  { name: "47-decorado-libre-2", foto: "0,0,0&vista=100,70,150,180,10,20", libre: true },
 ];
 // SOLO_CAPTURAS=1: solo las capturas fijas (para ajustar vistas rápido).
 const soloCapturas = process.env.SOLO_CAPTURAS === "1";
@@ -64,6 +73,7 @@ const hook = (page: Page, label: string) => {
 const info: Record<string, unknown> = {};
 // --- Capturas fijas ---
 for (const shot of SHOTS) {
+  if (process.env.FILTRO && !new RegExp(process.env.FILTRO).test(shot.name)) continue;
   const page = await ctx.newPage();
   hook(page, shot.name);
   await page.goto(`${base}/?track=${TRACK}&foto=${shot.foto}`);
