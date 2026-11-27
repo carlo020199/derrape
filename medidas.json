@@ -250,6 +250,22 @@
         }
       },
       "pendiente": "fps reales en iPhone/Android: pendiente de prueba en dispositivo"
+    },
+    "pulidoT3": {
+      "fecha": "2026-11-27",
+      "nota": "Vueltas de la noche del 27/11: farolillos con tapas de Sombra y halo suave, bruma baja, neumáticos con aro de flanco, escape con más sprites, HUD sin «/4», nubes de tres bandas, campanario ×2,1, 3 árboles grandes a la derecha de la salida.",
+      "lagunaLlamadas": 55,
+      "lagunaTriangulos": 92688,
+      "rendererInfoCapturas": {
+        "llamadas": "48–64",
+        "triangulos": "99 582–106 702 (máximo en d-laguna)"
+      },
+      "antes": {
+        "lagunaLlamadas": 54,
+        "lagunaTriangulos": 89762
+      },
+      "dentroDePresupuesto": true,
+      "fps": "pendiente de prueba en dispositivo"
     }
   }
 }
