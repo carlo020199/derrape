@@ -164,6 +164,29 @@ float oil = mn(vec2(vRoad.y * 0.16, vRoad.x * 0.55 + 31.0));
 float oilZone = max(1.0 - smoothstep(0.0, 1.6, abs(vRoad.x)), rut);
 mottle *= 1.0 - 0.55 * smoothstep(0.58, 0.66, oil) * (0.45 + 0.55 * oilZone);
 mottle *= mix(0.38, 1.0, smoothstep(0.0, 2.2, vRoad.z - abs(vRoad.x)));
+// Gravilla y esquirlas de hueso: puntos redondos sueltos y claros en celdas del suelo, en dos capas para que el plano liso
+// se rompa a cualquier distancia: fina (celdas de 33 cm, hasta ~35 m) y gruesa (celdas de 1 m, de 7 a ~55 m).
+// Se desvanecen con la distancia para no brillar como estática.
+float cam = distance(vWP, cameraPosition);
+float edgeW = smoothstep(0.5, 1.8, vRoad.z - abs(vRoad.x));
+{
+  vec2 cell = vWP.xz * 3.0;
+  vec2 ci = floor(cell);
+  vec2 off = vec2(mh(ci + 1.7), mh(ci + 5.1)) * 0.5 + 0.25;
+  float rad = 0.18 + 0.14 * mh(ci + 9.9);
+  float aa = max(fwidth(cell.x), fwidth(cell.y));
+  float dot_ = (1.0 - smoothstep(rad - aa, rad + aa, length(fract(cell) - off))) * step(0.55, mh(ci + 7.3));
+  mottle += 1.6 * dot_ * (1.0 - smoothstep(24.0, 40.0, cam)) * edgeW * (0.7 + 0.6 * mh(ci + 3.3));
+}
+{
+  vec2 cell = vWP.xz * 1.0 + 40.0;
+  vec2 ci = floor(cell);
+  vec2 off = vec2(mh(ci + 2.9), mh(ci + 6.1)) * 0.4 + 0.3;
+  float rad = 0.14 + 0.1 * mh(ci + 4.4);
+  float aa = max(fwidth(cell.x), fwidth(cell.y));
+  float dot_ = (1.0 - smoothstep(rad - aa, rad + aa, length(fract(cell) - off))) * step(0.5, mh(ci + 8.8));
+  mottle += 1.2 * dot_ * smoothstep(6.0, 12.0, cam) * (1.0 - smoothstep(34.0, 56.0, cam)) * edgeW * (0.7 + 0.6 * mh(ci + 5.5));
+}
 diffuseColor.rgb *= mottle;`,
       )
       // El emisivo aporta casi toda la luz del asfalto: también lleva las manchas.
@@ -222,13 +245,14 @@ export function animasTerrainMaterial(): THREE.MeshToonMaterial {
     // en mundo (6 y 2 m) pintan manchas de borde duro: unas hundidas hacia Sombra y otras claras hacia Ánima #9B6BFF.
     mat.onBeforeCompile = (shader) => {
       shader.vertexShader = shader.vertexShader
-        .replace("#include <common>", "#include <common>\nvarying vec2 vPatch;")
-        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvPatch = (modelMatrix * vec4(transformed, 1.0)).xz;");
+        .replace("#include <common>", "#include <common>\nvarying vec2 vPatch;\nvarying float vWY;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvec4 wp = modelMatrix * vec4(transformed, 1.0);\nvPatch = wp.xz;\nvWY = wp.y;");
       shader.fragmentShader = shader.fragmentShader
         .replace(
           "#include <common>",
           `#include <common>
 varying vec2 vPatch;
+varying float vWY;
 float ph(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float pn(vec2 p) {
   vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -241,7 +265,12 @@ float pn(vec2 p) {
 float patchDark = smoothstep(0.56, 0.6, pn(vPatch * 0.16 + 3.0) * 0.7 + pn(vPatch * 0.41 + 17.0) * 0.3);
 float patchLight = smoothstep(0.64, 0.68, pn(vPatch * 0.31 + 11.0) * 0.6 + pn(vPatch * 0.9 + 5.0) * 0.4);
 diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.6, 0.52, 0.78), patchDark * 0.95);
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.61, 0.42, 1.0), patchLight * 0.3);`,
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.61, 0.42, 1.0), patchLight * 0.3);
+// Colinas escalonadas: una terraza cada 2,4 m de altura, con el borde de abajo oscuro. Desaparece donde las bandas son más finas que un píxel.
+float terr = vWY / 2.4;
+float tb = fract(terr);
+float tFade = 1.0 - smoothstep(0.12, 0.4, fwidth(terr));
+diffuseColor.rgb *= 1.0 - 0.34 * tFade * (1.0 - smoothstep(0.0, 0.16, tb));`,
         );
     };
     animasTerrain = markShared(mat);

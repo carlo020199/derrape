@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
 import { createAnimasMoon, createClouds, createHaze, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
-import { createFences, createFireflies, createLanterns, createRocks, createTrees } from "./animasProps";
+import { createFences, createFillTrees, createFireflies, createLanterns, createRocks, createTrees } from "./animasProps";
 import { groundBoostMesh } from "./groundBoost";
 import { furnitureMesh } from "./furniture";
 import { paintedAsphaltMesh } from "./paintedAsphalt";
@@ -311,7 +311,7 @@ function boostMarks(track: Track) {
  * más un óvalo bajo el salto. `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma).
  * Las posiciones están en mundo (x, z); el mesh solo pone la altura.
  */
-const FAR_LIFT = 22;
+const FAR_LIFT = 74;
 
 export interface LagoonShape {
   mid: { x: number; z: number };
@@ -348,16 +348,16 @@ export function lagoonShape(mid: { x: number; z: number }, end: { x: number; z: 
   // salida, y entra en el óvalo por debajo de la calzada (el talud lo tapa).
   const far = new THREE.CatmullRomCurve3(
     [
-      [-300, 440, 45],
-      [-170, 400, 50],
-      [-60, 382, 56],
-      [40, 376, 52],
-      [60, 300, 36],
+      [-300, 400, 45],
+      [-170, 360, 50],
+      [-60, 342, 56],
+      [40, 336, 52],
+      [60, 290, 36],
       [mid.x + 6, 250, 24],
       [mid.x, mid.z + rz * 0.6, 14],
     ].map(([x, z]) => new THREE.Vector3(x, 0, z)),
   );
-  const halfs = [60, 68, 76, 70, 44, 26, 14];
+  const halfs = [80, 90, 98, 90, 58, 32, 14];
   const arm: LagoonShape["rivers"][number] = [];
   for (let i = 0; i <= 40; i++) {
     const t = i / 40;
@@ -779,6 +779,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
 
     // Árboles, farolillos y vallas de hueso. `height` es el mismo terreno que se dibuja.
     for (const mesh of createTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
+    for (const mesh of createFillTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
     scene.add(createRocks(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8));
     const lanterns = createLanterns(track, height, { x: shape.mid.x, z: shape.mid.z, y: waterY, rx: shape.rx, rz: shape.rz });
     scene.add(lanterns.bodies, lanterns.halos);
