@@ -179,6 +179,62 @@ describe("rampas-mueble: turbo al aterrizar", () => {
   });
 });
 
+/** Recta larga plana con rampas `size` a partir de `desde`, con los huecos labio→rampa dados (mismo montaje que `herramientas/cadenas.mts` del plan). */
+function cadenaEnRecta(size: "S" | "M", huecos: number[]): Salto[] {
+  const len = size === "S" ? 4 : 8;
+  const zones: TrackDef["zones"] = [];
+  let d = 120;
+  for (let i = 0; i <= huecos.length; i++) {
+    zones!.push({ type: "ramp", size, from: d / 2900, to: (d + len) / 2900, landBoost: true });
+    d += len + (huecos[i] ?? 0);
+  }
+  const base = rectaConRampa(true);
+  const def = { ...base, zones: [] } as Track;
+  const track: Track = { ...def, zones: zones!.map((z) => ({ type: z.type, size: z.size, landBoost: z.landBoost, from: z.from * 2900, to: z.to * 2900, lateralMin: -30, lateralMax: 30 })) };
+  const pose = pointAt(track, 60);
+  const s = createKart(pose.x, pose.z, pose.heading);
+  s.speed = 26;
+  const out: Salto[] = [];
+  let was = false;
+  let takeoff = 0;
+  for (let i = 0; i < 60 * 14; i++) {
+    const c = stepKartOnTrack(s, { steer: 0, throttle: true, brake: false, drift: false }, PHYSICS_DT, track);
+    if (s.airborne && !was) takeoff = c.distance;
+    if (!s.airborne && was) out.push({ despegue: takeoff, aterriza: c.distance, boost: { time: s.boostTime, mult: s.boostMult } });
+    was = s.airborne;
+    if (c.distance > 450) break;
+  }
+  return out;
+}
+
+describe("rampas-mueble: vuelos de diseño (los números de herramientas/cadenas.mts del plan)", () => {
+  it("S sola a 26 m/s vuela ≈ 17 m y M sola ≈ 24 m", () => {
+    const s = cadenaEnRecta("S", [])[0]!;
+    const m = cadenaEnRecta("M", [])[0]!;
+    expect(s.aterriza - s.despegue).toBeGreaterThan(15);
+    expect(s.aterriza - s.despegue).toBeLessThan(19);
+    expect(m.aterriza - m.despegue).toBeGreaterThan(22);
+    expect(m.aterriza - m.despegue).toBeLessThan(26);
+  });
+
+  it("S×3 con huecos 26/42 (los del plan): vuelos ≈ 17 → 32 → 32 m, cada uno con ×1,5", () => {
+    const v = cadenaEnRecta("S", [26, 42]);
+    expect(v).toHaveLength(3);
+    const largo = v.map((x) => x.aterriza - x.despegue);
+    expect(largo[0]).toBeGreaterThan(15);
+    expect(largo[0]).toBeLessThan(19);
+    expect(largo[1]).toBeGreaterThan(29);
+    expect(largo[1]).toBeLessThan(35);
+    expect(largo[2]).toBeGreaterThan(29);
+    expect(largo[2]).toBeLessThan(35);
+    for (const x of v) expect(x.boost.mult).toBe(1.5);
+  });
+
+  it("M×2 con hueco 32: encadena los dos saltos", () => {
+    expect(cadenaEnRecta("M", [32])).toHaveLength(2);
+  });
+});
+
 describe("Desván: cadenas de rampas-mueble", () => {
   it("hay 6 rampas S/M con landBoost: cadena de 3 S en la recta de meta, S sola, cadena de 2 M", async () => {
     const { track } = await load();
