@@ -39,6 +39,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Por qué la laguna de `a`/`b` es una franja (medido).** Cámara de `a-salida` en y = 39; el río lejano está a y = 24 y a 270–460 m: su banda subtiende solo ≈ 1° (≈ 22 px a 390×844 @2x). Para engrosarla hay que acercar o subir el agua (se probó y empeoraba el aspecto) o cambiar el ángulo de cámara; ninguna es una mejora barata y compatible con las consignas.
 
+- **Probado y descartado · mantener el agua lejana elevada más tramo** (el fundido de `FAR_LIFT` de t = 0,6 a t = 0,82): laguna `a` 0,89 % / `b` 1,55 %, sin cambio. Tres vías (anchura, pendiente de orilla y tramo elevado) dan lo mismo: la limitación es la cresta de la calzada, no el agua.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
