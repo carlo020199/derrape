@@ -43,6 +43,22 @@ interface Slot {
 
 export const TURBO_COLORS = [PALETTE.turbo1, PALETTE.turbo2, PALETTE.turbo3] as const;
 
+/** Color de la llama de turbo según su fuente: azul (mini-turbo, turbo azul, nitro…), naranja (×1,75) o triturbo (×3). */
+export type BoostTint = "blue" | "orange" | "tri";
+
+/** Núcleo, medio y borde de la llama de cada turbo. Naranja: de Llama a Brasa; triturbo: blanco con Espectro y Ánima. */
+export const TINT_COLORS: Record<BoostTint, { core: number; mid: number; edge: number; spark: number }> = {
+  blue: { core: PALETTE.espectro, mid: PALETTE.espectro, edge: PALETTE.anima, spark: PALETTE.espectro },
+  orange: { core: PALETTE.llama, mid: PALETTE.brasa, edge: PALETTE.brasa, spark: PALETTE.llama },
+  tri: { core: PALETTE.texto, mid: PALETTE.anima, edge: PALETTE.espectro, spark: PALETTE.anima },
+};
+
+/** Tinte de la llama según el estado del kart: el raíl manda sobre el naranja y este sobre el azul. */
+export function boostTint(s: { triTime: number; boostMult: number }): BoostTint {
+  if (s.triTime > 0) return "tri";
+  return s.boostMult >= 1.7 ? "orange" : "blue";
+}
+
 export class Fire {
   readonly mesh: THREE.InstancedMesh;
   private slots: Slot[] = [];
@@ -211,14 +227,18 @@ export function paintExhaust(
   mode: "idle" | "drift" | "boost",
   time: number,
   dt = 0,
+  tint: BoostTint = "blue",
 ) {
   const boost = mode === "boost";
   const turbo = boost || mode === "drift";
-  // Reposo: Llama en la boca y Brasa en medio y en la punta (el Ascua rojo sumado al morado de fondo viraba a rosa). Turbo: Espectro con borde Ánima.
-  const core = turbo ? PALETTE.espectro : PALETTE.llama;
-  const mid = turbo ? PALETTE.espectro : PALETTE.brasa;
-  const edge = turbo ? PALETTE.anima : PALETTE.brasa;
-  const n = boost ? 12 : 9;
+  // Reposo: Llama en la boca y Brasa en medio y en la punta (el Ascua rojo sumado al morado de fondo viraba a rosa).
+  // Turbo: color de su fuente (azul Espectro con borde Ánima, naranja Llama→Brasa, triturbo blanco/Ánima/Espectro).
+  // El derrape carga con la llama azul; solo el turbo en marcha usa el tinte.
+  const t = TINT_COLORS[boost ? tint : "blue"];
+  const core = turbo ? t.core : PALETTE.llama;
+  const mid = turbo ? t.mid : PALETTE.brasa;
+  const edge = turbo ? t.edge : PALETTE.brasa;
+  const n = boost ? (tint === "tri" ? 15 : 12) : 9;
   _side.set(dir.z, 0, -dir.x);
   if (_side.lengthSq() < 1e-4) _side.set(1, 0, 0);
   _side.normalize();
@@ -238,7 +258,7 @@ export function paintExhaust(
     _puff.copy(at).addScaledVector(dir, length * 0.55);
     _side.copy(dir).multiplyScalar(length * 0.6);
     // Chispas Espectro que se despegan de la llama.
-    fire.puff(_puff, PALETTE.espectro, _side, length * (boost ? 0.12 : 0.07), 0.22);
+    fire.puff(_puff, boost ? t.spark : PALETTE.espectro, _side, length * (boost ? 0.12 : 0.07), 0.22);
   }
 }
 

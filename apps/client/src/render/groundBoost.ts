@@ -13,6 +13,9 @@ export const CELL_WIDTH = 3;
 /** Altura sobre la calzada: por encima de la línea de borde (0,07) no hace falta; el polygonOffset hace el resto. */
 const LIFT = 0.05;
 
+/** Celdas por segundo que corren las flechas (una celda mide `CELL_LENGTH` m): ~3,75 m/s en los turbos y ~7,5 m/s en el raíl. */
+export const SCROLL_SPEED = { pad: 1.5, tri: 3 } as const;
+
 export type PadColor = "blue" | "orange" | "tri";
 
 export function padColor(type: PadType): PadColor {
@@ -78,12 +81,15 @@ function atlasTexture(): THREE.CanvasTexture {
     g.fillStyle = hex(color);
     g.fill();
   };
+  // Las fichas son periódicas en vertical (sin borde arriba ni abajo y con los chevrones repetidos cada 64 px):
+  // el shader las desplaza con `fract`, así que las flechas corren hacia delante sin costuras entre celdas.
   const tile = (x0: number, base: number) => {
-    g.fillStyle = hex(PALETTE.sombra);
-    g.fillRect(x0, 0, TILE, TILE);
     g.fillStyle = hex(base);
-    g.fillRect(x0 + 6, 6, 116, 116);
-    for (const y of [26, 74]) chevron(x0, y, PALETTE.texto, 44, 18);
+    g.fillRect(x0, 0, TILE, TILE);
+    g.fillStyle = hex(PALETTE.sombra);
+    g.fillRect(x0, 0, 8, TILE);
+    g.fillRect(x0 + TILE - 8, 0, 8, TILE);
+    for (const y of [6, 70]) chevron(x0, y, PALETTE.texto, 44, 18);
   };
   // Raíl: la ficha se estira a 2 m de ancho, así que los chevrones son estrechos y el borde (rieles) ocupa 1/6 a cada lado.
   const rail = (x0: number) => {
@@ -94,9 +100,11 @@ function atlasTexture(): THREE.CanvasTexture {
     g.fillRect(x0 + TILE - 10, 0, 6, TILE);
     g.fillStyle = hex(PALETTE.noche);
     g.fillRect(x0 + 18, 0, TILE - 36, TILE);
-    chevron(x0, 6, PALETTE.turbo1, 38, 12);
-    chevron(x0, 48, PALETTE.turbo2, 38, 12);
-    chevron(x0, 90, PALETTE.turbo3, 38, 12);
+    // Tres chevrones (Espectro, Llama, Ánima) cada 128/3 px; el último cruza el borde y se repite arriba.
+    const step = TILE / 3;
+    [PALETTE.turbo1, PALETTE.turbo2, PALETTE.turbo3].forEach((color, i) => {
+      for (const wrap of [0, -TILE]) chevron(x0, 4 + i * step + wrap, color, 38, 12);
+    });
   };
   tile(TILE * TILE_COLUMN.blue, PALETTE.espectro);
   tile(TILE * TILE_COLUMN.orange, PALETTE.brasa);
@@ -104,6 +112,7 @@ function atlasTexture(): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+  tex.wrapT = THREE.RepeatWrapping;
   return tex;
 }
 
@@ -140,8 +149,32 @@ export function groundBoostMesh(track: Track): THREE.Mesh | null {
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
   });
+  // Animación UV de las flechas: corren hacia delante dentro de cada celda (la ficha es periódica en v).
+  const uTime = { value: 0 };
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = uTime;
+    shader.fragmentShader = shader.fragmentShader
+      .replace("void main() {", "uniform float uTime;\nvoid main() {")
+      .replace(
+        "#include <map_fragment>",
+        /* glsl */ `
+          #ifdef USE_MAP
+            // Columna del atlas (0 azul, 1 naranja, 2 raíl): el raíl corre más deprisa.
+            float padCol = floor(vMapUv.x * 3.0 - 0.001);
+            float padSpeed = padCol > 1.5 ? ${SCROLL_SPEED.tri.toFixed(2)} : ${SCROLL_SPEED.pad.toFixed(2)};
+            vec2 padUv = vec2(vMapUv.x, fract(vMapUv.y - uTime * padSpeed));
+            // Gradientes originales: el salto de fract no debe elegir un mip bajo.
+            vec4 sampledDiffuseColor = textureGrad(map, padUv, dFdx(vMapUv), dFdy(vMapUv));
+            diffuseColor *= sampledDiffuseColor;
+          #endif
+        `,
+      );
+  };
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = "turbos-suelo";
   mesh.renderOrder = 1;
+  mesh.onBeforeRender = () => {
+    uTime.value = (performance.now() / 1000) % 1000;
+  };
   return mesh;
 }

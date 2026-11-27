@@ -178,7 +178,7 @@ const paint: PaintedAreaDef[] = [
 const def: TrackDef = {
   id: "desvan-de-las-maravillas",
   name: "Desván de las Maravillas",
-  theme: "animas",
+  theme: "desvan",
   laps: 3,
   width: WIDTH,
   verge: VERGE,

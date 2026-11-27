@@ -1058,6 +1058,21 @@ const animas: ThemeKit = {
   },
 };
 
+// Desván de las Maravillas: mismo cielo y calzada que Ánimas, con el aire más cálido (polvo de luz rosada)
+// y el decorado de muebles gigantes (desvanProps.ts) en vez del campanario y la laguna.
+const desvan: ThemeKit = {
+  ...animas,
+  sky: 0x241a3a,
+  horizon: 0x6a4a78,
+  skyHorizon: 0x8a5a86,
+  fog: [55, 200],
+  ground: 0x201838,
+  light: { hemiSky: 0xfff0e0, hemiGround: 0x6a4a78, hemi: 1.05, key: 0xffe2b8, keyIntensity: 1.1 },
+  decorate(scene, track, def) {
+    decorateAnimas(scene, track, def);
+  },
+};
+
 export const THEMES: Record<ThemeId, ThemeKit> = {
   pruebas: withDress("pruebas", pruebas),
   puerto: withDress("puerto", puerto),
@@ -1071,4 +1086,5 @@ export const THEMES: Record<ThemeId, ThemeKit> = {
   volcan: withDress("volcan", volcan),
   neon: withDress("neon", neon),
   animas,
+  desvan,
 };
