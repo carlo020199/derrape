@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
 import { createAnimasMoon, createClouds, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
-import { createFences, createLanterns, createTrees } from "./animasProps";
+import { createFences, createLanterns, createRocks, createTrees } from "./animasProps";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -742,6 +742,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
 
     // Árboles, farolillos y vallas de hueso. `height` es el mismo terreno que se dibuja.
     for (const mesh of createTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
+    scene.add(createRocks(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8));
     const lanterns = createLanterns(track, height, { x: shape.mid.x, z: shape.mid.z, y: waterY, rx: shape.rx, rz: shape.rz });
     scene.add(lanterns.bodies, lanterns.halos);
     if (lanterns.poles) scene.add(lanterns.poles);

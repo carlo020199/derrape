@@ -250,6 +250,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     colorAt: (d: number, bank: number) => THREE.Color,
     mat: THREE.Material,
     breaks: number[] = [],
+    roadCoords = false,
   ) {
     const rings: Ring[] = baseRings.slice();
     for (const b of breaks) if (b > 0 && b < track.length) rings.push(ringFor(b));
@@ -258,7 +259,9 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     const nor: number[] = [];
     const col: number[] = [];
     const idx: number[] = [];
-    const emit = (r: Ring, c: THREE.Color) => {
+    const roadAttr: number[] = [];
+    // `dist` es la distancia a lo largo de la pista (en el último tramo sigue creciendo en vez de volver a 0).
+    const emit = (r: Ring, c: THREE.Color, dist: number) => {
       const n = roadNormal(r.heading, r.grade, r.bank);
       const lx = Math.cos(r.heading);
       const lz = -Math.sin(r.heading);
@@ -271,6 +274,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
         pos.push(r.x + lx * o, r.y - off * Math.tan((r.bank * Math.PI) / 180) + lift, r.z + lz * o);
         nor.push(n.x, n.y, n.z);
         col.push(c.r, c.g, c.b);
+        roadAttr.push(off, dist, r.width / 2);
       }
       return base;
     };
@@ -282,8 +286,8 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
       const b = rings[(k + 1) % total]!;
       const dB = k === total - 1 ? track.length + b.d : b.d;
       const c = colorAt((a.d + dB) / 2, (a.bank + b.bank) / 2);
-      const aBase = prevColor && prevColor.equals(c) ? prevBase : emit(a, c);
-      const bBase = emit(b, c);
+      const aBase = prevColor && prevColor.equals(c) ? prevBase : emit(a, c, a.d);
+      const bBase = emit(b, c, dB);
       // Mismo orden de caras que antes: (a0, a1, b1) y (a0, b1, b0).
       idx.push(aBase, aBase + 1, bBase + 1, aBase, bBase + 1, bBase);
       prevColor = c;
@@ -293,6 +297,8 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
     geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+    // Metros desde el eje, distancia recorrida y semiancho: el asfalto pinta rodadas y borde oscuro con ellos.
+    if (roadCoords) geo.setAttribute("aRoad", new THREE.Float32BufferAttribute(roadAttr, 3));
     geo.setIndex(idx);
     const mesh = new THREE.Mesh(geo, mat);
     group.add(mesh);
@@ -310,7 +316,7 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
 
   // Asfalto y bordillos. En llano el realce es el de siempre (0,02 / 0,04).
   const roadMat = colors.animasAsphalt ? animasAsphaltMaterial() : sharedVertexToonDouble();
-  roadStrip((w) => -w / 2, (w) => w / 2, 0.02, 0.02, flat(new THREE.Color(colors.road)), roadMat);
+  roadStrip((w) => -w / 2, (w) => w / 2, 0.02, 0.02, flat(new THREE.Color(colors.road)), roadMat, [], !!colors.animasAsphalt);
   const innerA = colors.innerCurbA != null ? new THREE.Color(colors.innerCurbA) : null;
   const innerB = colors.innerCurbB != null ? new THREE.Color(colors.innerCurbB) : null;
   const curbA = new THREE.Color(colors.curbA);

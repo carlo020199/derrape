@@ -233,6 +233,23 @@
         "arboles": 38,
         "pilotoYkartCerca": 9754
       }
+    },
+    "c7_asfaltoYLaderas": {
+      "fecha": "2026-11-27",
+      "cambio": "Asfalto con rodadas, manchas de aceite y borde oscuro (shader, atributo aRoad); parches de color en el terreno (shader) y ~110 grupos de rocas pequeñas instanciadas (1 llamada, ~3 700 tris). Nubes: ya tenían borde claro (cdb652a), sin tocar.",
+      "antes": {
+        "lagunaLlamadas": 53,
+        "lagunaTriangulos": 86082
+      },
+      "despues": {
+        "lagunaLlamadas": 54,
+        "lagunaTriangulos": 89762,
+        "renderInfoCapturas": {
+          "llamadas": "46–62",
+          "triangulos": "96 136–103 280"
+        }
+      },
+      "pendiente": "fps reales en iPhone/Android: pendiente de prueba en dispositivo"
     }
   }
 }

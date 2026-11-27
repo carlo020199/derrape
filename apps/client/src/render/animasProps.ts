@@ -348,6 +348,69 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
   return out;
 }
 
+/** Roca pequeña de 20 caras con los vértices movidos (mismo desplazamiento en cada copia de un vértice): Niebla arriba, Sombra en los flancos. */
+function rockGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.IcosahedronGeometry(1, 0);
+  const pos = geo.getAttribute("position");
+  const top = new THREE.Color(PALETTE.niebla);
+  const side = new THREE.Color(SOMBRA);
+  const col = new Float32Array(pos.count * 3);
+  const jit = (x: number, y: number, z: number, k: number) => {
+    const h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + k * 11.13) * 43758.5453;
+    return h - Math.floor(h) - 0.5;
+  };
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const k = 1 + jit(x, y, z, 1) * 0.55;
+    pos.setXYZ(i, x * k, y * k * 0.62, z * k);
+    const c = side.clone().lerp(top, THREE.MathUtils.clamp(0.5 + y * 0.9, 0, 1));
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Rocas pequeñas (0,3–1,3 m) en las laderas junto a la pista: una sola malla instanciada, en grupos de 1 a 3.
+ * Rompen las zonas planas del terreno a los lados del encuadre sin acercarse al arcén.
+ */
+export function createRocks(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, groups = 110): THREE.InstancedMesh {
+  const slots: { x: number; y: number; z: number; s: number; sy: number; rot: number }[] = [];
+  let seed = 9173;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const stride = track.length / groups;
+  for (let g = 0; g < groups; g++) {
+    const d = (g * stride + rnd() * stride * 0.8) % track.length;
+    const side = g % 2 === 0 ? 1 : -1;
+    const p = pointAt(track, d);
+    const lat = side * (p.width / 2 + track.verge + 1.8 + rnd() * 9);
+    const n = 1 + Math.floor(rnd() * 3);
+    for (let k = 0; k < n; k++) {
+      const at = pointAt(track, d + (rnd() - 0.5) * 4, lat + (rnd() - 0.5) * 2.4);
+      const c = closestPoint(track, at.x, at.z);
+      if (Math.abs(c.lateral) < c.width / 2 + track.verge + 1.2) continue;
+      if (!lagoonClear(at.x, at.z)) continue;
+      const s = 0.3 + rnd() * rnd() * 1.1;
+      slots.push({ x: at.x, y: height(at.x, at.z) - s * 0.1, z: at.z, s, sy: 0.7 + rnd() * 0.7, rot: rnd() * Math.PI * 2 });
+    }
+  }
+  const mesh = new THREE.InstancedMesh(rockGeometry(), toonMaterial({ vertexColors: true }), Math.max(1, slots.length));
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  slots.forEach((r, i) => mesh.setMatrixAt(i, m.compose(new THREE.Vector3(r.x, r.y, r.z), q.setFromAxisAngle(up, r.rot), new THREE.Vector3(r.s, r.s * r.sy, r.s))));
+  mesh.count = slots.length;
+  mesh.frustumCulled = false;
+  mesh.name = "rocas";
+  return mesh;
+}
+
 const HALO_VERT = /* glsl */ `
 attribute vec3 aOffset;
 uniform float uTime;
