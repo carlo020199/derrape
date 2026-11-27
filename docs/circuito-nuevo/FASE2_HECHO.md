@@ -29,7 +29,7 @@ En `/workspace/derrape-circuito-capturas/fase2/`:
 - `/workspace/derrape-circuito-capturas/fase2/11-rampa-S-eses.png`
 - `/workspace/derrape-circuito-capturas/fase2/12-cadena-2M-antes.png`, `13-cadena-2M-entre.png`
 - `/workspace/derrape-circuito-capturas/fase2/14-rampa-lado.png` (cuña vista de lado con sillón y mesa)
-- `/workspace/derrape-circuito-capturas/fase2/15-cadena-en-vuelo-1.png`, `15-cadena-en-vuelo-2.png` (conduciendo la cadena de 3 S en el cliente)
+- `/workspace/derrape-circuito-capturas/fase2/15-cadena-en-vuelo-1.png`, `/workspace/derrape-circuito-capturas/fase2/15-cadena-en-vuelo-2.png`, `/workspace/derrape-circuito-capturas/fase2/15-cadena-en-vuelo-3.png` (los tres saltos de la cadena de 3 S en el cliente)
 - Las de la fase 1 regeneradas: `01-salida.png` … `07-vista-general.png`, `08-solitario-1..3.png`, y `smoke.json`.
 
 ## Decisiones tomadas
