@@ -134,7 +134,9 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
 - **Circuito nuevo (rama `circuito/nuevo`, plan en `docs/circuito-nuevo/`):**
   - [x] CN·Fase 1 — Trazado «Desván de las Maravillas» + turbos de suelo azul/naranja, jugable en práctica en solitario.
   - [x] CN·Fase 2 — Rampas-mueble del Desván: turbo de aterrizaje ×1,5 durante 0,5 s, cadenas de 2 y 3, visual de muebles viejos.
-  - [ ] CN·Fases 2–8 — Rampas-mueble, cohete v2, raíl triturbo, gigantes y plataforma, arte de muebles, pulido.
+  - [x] CN·Fase 3 — Raíl triturbo ×3 (50 m, del ancho de un kart) con barrido de cajas/aceite a 78 m/s.
+  - [x] CN·Fase 4 — Rampas gigantes XL (a la plataforma flotante y la que termina en salto) y plataforma como tramo elevado de la pista con zonas `fall`.
+  - [ ] CN·Fases 5–8 — Cohete v2, zonas rosa/morada decorativas, arte de muebles, pulido.
 - [ ] **Después de la 1.0:** bots, contrarreloj con fantasma, circuitos espejo, más objetos.
 
 Consejo: aunque la 1.0 sea con todo el contenido, no esperes a tenerlo todo para probar: la sensación

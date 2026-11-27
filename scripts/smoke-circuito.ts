@@ -1,4 +1,4 @@
-// Smoke del Desván de las Maravillas (fases 1 a 3: turbos de suelo, rampas-mueble y raíl triturbo) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
+// Smoke del Desván de las Maravillas (fases 1 a 4: turbos de suelo, rampas-mueble, raíl triturbo, rampas gigantes y plataforma) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
 // con un dedo simulado (CDP) mientras se vigilan los errores de consola.
 //
 // Uso (con el cliente en marcha: `npm run dev -w @derrape/client`):
@@ -9,7 +9,7 @@ import { chromium, type Page } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const base = process.argv[2] ?? "http://localhost:5173";
-const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase3";
+const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase4";
 const TRACK = "desvan-de-las-maravillas";
 mkdirSync(out, { recursive: true });
 
@@ -29,6 +29,14 @@ const SHOTS = [
   { name: "16-rail-antes", foto: "1780,0,0" }, // el raíl triturbo empieza en 1.812 m
   { name: "17-rail-dentro", foto: "1830,0,0" }, // encima del raíl
   { name: "18-rail-lado", foto: "1800,6,-15" }, // desde el lado: el raíl es una línea de 2 m en una calzada de 16
+  { name: "21-xl-plataforma-antes", foto: "1396,0,0" }, // rampa gigante que sube a la plataforma (1.420–1.436 m)
+  { name: "22-plataforma-meseta", foto: "1500,0,0" }, // encima de la meseta, con la fila de cajas (1.510 m)
+  { name: "23-plataforma-borde", foto: "1500,13,-80" }, // el borde del tablero y el vacío a un lado
+  { name: "24-xl-salto-antes", foto: "746,0,0" }, // rampa gigante que termina en salto (770–786 m)
+  { name: "25-xl-salto-lado", foto: "790,10,-60" },
+  // Vistas libres (?vista=x,y,z,mirax,miray,miraz con la niebla quitada): el tablero y la cuña desde fuera.
+  { name: "26-plataforma-lateral", foto: "0,0,0&vista=-60,16,-310,-55,2,-262", libre: true },
+  { name: "27-xl-cuna-lateral", foto: "0,0,0&vista=-150,14,-285,-112,1,-261", libre: true },
 ];
 
 const errors: string[] = [];
@@ -51,6 +59,14 @@ for (const shot of SHOTS) {
   hook(page, shot.name);
   await page.goto(`${base}/?track=${TRACK}&foto=${shot.foto}`);
   await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
+  if ("libre" in shot) {
+    await page.evaluate(() => {
+      const e = (window as unknown as { __escena: { scene: { fog: unknown }; camera: { far: number; updateProjectionMatrix(): void } } }).__escena;
+      e.scene.fog = null;
+      e.camera.far = 3000;
+      e.camera.updateProjectionMatrix();
+    });
+  }
   await page.waitForTimeout(2500);
   await page.addStyleTag({ content: "#countdown, #wrong-way, #loading, #touch-help { display: none !important }" });
   await page.screenshot({ path: `${out}/${shot.name}.png` });
@@ -197,14 +213,100 @@ const rail = { velocidadMax: 0, mult: 0, capturas: [] as string[] };
   await page.close();
   await ctx1.close();
 }
+// --- Rampas gigantes recorridas de verdad: el piloto automático sube a la plataforma (XL a 1.420 m) y salta la XL de la diagonal (770 m) ---
+type VueloXL = { despegue: number; aterriza?: number; y?: number; cae?: boolean };
+const gigantes: Record<string, { vuelos: VueloXL[]; capturas: string[] }> = {};
+for (const [clave, desde, hasta] of [["plataforma", 1380, 1620], ["diagonal", 740, 900]] as const) {
+  const ctx1 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await ctx1.newPage();
+  hook(page, `xl-${clave}`);
+  await page.goto(`${base}/?track=${TRACK}&foto=${desde},0,0&correr=bot`);
+  await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
+  await page.evaluate(`(() => {
+    window.__xl = [];
+    let was = false;
+    const tick = () => {
+      const k = window.__escena.kart;
+      if (k.airborne && !was) window.__xl.push({ despegue: k.along, cae: false });
+      if (k.surface === 'fall' && window.__xl.length) window.__xl[window.__xl.length - 1].cae = true;
+      if (!k.airborne && was) { const v = window.__xl[window.__xl.length - 1]; v.aterriza = k.along; v.y = k.groundY; }
+      was = k.airborne;
+      window.__along = k.along;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  })()`);
+  const rec = { vuelos: [] as VueloXL[], capturas: [] as string[] };
+  const t0 = Date.now();
+  let fotos = 0;
+  let enVuelo = 0;
+  while (Date.now() - t0 < 90000) {
+    const vuelos = (await page.evaluate(() => (window as unknown as { __xl: VueloXL[] }).__xl)) as VueloXL[];
+    const along = (await page.evaluate(() => (window as unknown as { __along: number }).__along)) as number;
+    const vuelo = vuelos[vuelos.length - 1];
+    // Una captura en pleno vuelo (a mitad) y otra ya aterrizado.
+    if (vuelo && vuelo.aterriza === undefined && fotos === enVuelo * 2 && ++enVuelo > 0) {
+      await page.waitForTimeout(250);
+      const name = `28-${clave}-en-vuelo.png`;
+      await page.screenshot({ path: `${out}/${name}` });
+      rec.capturas.push(name);
+      fotos++;
+    }
+    if (vuelo?.aterriza !== undefined && fotos === 1) {
+      await page.waitForTimeout(400);
+      const name = `29-${clave}-aterrizado.png`;
+      await page.screenshot({ path: `${out}/${name}` });
+      rec.capturas.push(name);
+      fotos++;
+    }
+    if (along > hasta || fotos >= 2 && vuelo?.aterriza !== undefined && along > (vuelo.aterriza ?? 0) + 30) break;
+    await page.waitForTimeout(30);
+  }
+  rec.vuelos = (await page.evaluate(() => (window as unknown as { __xl: VueloXL[] }).__xl)) as VueloXL[];
+  gigantes[clave] = rec;
+  await page.close();
+  await ctx1.close();
+}
+// --- Caída de la plataforma y reaparición: el último checkpoint queda en la meseta (`reaparece=1486`) y el kart arranca a 9 m del eje (sin suelo) ---
+// El respawn sucede dentro del paso de física: desde fuera solo se ve el contador de reapariciones y el kart ya vuelto a la calzada.
+const caida = { reaparecio: false, along: 0, groundY: 0, surface: "", respawns: 0, capturas: [] as string[] };
+{
+  const ctx1 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await ctx1.newPage();
+  hook(page, "caida-plataforma");
+  await page.goto(`${base}/?track=${TRACK}&foto=1500,9,0&correr&reaparece=1486`);
+  await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 90000 });
+  await page.evaluate(`window.__r0 = 0`);
+  const t0 = Date.now();
+  while (Date.now() - t0 < 30000) {
+    const r = (await page.evaluate(`({ respawns: window.__escena.respawns - window.__r0, along: window.__escena.kart.along, groundY: window.__escena.kart.groundY, surface: window.__escena.kart.surface })`)) as { respawns: number; along: number; groundY: number; surface: string };
+    if (r.respawns >= 1) {
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${out}/30-caida-reaparece.png` });
+      caida.capturas.push("30-caida-reaparece.png");
+      const post = (await page.evaluate(`({ along: window.__escena.kart.along, groundY: window.__escena.kart.groundY, surface: window.__escena.kart.surface, respawns: window.__escena.respawns - window.__r0 })`)) as { along: number; groundY: number; surface: string; respawns: number };
+      Object.assign(caida, post, { reaparecio: true });
+      break;
+    }
+    await page.waitForTimeout(30);
+  }
+  await page.close();
+  await ctx1.close();
+}
 await browser.close();
 
 const vmax = Math.max(...speeds.map((s) => s.kmh));
-const summary = { errores: errors, cadena3S: cadena, railTriturbo: rail, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
+const summary = { errores: errors, cadena3S: cadena, railTriturbo: rail, gigantes, caidaPlataforma: caida, velocidadMaxKmh: vmax, velocidadSinTurboKmh: Math.round(26 * 3.6), muestras: speeds.length, renderer: info };
 writeFileSync(`${out}/smoke.json`, JSON.stringify({ ...summary, velocidades: speeds }, null, 1));
 console.log(JSON.stringify(summary, null, 1));
 const cadenaOk = cadena.vuelos.length >= 3 && cadena.vuelos.slice(0, 3).every((v) => v.aterriza !== undefined && v.mult === 1.5 && (v.time ?? 0) > 0.3);
 if (!cadenaOk) console.error("La cadena de 3 S no se recorrió completa con turbo ×1,5 al aterrizar");
 const railOk = rail.velocidadMax > 77 && rail.velocidadMax <= 78.1;
 if (!railOk) console.error(`El raíl triturbo no llegó a 78 m/s (máx. ${rail.velocidadMax.toFixed(1)})`);
-process.exit(errors.length || !cadenaOk || !railOk ? 1 : 0);
+const platOk = (gigantes.plataforma?.vuelos[0]?.aterriza ?? 0) > 1436 && (gigantes.plataforma?.vuelos[0]?.aterriza ?? 9e9) < 1555 && (gigantes.plataforma?.vuelos[0]?.y ?? 0) > 1.5 && gigantes.plataforma!.vuelos[0]!.cae === false;
+if (!platOk) console.error("El bot no aterrizó en la plataforma tras la rampa gigante");
+const diagOk = (gigantes.diagonal?.vuelos[0]?.aterriza ?? 0) - (gigantes.diagonal?.vuelos[0]?.despegue ?? 0) > 25;
+if (!diagOk) console.error("La rampa gigante de la diagonal no terminó en un salto largo");
+const caidaOk = caida.reaparecio && caida.respawns === 1 && caida.surface === "road" && caida.groundY > 2.5 && caida.along > 1486 && caida.along < 1502;
+if (!caidaOk) console.error("Caer de la plataforma no reapareció bien en la meseta");
+process.exit(errors.length || !cadenaOk || !railOk || !platOk || !diagOk || !caidaOk ? 1 : 0);

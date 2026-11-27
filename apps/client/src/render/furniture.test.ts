@@ -33,4 +33,20 @@ describe("rampas-mueble: malla", () => {
     mesh.geometry.computeBoundingBox();
     expect(mesh.geometry.boundingBox!.max.y).toBeGreaterThan(1.5);
   });
+
+  it("la rampa gigante XL llega a 4 m de labio y la plataforma cuelga bajo la meseta (+3 m): costados y panza del tablero", async () => {
+    const track = buildTrackFromDef(await findTrack("desvan-de-las-maravillas")!.load());
+    const mesh = furnitureMesh(track)!;
+    const pos = mesh.geometry.getAttribute("position");
+    // Cuña XL: algún vértice a ≥ 4 m sobre el suelo.
+    let max = -Infinity;
+    // Tablero: vértices bajo la meseta, entre 1,3 y 2 m (3 − 1,5 de grosor ≈ 1,5), a 8,35 m del eje.
+    let panza = 0;
+    for (let i = 0; i < pos.count; i++) {
+      max = Math.max(max, pos.getY(i));
+      if (Math.abs(pos.getY(i) - 1.48) < 0.05) panza++;
+    }
+    expect(max).toBeGreaterThanOrEqual(3.9);
+    expect(panza).toBeGreaterThan(50);
+  });
 });

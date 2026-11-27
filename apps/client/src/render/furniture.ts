@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { pointAt, RAMP, surfaceY, type Track, type TrackZone } from "@derrape/shared";
+import { pointAt, RAMP, surfaceY, type Track, type TrackLift, type TrackZone } from "@derrape/shared";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { PALETTE, sharedVertexToonDouble } from "./materials";
 
@@ -156,11 +156,59 @@ function deck(P: Pieces, track: Track, z: TrackZone, kind: Deck) {
   tri(at(z.from, -HALF, base), at(z.from, HALF, base), at(z.from, HALF, h(z.from)), side);
 }
 
-/** Malla de todas las rampas-mueble del circuito (null si no tiene). Un solo material, una llamada de dibujo. */
+/** Grosor del tablero de la plataforma (m) y su media anchura: la calzada (±8) más un borde de madera clara de 0,35 m. */
+const SLAB = 1.5;
+const SLAB_HALF = HALF + 0.35;
+
+/**
+ * Plataforma flotante: un tablero de madera con borde de tablón claro y cajones de cómoda en los costados, bajo la
+ * calzada elevada (`TrackLift`). Sigue la altura de la pista (sube, meseta, baja) y el peralte. El arcén no se dibuja ahí.
+ */
+function plataforma(P: Pieces, track: Track, lift: TrackLift) {
+  const d0 = lift.from - lift.easeIn;
+  const d1 = lift.to + lift.easeOut;
+  const rows = Math.round((d1 - d0) / 2);
+  const at = (d: number, l: number, up: number): [number, number, number] => {
+    const p = pointAt(track, d, l);
+    return [p.x, surfaceY({ y: p.y, lateral: l, bank: p.bank }) + up, p.z];
+  };
+  const quad = (a: number[], b: number[], c: number[], d: number[], color: number) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute([...a, ...b, ...c, ...a, ...c, ...d], 3));
+    P.add(g, color);
+  };
+  for (let r = 0; r < rows; r++) {
+    const a = d0 + ((d1 - d0) * r) / rows;
+    const b = d0 + ((d1 - d0) * (r + 1)) / rows;
+    // Borde de tablón claro (de HALF a SLAB_HALF) a los dos lados, justo bajo el asfalto.
+    for (const s of [1, -1]) {
+      quad(at(a, s * HALF, -0.02), at(a, s * SLAB_HALF, -0.02), at(b, s * SLAB_HALF, -0.02), at(b, s * HALF, -0.02), FURNITURE.maderaClara);
+      // Costado: del borde del tablero hacia abajo.
+      const top = -0.02;
+      const bottom = -SLAB;
+      quad(at(a, s * SLAB_HALF, top), at(a, s * SLAB_HALF, bottom), at(b, s * SLAB_HALF, bottom), at(b, s * SLAB_HALF, top), r % 2 === 0 ? FURNITURE.maderaOscura : FURNITURE.madera);
+    }
+    // Panza del tablero.
+    quad(at(a, -SLAB_HALF, -SLAB), at(a, SLAB_HALF, -SLAB), at(b, SLAB_HALF, -SLAB), at(b, -SLAB_HALF, -SLAB), FURNITURE.maderaOscura);
+  }
+  // Cajones de cómoda en los costados (una cara de 5 m con tirador metálico), cada 10 m.
+  for (let d = d0 + 12; d < d1 - 8; d += 10) {
+    for (const s of [1, -1]) {
+      const m = frame(track, d, s * SLAB_HALF, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+      m.multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.04));
+      // El marco queda en la calzada elevada (altura del borde): el cajón cuelga bajo ella.
+      P.box(m, 5, SLAB - 0.5, 0.12, FURNITURE.madera, 0, -SLAB + 0.25);
+      P.box(m, 1.2, 0.14, 0.2, FURNITURE.metal, 0, -SLAB / 2 - 0.1, 0.1);
+    }
+  }
+}
+
+/** Malla de todas las rampas-mueble y plataformas del circuito (null si no tiene). Un solo material, una llamada de dibujo. */
 export function furnitureMesh(track: Track): THREE.Mesh | null {
   const ramps = track.zones.filter((z) => z.type === "ramp" && z.size && z.landBoost);
   if (!ramps.length) return null;
   const P = new Pieces();
+  for (const lift of track.lifts) plataforma(P, track, lift);
   ramps.forEach((z, i) => {
     deck(P, track, z, i % 2 === 0 ? "tablon" : "somier");
     const mid = (z.from + z.to) / 2;

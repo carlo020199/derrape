@@ -400,6 +400,9 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     if (correr !== null) phase = "racing";
     // ?correr=bot: el piloto automático conduce al jugador (el smoke recorre rampas sin dedo).
     if (correr === "bot") player.bot = { lane: 0, lookAhead: 12 };
+    // ?reaparece=<metros>: el último checkpoint pisado queda ahí (el smoke prueba caídas sin dar media vuelta).
+    const reaparece = new URLSearchParams(location.search).get("reaparece");
+    if (reaparece !== null) player.progress.respawnDistance = Number(reaparece);
     // `kart` (solo con ?foto): estado vivo del kart, para que el smoke compruebe saltos y turbos.
     (window as unknown as { __escena: unknown }).__escena = {
       scene,
@@ -407,6 +410,13 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       renderer,
       get kart() {
         return player.race.state;
+      },
+      /** Progreso de carrera del jugador (el smoke fija `respawnDistance` para probar caídas sin dar la vuelta entera). */
+      get progress() {
+        return player.progress;
+      },
+      get respawns() {
+        return player.respawns;
       },
     };
     // Los demás, detrás de la cámara.
