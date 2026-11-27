@@ -27,6 +27,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 11 · árbol grande a la izquierda (C7).** Uno solo (d = 30, a 14 m del arcén, escala 3,4): su copa llena la esquina izquierda de `a-salida` y deja libres el campanario, la luna y los farolillos. Probado y descartado en la misma vuelta: ensanchar el río lejano (`halfs`), que no cambia la laguna en `a`/`b` (0,90 → 0,93 %) porque la tapa la cresta.
 
+- **Probado y descartado · laguna en `a`/`b` por el terreno.** Aplanar las orillas del río lejano (pendiente 0,45 → 0,12 junto al cauce lejano) no cambia nada (0,88 % / 1,47 %): lo que oculta el agua en la salida no es el terreno sino el final elevado de la calzada. Con el río más alto (FAR_LIFT) ya se probó el 26/11 y empeoraba el aspecto. Queda como decisión de rediseño (ver abajo).
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
