@@ -552,9 +552,14 @@ function crossedLip(length: number, lip: number, from: number, to: number): bool
   return forwardDelta(length, from, lip) <= d;
 }
 
-function rampAt(track: Track, distance: number): TrackZone | null {
+/** Franja lateral de una zona. Las rampas de siempre ocupan todo el ancho; las de mueble, solo la calzada. */
+function inBand(z: TrackZone, lateral: number): boolean {
+  return lateral >= z.lateralMin && lateral <= z.lateralMax;
+}
+
+function rampAt(track: Track, distance: number, lateral: number): TrackZone | null {
   for (const z of track.zones) {
-    if (z.type === "ramp" && z.size && inSpan(z.from, z.to, distance)) return z;
+    if (z.type === "ramp" && z.size && inSpan(z.from, z.to, distance) && inBand(z, lateral)) return z;
   }
   return null;
 }
@@ -664,7 +669,7 @@ export function stepKartOnTrack(
     s.grade = gradeAlong(track, before, s.heading);
     s.groundY = surfaceY(before);
     s.gripCap = gripCapAt(track, before.distance, s.speed);
-    const ramp = rampAt(track, before.distance);
+    const ramp = rampAt(track, before.distance, before.lateral);
     s.rampSize = ramp?.size ?? null;
     s.climb = ramp ? rampClimb(track, ramp, before.distance) : 0;
   } else if (!s.airborne) {
@@ -689,6 +694,7 @@ export function stepKartOnTrack(
     for (const z of track.zones) {
       if (z.type !== "ramp" || !z.size) continue;
       if (!crossedLip(track.length, z.to, prevAlong, c.distance)) continue;
+      if (!inBand(z, c.lateral)) continue;
       if (s.speed < SURFACE.rampMinSpeed || s.driftDir !== 0) continue;
       const lip = pointAt(track, z.to);
       beginFlight(s, { ...c, y: lip.y, bank: lip.bank, lateral: 0 }, z.size, z.landBoost === true);

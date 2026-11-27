@@ -194,6 +194,23 @@ describe("Desván: cadenas de rampas-mueble", () => {
     expect(r.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("la rampa-mueble solo actúa en la calzada: por el arcén se pasa sin saltar", async () => {
+    const { track } = await load();
+    for (const [lateral, salta] of [[0, true], [11, false], [-11, false]] as const) {
+      const pose = pointAt(track, 60, lateral);
+      const s = createKart(pose.x, pose.z, pose.heading);
+      s.speed = 26;
+      let voló = false;
+      // Recto por el borde: la recta de meta es recta hasta la tercera rampa (≈ 125 m).
+      for (let i = 0; i < 60 * 3; i++) {
+        const c = stepKartOnTrack(s, { steer: 0, throttle: true, brake: false, drift: false }, PHYSICS_DT, track);
+        voló ||= s.airborne;
+        if (c.distance > 125) break;
+      }
+      expect(voló, `lateral ${lateral}`).toBe(salta);
+    }
+  });
+
   it("un vuelo de rampa-mueble nunca pasa cerca de otro tramo de la pista (closestPoint es global)", async () => {
     const { track } = await load();
     const pts = track.points;

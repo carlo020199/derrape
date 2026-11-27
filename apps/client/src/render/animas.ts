@@ -4,6 +4,7 @@ import { createAnimasMoon, createClouds, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 import { createFences, createLanterns, createTrees } from "./animasProps";
 import { groundBoostMesh } from "./groundBoost";
+import { furnitureMesh } from "./furniture";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -688,7 +689,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const humps: THREE.BufferGeometry[] = [];
   const stripes: THREE.BufferGeometry[] = [];
   for (const z of track.zones) {
-    if (z.type !== "ramp" || !z.size || z.size === "L") continue;
+    if (z.type !== "ramp" || !z.size || z.size === "L" || z.landBoost) continue;
     const spec = RAMP[z.size];
     const lip = pointAt(track, z.to);
     const g = humpGeometry(spec.len, spec.lip, Math.min(2.15, lip.width * 0.16), 1.45);
@@ -768,4 +769,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   // Turbos de suelo azul/naranja (circuitos que los traen): una sola malla.
   const groundPads = groundBoostMesh(track);
   if (groundPads) scene.add(groundPads);
+  // Rampas-mueble (Desván): cuñas de tablones o somier con muebles viejos al borde.
+  const furniture = furnitureMesh(track);
+  if (furniture) scene.add(furniture);
 }

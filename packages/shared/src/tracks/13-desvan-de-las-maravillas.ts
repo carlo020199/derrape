@@ -100,6 +100,9 @@ const ramp = (size: "S" | "M", from: number): ZoneDef => ({
   size,
   from: m(from),
   to: m(from + (size === "S" ? 4 : 8)),
+  // Solo la calzada (16 m): el arcén queda libre para esquivarlas y los muebles de adorno van fuera.
+  lateralMin: -WIDTH / 2,
+  lateralMax: WIDTH / 2,
   landBoost: true,
 });
 
