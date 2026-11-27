@@ -35,7 +35,7 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Control de coste (software).** A/B en la misma máquina de `a-salida` (3 + 3 tomas intercaladas, SwiftShader 390×844 @2x): antes de la noche (d859861) 51–61 ms (media 54,4); ahora 55–60 ms (media 57,6), ≈ +6 %, dentro del ruido (la máquina iba cargada). Solo orientativo: el fps real en móvil sigue pendiente de prueba en dispositivo.
 
-- **Probado y descartado · nubes traslúcidas (opacity 0,84).** Se ven más suaves, pero al pasar al grupo transparente se pintan después de colinas y terreno (que son opacos) y se cuelan por delante de ellos. Arreglarlo exige reordenar el telón de fondo (colinas, bruma, río lejano), con riesgo para lo ya ajustado. Se revierte.
+- **Probado y descartado · nubes traslúcidas (opacity 0,84).** Se ven más suaves, pero al pasar al grupo transparente se pintan después de colinas y terreno (que son opacos) y se cuelan por delante de ellos. Arreglarlo exige reordenar el telón de fondo (colinas, bruma, río lejano), con riesgo para lo ya ajustado. Se revierte. Segundo intento (colinas también transparentes, para que el orden lo marque `renderOrder`): las nubes quedan bien, pero las colinas, que ahora prueban profundidad después del terreno, tapan el río lejano (se pierde la franja de agua en `a`/`b`). Revertido también.
 
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
