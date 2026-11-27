@@ -39,8 +39,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 ## Qué falta
 - Prueba de fps en iPhone/Android: **pendiente de prueba en dispositivo** (solo hay métricas proxy).
 - Laguna ancha visible desde la salida (C3 en `a`/`b`: 0,9 % / 1,5 %): requiere rediseñar el terreno o la calzada elevada; con la restricción «sin subir el terreno» no hay arreglo barato (en `d` pasa: 8,0 % / 7,3 %).
-- Árboles grandes en el lado izquierdo de la salida: taparían campanario y farolillos (falló el 25/11); solo se hizo el derecho.
-- Cortes del contorno en la coleta de Lía vistos de cerca (menor).
+- (Hecho en la vuelta 11: un árbol grande a la izquierda de la salida, abierto, que no tapa el campanario.)
+- Los «cortes» negros junto a la coleta de Lía no son un fallo del contorno: son la goma Noche (torus) entre el nudo y la cúpula, deliberada en el diseño.
 - Nubes opacas (no traslúcidas): con discos solapados la mezcla alfa se vería doble.
 
 ## Cómo comprobarlo
@@ -53,5 +53,5 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 ## Decisiones para Carlo
 - ¿Rediseñar el terreno/calzada para que la laguna se vea ancha desde la salida (C3 en `a`/`b`)? Ahora solo pasa en `d`.
-- ¿Te gustan los 3 árboles grandes del borde derecho de la salida? Si no, quitar el bloque «Tres árboles grandes» de `createTrees` en `animasProps.ts`.
+- ¿Te gustan los 4 árboles grandes de los bordes de la salida (3 a la derecha, 1 a la izquierda)? Si no, quitar los dos bloques «árboles grandes» de `createTrees` en `animasProps.ts`.
 - Margen de presupuesto: las capturas de la Laguna llegan a 64 llamadas y 106 700 triángulos (4 karts); `medir` con 8 karts da 55 y 92 688. El límite del release es 110 000: queda poco para añadir más escenario.
