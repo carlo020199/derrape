@@ -35,6 +35,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Control de coste (software).** A/B en la misma máquina de `a-salida` (3 + 3 tomas intercaladas, SwiftShader 390×844 @2x): antes de la noche (d859861) 51–61 ms (media 54,4); ahora 55–60 ms (media 57,6), ≈ +6 %, dentro del ruido (la máquina iba cargada). Solo orientativo: el fps real en móvil sigue pendiente de prueba en dispositivo.
 
+- **Probado y descartado · nubes traslúcidas (opacity 0,84).** Se ven más suaves, pero al pasar al grupo transparente se pintan después de colinas y terreno (que son opacos) y se cuelan por delante de ellos. Arreglarlo exige reordenar el telón de fondo (colinas, bruma, río lejano), con riesgo para lo ya ajustado. Se revierte.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
@@ -49,7 +51,7 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 - Laguna ancha visible desde la salida (C3 en `a`/`b`: 0,9 % / 1,5 % de píxeles): se mitigó con el resplandor del río (vuelta 12), pero la métrica no sube porque el agua sigue tapada por el final de la calzada elevada; un cambio real exige rediseñar la calzada o el terreno (en `d` pasa: 8,0 % / 7,3 %).
 - (Hecho en la vuelta 11: un árbol grande a la izquierda de la salida, abierto, que no tapa el campanario.)
 - Los «cortes» negros junto a la coleta de Lía no son un fallo del contorno: son la goma Noche (torus) entre el nudo y la cúpula, deliberada en el diseño.
-- Nubes opacas (no traslúcidas): con discos solapados la mezcla alfa se vería doble.
+- Nubes opacas (no traslúcidas): probado en la vuelta 12 bis; las colinas y el terreno, opacos, se pintan antes y las nubes traslúcidas se cuelan delante. Requiere reordenar el telón de fondo.
 
 ## Cómo comprobarlo
 - `git log --oneline -12` (una vuelta por commit), `npm test` (191), `npm run lint`, `npm run build`, `npm run medir` (Laguna 55 llamadas · 92 688 tris).
