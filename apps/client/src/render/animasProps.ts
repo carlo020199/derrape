@@ -332,6 +332,14 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
     if (!lagoonClear(at.x, at.z)) continue;
     slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: i % 3, s: 1.5 + rnd() * 0.5, rot: rnd() * Math.PI * 2 });
   }
+  // Tres árboles grandes solo a la derecha de la recta de salida (lateral negativo): enmarcan el borde como en ejemplo1 sin tapar
+  // el campanario ni los farolillos de la izquierda. Las copas asoman sobre la calzada elevada.
+  for (const [d, extra, model] of [[22, 6, 0], [46, 9, 1], [74, 7, 2]] as const) {
+    const p = pointAt(track, d);
+    const at = pointAt(track, d, -(p.width / 2 + track.verge + extra));
+    if (!lagoonClear(at.x, at.z)) continue;
+    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model, s: 3.2, rot: d });
+  }
   const out: THREE.InstancedMesh[] = [];
   const m = new THREE.Matrix4();
   geos.forEach((geo, model) => {

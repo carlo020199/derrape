@@ -17,6 +17,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 6 · campanario legible desde la salida (C4).** Escala 1,6 → 2,1: en `a-salida` ya no asoma solo la punta del tejado sino el cuerpo con la campana de Llama. Laguna `a` 0,88 % / `b` 1,50 % (casi igual). Mismo coste (mismas mallas). Probado y revertido antes: camposanto (lápidas+calabazas), ver arriba.
 
+- **Vuelta 7 · árboles grandes en el borde derecho de la salida (C7).** 3 árboles (uno por modelo) a escala 3,2 en el lateral derecho de la recta de salida (d = 22, 46, 74 m); sus copas asoman sobre la calzada elevada y enmarcan la esquina superior derecha como en ejemplo1. Solo el lado derecho: así no tapan el campanario, la luna ni los farolillos de la izquierda (lo que falló el 25/11). Las mismas 3 llamadas de árboles; +~800 triángulos. Laguna `a` 0,87 % / `b` 1,47 %.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts
 - /workspace/derrape-release/docs/release-v1/capturas/ y /workspace/derrape-release/docs/screenshots/release1/ (regeneradas en cada vuelta)
