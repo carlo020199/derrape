@@ -47,6 +47,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Probado y descartado · sombra de contacto más firme** (Hydrogen dif. 6): núcleo 0,45 → 0,8 y radio 1,35 → 1,15. Sobre el asfalto Ciruela, casi tan oscuro como la sombra Noche, no se distingue en vista trasera ni lateral; sin mejora visible, se revierte.
 
+- **Vuelta 13 · borla de los farolillos (C5).** Hilo de Sombra y cono de Brasa colgando bajo cada farolillo (como en ejemplo1): ~25 triángulos por farolillo, la misma llamada. Las capturas de la Laguna suben a ≈ 107 000–108 000 triángulos (4 karts; límite 110 000), así que **no hay margen para más geometría** de escenario.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)

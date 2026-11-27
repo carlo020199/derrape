@@ -527,6 +527,9 @@ function lanternGeometry() {
   p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, 0.44, 0), SOMBRA));
   p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, -0.44, 0), SOMBRA));
   p.push(piece(new THREE.TorusGeometry(0.31, 0.04, 3, 6), M(0, 0.0, 0, Math.PI / 2), BRASA));
+  // Borla colgando bajo el farolillo (ejemplo1): hilo de Sombra y flecos de Brasa.
+  p.push(piece(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 4), M(0, -0.56, 0), SOMBRA));
+  p.push(piece(new THREE.ConeGeometry(0.09, 0.3, 5), M(0, -0.78, 0, Math.PI), BRASA));
   return merge(p);
 }
 
