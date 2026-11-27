@@ -45,6 +45,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Cámara más alta en la salida (medido, sin aplicar).** Con la cámara de `a-salida` 0 / +3 / +6 m más alta y la misma mirada, la laguna sube de 0,87 % a 1,43 % y 2,33 %: ni con +6 m llega al 6 %, así que subir la cámara no compensa lo que cuesta en C1 y en jugabilidad. Además el criterio C3 de Dalí es «en a), b) **o** d) ≥ 6 %», y se cumple en `d-laguna` (8,0 % Lía / 7,3 % Calavera): la laguna de `a`/`b` es un deseo estético, no un incumplimiento.
 
+- **Probado y descartado · sombra de contacto más firme** (Hydrogen dif. 6): núcleo 0,45 → 0,8 y radio 1,35 → 1,15. Sobre el asfalto Ciruela, casi tan oscuro como la sombra Noche, no se distingue en vista trasera ni lateral; sin mejora visible, se revierte.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
