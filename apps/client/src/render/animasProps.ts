@@ -420,7 +420,7 @@ void main() {
   vec3 c = aOffset;
   c.y += sin(uTime * 1.7 + c.x * 0.37 + c.z * 0.21) * 0.15;
   vec4 mv = viewMatrix * vec4(c, 1.0);
-  mv.xy += position.xy * 5.2;
+  mv.xy += position.xy * 7.4;
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -429,17 +429,18 @@ const HALO_FRAG = /* glsl */ `
 varying vec2 vUv;
 void main() {
   float d = length(vUv - 0.5) * 2.0;
-  float a = pow(clamp(1.0 - d, 0.0, 1.0), 1.8) * 0.55;
+  float k = clamp(1.0 - d, 0.0, 1.0);
+  float a = (k * k * k * 0.5 + pow(k, 1.4) * 0.14);
   gl_FragColor = vec4(1.0, 0.416, 0.122, a);
 }
 `;
 
-/** Farolillo de papel: cuerpo Llama con aros Brasa y hueso arriba y abajo. */
+/** Farolillo de papel: cuerpo Llama con aro Brasa y tapas de Sombra (el Hueso duro arriba y abajo parecía un plato). */
 function lanternGeometry() {
   const p: Parts = [];
   p.push(piece(new THREE.SphereGeometry(0.34, 6, 4), M(0, 0, 0, 0, 0, 0, 1, 1.2, 1), LLAMA));
-  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, 0.44, 0), HUESO));
-  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, -0.44, 0), HUESO));
+  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, 0.44, 0), SOMBRA));
+  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, -0.44, 0), SOMBRA));
   p.push(piece(new THREE.TorusGeometry(0.31, 0.04, 3, 6), M(0, 0.0, 0, Math.PI / 2), BRASA));
   return merge(p);
 }
