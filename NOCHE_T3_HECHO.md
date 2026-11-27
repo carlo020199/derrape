@@ -25,6 +25,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 10 · luciérnagas (opcional de Dalí).** 200 puntos aditivos Espectro con núcleo claro que suben y bajan y parpadean sobre el óvalo y el cauce (`createFireflies`): +1 llamada, 0 triángulos. Se aprecian sobre todo sobre la ladera morada junto a la laguna; sobre el agua brillante contrastan poco.
 
+- **Vuelta 11 · árbol grande a la izquierda (C7).** Uno solo (d = 30, a 14 m del arcén, escala 3,4): su copa llena la esquina izquierda de `a-salida` y deja libres el campanario, la luna y los farolillos. Probado y descartado en la misma vuelta: ensanchar el río lejano (`halfs`), que no cambia la laguna en `a`/`b` (0,90 → 0,93 %) porque la tapa la cresta.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)

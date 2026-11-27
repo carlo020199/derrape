@@ -340,6 +340,12 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
     if (!lagoonClear(at.x, at.z)) continue;
     slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model, s: 3.2, rot: d });
   }
+  // Y uno a la izquierda, bien abierto y más cerca de la cámara: su copa queda en la esquina superior izquierda, sobre los farolillos.
+  {
+    const p = pointAt(track, 30);
+    const at = pointAt(track, 30, p.width / 2 + track.verge + 14);
+    if (lagoonClear(at.x, at.z)) slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: 1, s: 3.4, rot: 2 });
+  }
   const out: THREE.InstancedMesh[] = [];
   const m = new THREE.Matrix4();
   geos.forEach((geo, model) => {
