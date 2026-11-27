@@ -31,6 +31,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 12 · resplandor del río lejano (C3).** Como el agua de `a`/`b` la tapa el final elevado de la calzada (no el terreno), se añade una cortina de 26 m de Espectro aditivo sobre el cauce lejano (`riverGlow`, 1 llamada, ~80 triángulos, alfa por vértice que se apaga hacia arriba y en los extremos). Desde la salida la franja deja de ser una raya y se lee como un río luminoso hasta el campanario. No cambia el terreno ni los árboles.
 
+  - Nota: en esa tanda la captura `d-laguna` de Calavera salió con la cámara sin asentar (73,7 % morado / 18,6 % laguna); es intermitente en la tanda completa y sale bien suelta (85,9 % / 7,3 %). Se regeneró.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
