@@ -4,7 +4,7 @@
 // horario: recta de meta subiendo, curva ancha norte, tres eses, diagonal larga hacia el suroeste, horquilla
 // interior, segunda diagonal hacia el este, curva grande al sureste, recta inferior y curva con abanico hacia meta.
 // Fase 1: trazado y turbos de suelo (azul ×1,5 y naranja ×1,75). Fase 2: rampas-mueble. Fase 3: raíl triturbo ×3.
-// Plataforma y arte de muebles llegan en fases posteriores (ver docs/circuito-nuevo/). El tema es `animas` de momento.
+// Fase 4: rampas gigantes XL y plataforma flotante. El arte final de muebles llega en fases posteriores (ver docs/circuito-nuevo/). El tema es `animas` de momento.
 // Plan y vista previa: /workspace/derrape-plan-circuito (PLAN.md §1.2 y §2.3).
 
 import { smoothTrack } from "../track";
@@ -51,6 +51,20 @@ const control = [
 
 const WIDTH = 16;
 const VERGE = 6;
+/**
+ * Plataforma flotante de la recta inferior (H): un tramo elevado de la propia pista. Sube +3 m en 44 m (≈ 7 %),
+ * meseta de 80 m con una fila de cajas (1.510 m) y baja en 40 m. A los lados, zonas `fall` desde 8,5 m del eje.
+ */
+const PLATFORM = {
+  rampFrom: 1420,
+  riseFrom: 1436,
+  plateauFrom: 1480,
+  plateauTo: 1555,
+  descentTo: 1595,
+  rise: 3,
+  /** Distancia lateral (m) a partir de la cual ya no hay suelo. La calzada mide 16 m (±8). */
+  edge: 8.5,
+};
 /** Longitud de la vuelta (m): las zonas y las cajas se escriben en metros desde meta y aquí se pasan a fracciones. */
 const LENGTH = smoothTrack(control, WIDTH, 3, VERGE).length;
 const m = (d: number) => d / LENGTH;
@@ -125,6 +139,32 @@ const ramps: ZoneDef[] = [
   ramp("M", 1130),
 ];
 
+/** Rampa gigante (mueble enorme): labio de 4 m en 16 m, solo en la calzada, con turbo de aterrizaje. */
+const giant = (from: number): ZoneDef => ({
+  type: "ramp",
+  size: "XL",
+  from: m(from),
+  to: m(from + 16),
+  lateralMin: -WIDTH / 2,
+  lateralMax: WIDTH / 2,
+  landBoost: true,
+});
+
+// Rampas gigantes (PLAN §2.5). Se simulan entradas a 20/26/39/45 m/s con `scripts/gigantes.ts`.
+const giants: ZoneDef[] = [
+  giant(PLATFORM.rampFrom), // H — sube a la plataforma flotante
+  giant(770), // D — termina en un salto largo por la diagonal
+];
+
+/** Fuera de la calzada de la plataforma no hay suelo: reaparecer (como el agua bajo el salto L1 de la Laguna). */
+const voids: ZoneDef[] = [1, -1].map((side) => ({
+  type: "fall" as const,
+  from: m(PLATFORM.riseFrom),
+  to: m(PLATFORM.descentTo),
+  lateralMin: side > 0 ? PLATFORM.edge : -40,
+  lateralMax: side > 0 ? 40 : -PLATFORM.edge,
+}));
+
 const def: TrackDef = {
   id: "desvan-de-las-maravillas",
   name: "Desván de las Maravillas",
@@ -135,7 +175,16 @@ const def: TrackDef = {
   control,
   // Cajas de objetos (m desde meta): 45, 290, 940, 1.300, 1.510 y 1.700. Nunca sobre un turbo.
   itemRows: [45, 290, 940, 1300, 1510, 1700].map(m),
-  zones: [...zones, ...ramps],
+  zones: [...zones, ...ramps, ...giants, ...voids],
+  lifts: [
+    {
+      from: PLATFORM.plateauFrom,
+      to: PLATFORM.plateauTo,
+      rise: PLATFORM.rise,
+      easeIn: PLATFORM.plateauFrom - PLATFORM.riseFrom,
+      easeOut: PLATFORM.descentTo - PLATFORM.plateauTo,
+    },
+  ],
   seed: 4813,
 };
 

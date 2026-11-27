@@ -63,6 +63,19 @@ export interface TrackHazard {
   phase: number;
 }
 
+/**
+ * Tramo elevado de la propia pista (plataforma flotante): sube `rise` m con una curva suave a lo largo de
+ * `easeIn` m antes de `from`, se queda arriba hasta `to` y baja en `easeOut` m. Todo en metros desde meta.
+ * La altura del suelo solo depende de la distancia, así que una plataforma es esto + zonas `fall` a los lados.
+ */
+export interface TrackLift {
+  from: number;
+  to: number;
+  rise: number;
+  easeIn: number;
+  easeOut: number;
+}
+
 export interface Track {
   /** Línea central cerrada (el último punto conecta con el primero), con y/w ya rellenos. */
   points: Required<TrackPoint>[];
@@ -76,6 +89,8 @@ export interface Track {
   verge: number;
   zones: TrackZone[];
   hazards: TrackHazard[];
+  /** Tramos elevados ya sumados a la altura de `points` (el terreno y la malla los usan para dejar el vacío debajo). */
+  lifts: TrackLift[];
   /**
    * El circuito usa peralte, cuestas y rampas con tamaño.
    * En false, un kart se conduce igual que antes (bank 0 y rampas sin `size`).
@@ -116,7 +131,7 @@ export function buildTrack(
     lengths.push(lengths[i - 1]! + Math.hypot(b.x - a.x, b.z - a.z));
   }
   const length = lengths.pop()!;
-  return { points: full, lengths, length, width, verge, zones, hazards, relief: false };
+  return { points: full, lengths, length, width, verge, zones, hazards, lifts: [], relief: false };
 }
 
 /** Óvalo de prueba: dos rectas unidas por semicírculos. */
@@ -303,6 +318,24 @@ export function maxBankRate(track: Track): number {
     worst = Math.max(worst, Math.abs(b.bank - a.bank) / (Math.hypot(b.x - a.x, b.z - a.z) || 1));
   }
   return worst;
+}
+
+const smooth = (u: number) => {
+  const t = Math.max(0, Math.min(1, u));
+  return t * t * (3 - 2 * t);
+};
+
+/** Cuánto sube el tramo elevado a `distance` metros (0 si no hay ninguno). */
+export function liftAt(lifts: readonly TrackLift[], length: number, distance: number): number {
+  let total = 0;
+  for (const l of lifts) {
+    const d = ((distance - l.from + length / 2) % length + length) % length - length / 2; // metros respecto a `from`, con signo
+    const span = l.to - l.from;
+    if (d < 0) total += l.rise * smooth(1 + d / l.easeIn);
+    else if (d <= span) total += l.rise;
+    else total += l.rise * smooth(1 - (d - span) / l.easeOut);
+  }
+  return total;
 }
 
 /** Lleva una distancia cualquiera al rango 0..length. */
@@ -568,8 +601,8 @@ function rampAt(track: Track, distance: number, lateral: number): TrackZone | nu
 
 function tallWallAt(track: Track, distance: number): boolean {
   for (const z of track.zones) {
-    if (z.type !== "ramp" || z.size !== "L") continue;
-    const end = (z.to + RAMP.tallSpan) % track.length;
+    if (z.type !== "ramp" || (z.size !== "L" && z.size !== "XL")) continue;
+    const end = (z.to + (z.size === "XL" ? RAMP.tallSpanXL : RAMP.tallSpan)) % track.length;
     if (inSpan(z.from, end, distance)) return true;
   }
   return false;
