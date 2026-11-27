@@ -79,6 +79,7 @@ export function respawnKart(s: KartState, p: LapProgress, track: Track): void {
   s.climb = 0;
   s.trick = false;
   s.flightRamp = null;
+  s.flightLandBoost = false;
   s.rampSize = null;
   s.along = -1;
   p.stuckTime = 0;

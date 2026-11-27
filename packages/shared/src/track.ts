@@ -3,7 +3,7 @@
 // la altura solo se dibuja y las rampas hacen el salto de duración fija.
 
 import { bounceKart, giveBoost, stepKart, type KartInput, type KartState } from "./kart";
-import { GRIP, KART, RAMP, SURFACE, type KartTuning, type RampSize } from "./tuning";
+import { GRIP, KART, LANDING, RAMP, SURFACE, type KartTuning, type RampSize } from "./tuning";
 
 export interface TrackPoint {
   x: number;
@@ -42,6 +42,8 @@ export interface TrackZone {
   lateralMax: number;
   /** Rampa con vuelo real. Sin tamaño, el salto dura lo de siempre. */
   size?: RampSize;
+  /** Rampa-mueble: al aterrizar limpio da el turbo de `LANDING` (×1,5 durante 0,5 s). */
+  landBoost?: boolean;
 }
 
 /**
@@ -605,12 +607,13 @@ function rampClimb(track: Track, zone: TrackZone, distance: number): number {
   return spec.lip * (into / span);
 }
 
-function beginFlight(s: KartState, c: ClosestPoint, size: RampSize) {
+function beginFlight(s: KartState, c: ClosestPoint, size: RampSize, landBoost = false) {
   const spec = RAMP[size];
   const th = Math.atan(spec.lip / spec.len);
   const pitch = Math.asin(Math.max(-1, Math.min(1, s.grade)));
   s.airborne = true;
   s.flightRamp = size;
+  s.flightLandBoost = landBoost;
   s.trick = false;
   s.vy = s.speed * Math.sin(th + pitch);
   s.y = surfaceY(c) + spec.lip;
@@ -624,14 +627,19 @@ function landKart(s: KartState, track: Track, c: ClosestPoint) {
   const ground = surfaceY(c);
   const kartPitch = Math.atan2(s.vy, Math.max(1, Math.abs(s.speed)));
   const trackPitch = Math.asin(Math.max(-1, Math.min(1, gradeAlong(track, c, s.heading))));
-  const clean = Math.abs(kartPitch - trackPitch) < (15 * Math.PI) / 180;
-  if (s.trick && s.flightRamp) giveBoost(s, RAMP[s.flightRamp].trick, KART.boostSpeedMult);
+  const pitchError = Math.abs(kartPitch - trackPitch);
+  const clean = pitchError < (15 * Math.PI) / 180;
+  // Rampa-mueble: el aterrizaje (sin clavar el morro: `LANDING.maxPitch`) regala ×1,5 durante 0,5 s y el truco lo alarga a ×1,5 (no ×1,3).
+  // `giveBoost` se queda con el mayor: no se apila con un turbo de suelo ni con un mini-turbo.
+  if (s.flightLandBoost && pitchError < (LANDING.maxPitch * Math.PI) / 180) giveBoost(s, LANDING.time, LANDING.mult);
+  if (s.trick && s.flightRamp) giveBoost(s, RAMP[s.flightRamp].trick, s.flightLandBoost ? LANDING.mult : KART.boostSpeedMult);
   s.airborne = false;
   s.y = ground;
   s.vy = 0;
   s.climb = 0;
   s.trick = false;
   s.flightRamp = null;
+  s.flightLandBoost = false;
   s.groundY = ground;
   return clean;
 }
@@ -683,7 +691,7 @@ export function stepKartOnTrack(
       if (!crossedLip(track.length, z.to, prevAlong, c.distance)) continue;
       if (s.speed < SURFACE.rampMinSpeed || s.driftDir !== 0) continue;
       const lip = pointAt(track, z.to);
-      beginFlight(s, { ...c, y: lip.y, bank: lip.bank, lateral: 0 }, z.size);
+      beginFlight(s, { ...c, y: lip.y, bank: lip.bank, lateral: 0 }, z.size, z.landBoost === true);
     }
   }
   s.along = c.distance;

@@ -28,6 +28,8 @@ export interface ZoneDef {
   lateralMax?: number;
   /** Rampa S/M/L con vuelo real. Sin tamaño, el salto es el de siempre. */
   size?: RampSize;
+  /** Rampa-mueble: al aterrizar limpio da el turbo de `LANDING`. */
+  landBoost?: boolean;
 }
 
 /** Obstáculo periódico (paso a nivel, etc.), en fracciones de vuelta. */
@@ -81,6 +83,7 @@ export function buildTrackFromDef(def: TrackDef): Track {
       lateralMin: z.lateralMin ?? -outer,
       lateralMax: z.lateralMax ?? outer,
       size: z.size,
+      landBoost: z.landBoost,
     }),
   );
   track.hazards = (def.hazards ?? []).map(

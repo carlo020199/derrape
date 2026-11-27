@@ -206,6 +206,17 @@ export const BANK = {
 
 export type RampSize = "S" | "M" | "L";
 
+/** Rampas-mueble (`landBoost`): turbo al aterrizar limpio. No se apila (ver `giveBoost`: gana el mayor). */
+export const LANDING = {
+  mult: 1.5,
+  time: 0.5,
+  /**
+   * Cabeceo máximo (grados) respecto a la pista para cobrar el turbo. Algo más generoso que el aterrizaje
+   * «limpio» (15°): con un turbo de aterrizaje el kart sale de la rampa más rápido y el salto es más alto.
+   */
+  maxPitch: 22,
+};
+
 /** Vuelo balístico de las rampas con tamaño. `lip` alto del labio (m), `len` largo (m). */
 export const RAMP = {
   S: { lip: 0.6, len: 4, trick: 0.4 },

@@ -73,6 +73,8 @@ export interface KartState {
   rampSize: RampSize | null;
   /** Rampa que originó el vuelo, para el truco al aterrizar. */
   flightRamp: RampSize | null;
+  /** La rampa que originó el vuelo es una rampa-mueble (turbo al aterrizar). */
+  flightLandBoost: boolean;
   /** El piloto pidió el truco durante este salto. */
   trick: boolean;
   /** El último choque fue contra el muro exterior de un peralte. */
@@ -117,6 +119,7 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     groundY: 0,
     rampSize: null,
     flightRamp: null,
+    flightLandBoost: false,
     trick: false,
     outsideWall: false,
     along: -1,

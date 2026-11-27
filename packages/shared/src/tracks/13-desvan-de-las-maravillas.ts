@@ -79,8 +79,8 @@ const zones: ZoneDef[] = [
   // D — diagonal 1
   pad("boostOrange", 900, 906),
   // E — horquilla
-  pad("boostBlueNarrow", 1010, 1016, 3, 6),
-  pad("boostOrange", 1072, 1078),
+  pad("boostBlueNarrow", 988, 994, 3, 6),
+  pad("boostOrange", 1188, 1194),
   // G — curva grande (abanico)
   pad("boostBlueNarrow", 1230, 1238, -6, -3),
   pad("boostBlueNarrow", 1250, 1258, -1, 2),
@@ -94,6 +94,28 @@ const zones: ZoneDef[] = [
   pad("boostOrangeNarrow", 1735, 1745, -1.5, 1.5),
 ];
 
+/** Rampa-mueble: con tamaño (vuelo balístico) y turbo al aterrizar (`landBoost`). Largo S = 4 m, M = 8 m. */
+const ramp = (size: "S" | "M", from: number): ZoneDef => ({
+  type: "ramp",
+  size,
+  from: m(from),
+  to: m(from + (size === "S" ? 4 : 8)),
+  landBoost: true,
+});
+
+// Rampas-mueble (PLAN §2.4). Los huecos labio→siguiente rampa salen de `scripts/cadenas.ts` (física real).
+const ramps: ZoneDef[] = [
+  // A — cadena de 3 S
+  ramp("S", 116),
+  ramp("S", 146),
+  ramp("S", 192),
+  // C — S sola a la salida de las eses
+  ramp("S", 715),
+  // F — cadena de 2 M
+  ramp("M", 1090),
+  ramp("M", 1130),
+];
+
 const def: TrackDef = {
   id: "desvan-de-las-maravillas",
   name: "Desván de las Maravillas",
@@ -104,7 +126,7 @@ const def: TrackDef = {
   control,
   // Cajas de objetos (m desde meta): 45, 290, 940, 1.300, 1.510 y 1.700. Nunca sobre un turbo.
   itemRows: [45, 290, 940, 1300, 1510, 1700].map(m),
-  zones,
+  zones: [...zones, ...ramps],
   seed: 4813,
 };
 
