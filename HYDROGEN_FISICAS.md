@@ -19,16 +19,16 @@ Detalle completo escrito por Hydrogen: `docs/hydrogen/CAMBIOS_HYDROGEN.md`. Aná
 | Rapidez del contravolante `driftSteerRate` | 8 | **14** |
 | Mini-turbo nivel I (azul) | ×1,20 · 0,62 s | **×1,28 · 0,85 s** |
 | Mini-turbo nivel II (naranja) | ×1,20 · 1,67 s | **×1,40 · 1,50 s** |
-| Mini-turbo nivel III (morado) | ×1,20 · 2,63 s | **×1,52 · 2,20 s** |
+| Mini-turbo nivel III (morado) | ×1,20 · 2,63 s | **×1,45 · 2,20 s** (Hydrogen puso ×1,52; bajado a ×1,45 por decisión de Carlo, 27/11) |
 | Aceleración en turbo `boostAccel` | 45 | **55** m/s² |
 | Panel de turbo clásico `boostPadMult` | ×1,3 | **×1,4** |
 | Truco en rampa sin turbo de aterrizaje | ×1,2 | ×1,28 (usa `boostMult1`) |
 
-Con la punta de 26 m/s, el mini-turbo sube a **33,3 / 36,4 / 39,5 m/s** según nivel.
+Con la punta de 26 m/s, el mini-turbo sube a **33,3 / 36,4 / 37,7 m/s** según nivel.
 
 Fórmulas:
 - **Entrada inmediata**: si mantienes el derrape con lado (`driftSide` del gesto, o `|giro| > 0,15`) y vas a ≥ 10 m/s, el derrape empieza **en el mismo paso**, con el saltito aún en el aire (antes esperaba a aterrizar y pedía `|giro| > 0,3`). Mientras dura el salto o estás en el aire **no carga**: las rampas no regalan carga.
-- **Empujón al soltar**: `velocidad = max(velocidad, punta + (mult − 1) · punta · 0,75)`, es decir 31,5 / 33,8 / 36,1 m/s al instante, y luego el turbo sigue empujando hasta ×mult.
+- **Empujón al soltar**: `velocidad = max(velocidad, punta + (mult − 1) · punta · 0,75)`, es decir 31,5 / 33,8 / 34,8 m/s al instante, y luego el turbo sigue empujando hasta ×mult.
 - **Ángulo visual del kart**: `driftDir · (0,44 + dentro · 0,16)`, de 0,28 rad abriendo a 0,60 rad cerrando (antes fijo 0,45). Solo gira el chasis; la cámara no se toca.
 
 ## Cómo se mapea el arrastre
@@ -39,7 +39,7 @@ Fórmulas:
 - Deslizar arriba o abajo y tocar = lo mismo que antes (gas o freno, objeto).
 
 ## Tests
-- `npx vitest run`: **258/258** en verde, contando ya los tests del circuito nuevo integrados desde `main`.
+- `npx vitest run`: **259/259** en verde, contando ya los tests del circuito nuevo integrados desde `main`.
 - `npm run lint` y `npm run build`: en verde.
 - Tests nuevos de Hydrogen en `kart.test.ts`:
   - (a) el derrape arranca durante el saltito;
@@ -68,21 +68,19 @@ Regla de `giveBoost`: no se apilan, **gana el mayor multiplicador** y la duraci�
 | Mini-turbo I | 1,28 | 33,3 |
 | Panel clásico | 1,40 | 36,4 |
 | Mini-turbo II | 1,40 | 36,4 |
+| **Mini-turbo III** | **1,45** | **37,7** |
 | **Turbo azul de suelo / aterrizaje en rampa-mueble** | **1,50** | **39,0** |
-| **Mini-turbo III** | **1,52** | **39,5** |
 | Turbo naranja de suelo | 1,75 | 45,5 |
 | Raíl triturbo | 3,00 | 78,0 |
 
-- **Choque principal**: el mini-turbo III (×1,52) supera por poco al azul (×1,5). Si sueltas un morado sobre un azul, el azul solo alarga el tiempo y no se nota. Además, un buen derrape vale lo mismo que el turbo azul, que es el premio del circuito.
-- El mini-turbo II y el panel clásico ×1,4 quedan iguales entre sí.
-- **Propuesta**, a elegir:
-  - (A) bajar el nivel III a ×1,45 (37,7 m/s), por debajo del azul;
-  - (B) subir el azul a ×1,6 y el naranja a ×1,8, como dice `docs/circuito-nuevo/FASE1_HECHO.md`.
-  
-  Lo más barato es la A.
+- **Resuelto (27/11, decisión de Carlo)**: el mini-turbo III se bajó de ×1,52 (Hydrogen) a **×1,45**, por debajo del azul ×1,5. Así, soltar un morado sobre un azul sí se nota (gana el azul) y el turbo azul sigue siendo el premio del circuito. Un test nuevo en `kart.test.ts` lo vigila: `boostMult1 < boostMult2 < boostMult3 < PADS.boostBlue.mult`.
+- Sigue habiendo un empate: el mini-turbo II y el panel clásico, los dos a ×1,4.
 - `boostAccel` 55 hace que la subida al azul o al naranja sea algo más rápida que con 45.
 
 ## Cómo probarlo (sin tocar `main`)
+
+Hay un PR **borrador** solo para la vista previa de Render: «[render preview] Físicas Hydrogen (one-shot) — NO MERGEAR». No se fusiona sin el OK de Carlo.
+
 1. **En tu PC, recomendado**:
    - `git fetch && git switch hydrogen/fisicas` (o `git worktree add ../derrape-hydrogen hydrogen/fisicas`);
    - `npm ci`;
@@ -118,4 +116,3 @@ Regla de `giveBoost`: no se apilan, **gana el mayor multiplicador** y la duraci�
 - El empujón al soltar usa la punta sin terreno: si sueltas en hierba sube igual a 31–36 m/s (los turbos ya ignoraban el terreno).
 - Levantar el dedo para soltar el mini-turbo también quita el gas un instante.
 - Falta probar con el dedo de verdad que el radio de derrape cabe en las curvas estrechas de la Laguna.
-- Mini-turbo III frente al turbo azul: ver arriba.

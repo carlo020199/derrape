@@ -11,7 +11,7 @@ import {
   type KartInput,
 } from "./kart";
 import { closestPoint, collideKartWithTrack, createOvalTrack } from "./track";
-import { KART, PHYSICS_DT } from "./tuning";
+import { KART, PADS, PHYSICS_DT } from "./tuning";
 
 const GAS: KartInput = { steer: 0, throttle: true, brake: false, drift: false };
 
@@ -127,6 +127,12 @@ describe("kart", () => {
     run(s, GAS, 0.5);
     expect(s.speed).toBeGreaterThan(KART.maxSpeed);
     expect(s.speed).toBeLessThanOrEqual(KART.maxSpeed * KART.boostMult3 + 1e-9);
+  });
+
+  it("el mini-turbo III queda por debajo del turbo azul de suelo (el azul se sigue notando)", () => {
+    expect(KART.boostMult1).toBeLessThan(KART.boostMult2);
+    expect(KART.boostMult2).toBeLessThan(KART.boostMult3);
+    expect(KART.boostMult3).toBeLessThan(PADS.boostBlue.mult);
   });
 
   it("el turbo de nivel 3 da más velocidad y dura más que el de nivel 1", () => {

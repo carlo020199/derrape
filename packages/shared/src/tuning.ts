@@ -89,7 +89,7 @@ export const KART = {
   /** Velocidad punta durante el mini-turbo por nivel (multiplicador). */
   boostMult1: 1.28,
   boostMult2: 1.4,
-  boostMult3: 1.52,
+  boostMult3: 1.45,
   /** Aceleración durante cualquier turbo (m/s²). */
   boostAccel: 55,
 
