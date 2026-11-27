@@ -23,6 +23,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 9 · color del fuego del escape (C5).** En reposo el borde de la llama era Ascua (#D9362B); sumado al fondo morado salía rosa/magenta (se veía sobre todo en Medianoche). Ahora Llama→Brasa→Brasa, todo naranja. Turbo (Espectro/Ánima) sin cambios.
 
+- **Vuelta 10 · luciérnagas (opcional de Dalí).** 200 puntos aditivos Espectro con núcleo claro que suben y bajan y parpadean sobre el óvalo y el cauce (`createFireflies`): +1 llamada, 0 triángulos. Se aprecian sobre todo sobre la ladera morada junto a la laguna; sobre el agua brillante contrastan poco.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)

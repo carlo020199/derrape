@@ -419,6 +419,77 @@ export function createRocks(track: Track, height: (x: number, z: number) => numb
   return mesh;
 }
 
+const FLY_VERT = /* glsl */ `
+attribute float aPhase;
+uniform float uTime;
+varying float vTw;
+void main() {
+  vec3 p = position;
+  p.y += sin(uTime * 0.9 + aPhase * 6.283) * 0.8;
+  p.x += sin(uTime * 0.5 + aPhase * 17.0) * 1.2;
+  p.z += cos(uTime * 0.45 + aPhase * 11.0) * 1.2;
+  vec4 mv = viewMatrix * vec4(p, 1.0);
+  vTw = 0.55 + 0.45 * sin(uTime * 2.2 + aPhase * 40.0);
+  gl_PointSize = clamp(620.0 / max(-mv.z, 1.0), 3.0, 26.0);
+  gl_Position = projectionMatrix * mv;
+}
+`;
+
+const FLY_FRAG = /* glsl */ `
+varying float vTw;
+void main() {
+  float d = length(gl_PointCoord - 0.5) * 2.0;
+  float k = clamp(1.0 - d, 0.0, 1.0);
+  gl_FragColor = vec4(mix(vec3(0.247, 0.949, 0.784), vec3(0.95, 1.0, 0.9), k * k), (k * k * 0.9 + pow(k, 3.0)) * vTw);
+}
+`;
+
+/**
+ * Luciérnagas Espectro (#3FF2C8) sobre la laguna y el cauce: unos 200 puntos aditivos en una sola llamada, sin triángulos.
+ * Suben y bajan ±0,8 m y parpadean; dan vida al agua lejana sin tocar el terreno.
+ */
+export function createFireflies(over: { x: number; z: number; y: number; rx: number; rz: number }, rivers: { x: number; z: number; half: number; lift: number }[][], count = 200): THREE.Points {
+  let seed = 7771;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const pos = new Float32Array(count * 3);
+  const phase = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    if (i % 2 === 0) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * 0.8;
+      pos.set([over.x + Math.cos(a) * over.rx * r, over.y + 1.5 + rnd() * 3.5, over.z + Math.sin(a) * over.rz * r], i * 3);
+    } else {
+      const river = rivers[i % rivers.length]!;
+      const q = river[Math.floor(rnd() * river.length)]!;
+      pos.set([q.x + (rnd() - 0.5) * q.half * 1.4, over.y + q.lift + 1.5 + rnd() * 4, q.z + (rnd() - 0.5) * q.half * 1.4], i * 3);
+    }
+    phase[i] = rnd();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("aPhase", new THREE.BufferAttribute(phase, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: FLY_VERT,
+    fragmentShader: FLY_FRAG,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    fog: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pts.renderOrder = 4;
+  pts.name = "luciernagas";
+  pts.onBeforeRender = () => {
+    mat.uniforms.uTime!.value = performance.now() / 1000;
+  };
+  return pts;
+}
+
 const HALO_VERT = /* glsl */ `
 attribute vec3 aOffset;
 uniform float uTime;
