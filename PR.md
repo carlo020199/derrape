@@ -3,7 +3,7 @@
 > Borrador de descripción. **No se ha abierto el PR** (lo decide Carlo). Última comprobación: 27/11/2026.
 
 ## Estado real de la rama (léelo primero)
-- Las fases 1–5 **ya están en `main`** (PRs #14, #16 y #17 de `circuito/nuevo`). Lo que aún no está en `main` es la **fase 6** (2 commits, 9 archivos de código + docs). Este documento resume las seis fases para que el PR se entienda entero.
+- Las fases 1–5 **ya están en `main`** (PRs #14, #16 y #17 de `circuito/nuevo`). Lo que aún no está en `main` es la **fase 6** (3 commits, 18 archivos, ≈ +770 líneas, incluidos tests, smoke y docs). Este documento resume las seis fases para que el PR se entienda entero.
 - **El «conflicto previsto con `hydrogen/fisicas` ya no existe**: `origin/hydrogen/fisicas` es ancestro de `origin/main` (PR #15, comprobado con `git merge-base --is-ancestor`) y `main` ya se ha fusionado en esta rama (`8f15faf`). `git merge-tree origin/main HEAD` da un árbol limpio, sin conflictos. El aviso «no está en main» de `HYDROGEN_FISICAS.md` está desactualizado.
 - La interacción física que sí importaba (mini-turbo III ×1,52 empatando con el azul ×1,5) ya está resuelta en `main`: N3 = ×1,45.
 
@@ -15,7 +15,7 @@
 | 3 | **Raíl triturbo ×3** de 2 m de ancho (justo un kart), contador `triTime` propio, inercia controlada, **servidor**: umbral de salto sospechoso 90 m/s y **barrido de cajas/aceite por segmento** (a 78 m/s un kart avanza 3,9 m entre mensajes) | 50 m en la recta de meta; 78,0 m/s medidos |
 | 4 | **Rampas gigantes XL** (una sube a una **plataforma flotante** con cajas encima; otra termina en salto largo); plataforma = tramo elevado de la propia pista con zonas `fall` a los lados; reaparición correcta tras caer | +3 m, meseta de 75 m; vuelos 30–85 m según turbo |
 | 5 | **Asfalto pintado decorativo** rosa y morado entre tramos (como patrocinadores en escapatorias de F1), **sin efecto de juego** | 1 malla, ≈40 triángulos; fuera del muro |
-| 6 | **Arte de fantasía** (tema propio `desvan`) + **VFX/SFX de turbos** (ver abajo) | +2 llamadas… ver Medidas |
+| 6 | **Arte de fantasía** (tema propio `desvan`) + **VFX/SFX de turbos** (ver abajo) | Desván: 43 llamadas / 53 782 triángulos (ver Medidas) |
 
 ### Fase 6 en detalle
 - **Tema `desvan`** (`ThemeId` nuevo, `render/desvanProps.ts`): muebles gigantes del tamaño de una casa a los lados de la pista — estanterías con libros enormes, pilas de libros, lámparas de pie (pantalla que brilla), armarios, cajas de juguetes con cubos de letras, sillas, relojes de pie, torres de cubos, pelotas de playa y un **osito de peluche** que asoma (guiño a King Kong). Cielo y luz algo más cálidos que Ánimas; sin campanario ni laguna. Todo en código, sin texturas ni luces reales. Reparto determinista con tests: siempre fuera del muro + 5 m, sin pisar asfalto pintado ni solaparse; una malla por celda de 170 m para que el GPU descarte lo lejano.
