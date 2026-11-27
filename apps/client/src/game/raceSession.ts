@@ -390,6 +390,8 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     const at = pointAt(track, d ?? 0, lat ?? 0);
     const s = createKart(at.x, at.z, at.heading + ((giro ?? 0) * Math.PI) / 180);
     player.race = createRaceKart(player.race.id, s, track);
+    // &turbo=1: el kart de la foto sale con turbo (para ver el fuego del escape).
+    if (new URLSearchParams(location.search).get("turbo")) player.race.state.boostTime = 1e6;
     player.prev = { ...s };
     countdown = -1e6;
     // ?correr (con ?foto): sin cuenta atrás, el kart conduce desde ese punto (smoke de rampas y turbos).

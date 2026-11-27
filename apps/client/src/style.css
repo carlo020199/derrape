@@ -92,13 +92,14 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   position: fixed;
   top: calc(82px + var(--safe-t));
   right: calc(12px + var(--safe-r));
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  border: 2px solid var(--niebla);
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  border: 1.5px solid var(--niebla);
   border-radius: 50%;
-  background: rgb(30 24 48 / 0.85);
+  background: rgb(30 24 48 / 0.5);
   color: var(--texto);
+  opacity: 0.7; /* HUD menos recargado: el engranaje se queda al alcance pero sin competir con la pista */
   z-index: 6;
 }
 
@@ -129,6 +130,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   -webkit-text-stroke: 4px var(--noche);
 }
 #position-total {
+  display: none; /* HUD de ejemplo1: solo «1º»; el total está en la pastilla y en el minimapa */
   font-family: var(--font-body);
   font-weight: 800;
   font-size: 18px;
@@ -152,7 +154,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
 }
 #hud-speed {
   font-family: var(--font-title);
-  font-size: 34px;
+  font-size: 46px; /* el velocímetro es el dato grande de ejemplo1 */
   font-weight: 400;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -164,7 +166,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   margin-left: 4px;
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   -webkit-text-stroke: 3px var(--noche);
   paint-order: stroke fill;
 }
@@ -174,7 +176,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   height: 16px;
   border-radius: 50%;
   background: rgb(30 24 48 / 0.72);
-  box-shadow: 0 0 0 2px var(--noche);
+  box-shadow: 0 0 0 2px var(--noche), inset 0 0 0 2px var(--hueso-sombra);
 }
 #hud-turbo span.on { box-shadow: 0 0 0 2px var(--noche), inset 0 0 0 2px var(--brasa); }
 #hud[data-level="1"] #hud-turbo span.on { background: var(--turbo-1); }
@@ -267,7 +269,7 @@ body.in-menu #touch-help,
   z-index: 4;
   transition: transform 120ms ease-out, box-shadow 120ms ease-out;
 }
-#item-slot.empty { opacity: 0.5; }
+#item-slot.empty { background: rgb(30 24 48 / 0.7); }
 #item-slot.ready {
   box-shadow: 0 0 0 3px var(--noche), 0 0 16px var(--brasa);
   transform: scale(1.06);
@@ -643,6 +645,20 @@ body.in-menu #touch-help,
   touch-action: pan-y;
 }
 .screen[hidden] { display: none; }
+/* Inicio (la sala tiene el card más alto y taparía la luna): noche de la Laguna (luna Hueso con halo Ánima, estrellas y colinas lejanas) en vez de un fondo liso. Solo CSS. */
+#home {
+  background:
+    radial-gradient(circle 31px at 76% 13%, var(--hueso) 0 29px, transparent 31px),
+    radial-gradient(circle 120px at 76% 13%, rgb(155 107 255 / 0.4), transparent 100%),
+    radial-gradient(circle at 14% 8%, var(--hueso) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 31% 17%, var(--hueso) 0 1px, transparent 2px),
+    radial-gradient(circle at 52% 6%, var(--hueso) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 90% 30%, var(--hueso) 0 1px, transparent 2px),
+    radial-gradient(circle at 8% 26%, var(--hueso) 0 1px, transparent 2px),
+    radial-gradient(ellipse 110% 14% at 20% 100%, var(--sombra) 0 98%, transparent 100%),
+    radial-gradient(ellipse 90% 10% at 85% 100%, var(--ciruela) 0 98%, transparent 100%),
+    linear-gradient(var(--ciruela) 0%, var(--sombra) 55%, #4a3f66 100%);
+}
 .screen .card {
   width: min(100%, 380px);
   max-width: none;
