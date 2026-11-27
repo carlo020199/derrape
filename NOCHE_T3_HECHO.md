@@ -13,6 +13,10 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 5 · nubes (C4).** Cada nube suma una panza de tono medio (mitad entre el borde claro y Sombra) entre el borde superior claro y la base: tres bandas de toon en lugar de un escalón duro; el borde superior sigue siendo el más claro. +1 disco por puff (nubes ~3 500 → ~5 200 triángulos, la misma llamada).
 
+- **Probado y revertido · camposanto (lápidas y calabazas).** 22 grupos instanciados (+5 000 triángulos, +1 llamada): desde la salida y la recta no se ve ni uno (los tapan la cresta y la calzada elevada) y solo aparecen como puntos lejanos en la curva. No compensa el coste; no se commitea.
+
+- **Vuelta 6 · campanario legible desde la salida (C4).** Escala 1,6 → 2,1: en `a-salida` ya no asoma solo la punta del tejado sino el cuerpo con la campana de Llama. Laguna `a` 0,88 % / `b` 1,50 % (casi igual). Mismo coste (mismas mallas). Probado y revertido antes: camposanto (lápidas+calabazas), ver arriba.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts
 - /workspace/derrape-release/docs/release-v1/capturas/ y /workspace/derrape-release/docs/screenshots/release1/ (regeneradas en cada vuelta)

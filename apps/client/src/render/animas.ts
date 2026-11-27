@@ -642,7 +642,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const placeTower = (groundY: number) => {
     const tower = new THREE.Mesh(campanarioGeometry(), bone);
     tower.position.set(spot.x, groundY - 0.4, spot.z);
-    tower.scale.setScalar(1.6);
+    tower.scale.setScalar(2.1);
     // De cara a la parrilla (d = 18), no a la calzada de al lado: así la campana y las ventanas se ven desde la salida.
     const grid = pointAt(track, 18, 0);
     tower.rotation.y = Math.atan2(grid.x - spot.x, grid.z - spot.z);

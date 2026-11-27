@@ -1,12 +1,12 @@
 {
-  "fecha": "2026-11-27T01:36:18.087Z",
+  "fecha": "2026-11-27T01:40:49.093Z",
   "personaje": "calavera-chispas",
   "kart": "medianoche",
   "a-salida": {
-    "c2_moradoPct": 93.3,
-    "c2_casiNegroPct": 0.91,
-    "c3_lagunaPct": 0.58,
-    "c3_lagunaTercioMedioSuperiorPct": 0.56,
+    "c2_moradoPct": 93.29,
+    "c2_casiNegroPct": 0.9,
+    "c3_lagunaPct": 0.56,
+    "c3_lagunaTercioMedioSuperiorPct": 0.53,
     "c7_bloquesPlanosPctDelTerrenoVisible": 48.44,
     "c7_regionPlanaMayorPctPantalla": 25.82,
     "c7_bloquesPlanosRelativoPct": 21.35,
@@ -14,17 +14,17 @@
     "alto": 1688,
     "renderInfo": {
       "calls": 55,
-      "triangles": 103174
+      "triangles": 103150
     },
-    "msPorFotogramaSoftware": 60.5
+    "msPorFotogramaSoftware": 61
   },
   "b-recta-campanario": {
-    "c2_moradoPct": 92.91,
-    "c2_casiNegroPct": 0.93,
-    "c3_lagunaPct": 1.24,
-    "c3_lagunaTercioMedioSuperiorPct": 1.21,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 56.25,
-    "c7_regionPlanaMayorPctPantalla": 32.66,
+    "c2_moradoPct": 92.85,
+    "c2_casiNegroPct": 0.92,
+    "c3_lagunaPct": 1.19,
+    "c3_lagunaTercioMedioSuperiorPct": 1.17,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 55.73,
+    "c7_regionPlanaMayorPctPantalla": 32.35,
     "c7_bloquesPlanosRelativoPct": 34.38,
     "ancho": 780,
     "alto": 1688,
@@ -32,15 +32,15 @@
       "calls": 54,
       "triangles": 102374
     },
-    "msPorFotogramaSoftware": 60.8
+    "msPorFotogramaSoftware": 58
   },
   "c-curva-valla": {
-    "c2_moradoPct": 93.77,
+    "c2_moradoPct": 93.83,
     "c2_casiNegroPct": 1.07,
     "c3_lagunaPct": 0.19,
     "c3_lagunaTercioMedioSuperiorPct": 0.16,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 53.13,
-    "c7_regionPlanaMayorPctPantalla": 31.11,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 53.65,
+    "c7_regionPlanaMayorPctPantalla": 31.42,
     "c7_bloquesPlanosRelativoPct": 21.35,
     "ancho": 780,
     "alto": 1688,
@@ -48,14 +48,14 @@
       "calls": 54,
       "triangles": 98932
     },
-    "msPorFotogramaSoftware": 50.9
+    "msPorFotogramaSoftware": 58.1
   },
   "d-laguna": {
-    "c2_moradoPct": 85.87,
+    "c2_moradoPct": 85.89,
     "c2_casiNegroPct": 1.17,
-    "c3_lagunaPct": 7.35,
-    "c3_lagunaTercioMedioSuperiorPct": 6.63,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 33.33,
+    "c3_lagunaPct": 7.3,
+    "c3_lagunaTercioMedioSuperiorPct": 6.58,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 33.85,
     "c7_regionPlanaMayorPctPantalla": 13.69,
     "c7_bloquesPlanosRelativoPct": 21.35,
     "ancho": 780,
@@ -64,15 +64,15 @@
       "calls": 61,
       "triangles": 104036
     },
-    "msPorFotogramaSoftware": 60.2
+    "msPorFotogramaSoftware": 59.1
   },
   "e-frontal": {
-    "c2_moradoPct": 94.36,
+    "c2_moradoPct": 94.31,
     "c2_casiNegroPct": 1.52,
     "c3_lagunaPct": 0.11,
     "c3_lagunaTercioMedioSuperiorPct": 0.08,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 59.38,
-    "c7_regionPlanaMayorPctPantalla": 32.98,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 58.85,
+    "c7_regionPlanaMayorPctPantalla": 32.66,
     "c7_bloquesPlanosRelativoPct": 38.02,
     "ancho": 780,
     "alto": 1688,
@@ -80,7 +80,7 @@
       "calls": 48,
       "triangles": 98790
     },
-    "msPorFotogramaSoftware": 48.1
+    "msPorFotogramaSoftware": 46.3
   },
   "erroresDeConsola": [
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
