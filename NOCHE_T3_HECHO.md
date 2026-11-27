@@ -44,7 +44,7 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 ## Qué falta
 - Prueba de fps en iPhone/Android: **pendiente de prueba en dispositivo** (solo hay métricas proxy).
-- Laguna ancha visible desde la salida (C3 en `a`/`b`: 0,9 % / 1,5 %): requiere rediseñar el terreno o la calzada elevada; con la restricción «sin subir el terreno» no hay arreglo barato (en `d` pasa: 8,0 % / 7,3 %).
+- Laguna ancha visible desde la salida (C3 en `a`/`b`: 0,9 % / 1,5 % de píxeles): se mitigó con el resplandor del río (vuelta 12), pero la métrica no sube porque el agua sigue tapada por el final de la calzada elevada; un cambio real exige rediseñar la calzada o el terreno (en `d` pasa: 8,0 % / 7,3 %).
 - (Hecho en la vuelta 11: un árbol grande a la izquierda de la salida, abierto, que no tapa el campanario.)
 - Los «cortes» negros junto a la coleta de Lía no son un fallo del contorno: son la goma Noche (torus) entre el nudo y la cúpula, deliberada en el diseño.
 - Nubes opacas (no traslúcidas): con discos solapados la mezcla alfa se vería doble.
