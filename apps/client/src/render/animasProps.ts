@@ -186,7 +186,8 @@ function headingKappa(track: Track, d: number) {
 const POST_SCALE = 1.7;
 
 export interface FenceResult {
-  posts: THREE.InstancedMesh;
+  /** Postes en grupos de ~25: cada grupo se descarta entero cuando queda fuera de cámara (un InstancedMesh no descarta instancias sueltas). */
+  posts: THREE.Group;
   rope: THREE.Mesh;
   count: number;
   /** Tramos con valla (distancia inicial y final, m). */
@@ -232,12 +233,21 @@ export function createFences(track: Track, spacing = 3.4, maxPosts = 150): Fence
     total += list.length;
   }
   const placed = all.filter((q) => keep.has(q.run));
-  const posts = new THREE.InstancedMesh(skullPostGeometry(), sharedBoneToon(), Math.max(1, placed.length));
-  const m = new THREE.Matrix4();
-  placed.forEach((q, i) => posts.setMatrixAt(i, m.compose(new THREE.Vector3(q.x, q.y, q.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), i * 1.7), new THREE.Vector3(POST_SCALE, POST_SCALE, POST_SCALE))));
-  posts.count = placed.length;
-  posts.frustumCulled = false;
+  const posts = new THREE.Group();
   posts.name = "vallas-hueso";
+  const postGeo = skullPostGeometry();
+  const postMat = sharedBoneToon();
+  const m = new THREE.Matrix4();
+  const CHUNK = 25;
+  for (let c0 = 0; c0 < placed.length; c0 += CHUNK) {
+    const part = placed.slice(c0, c0 + CHUNK);
+    const mesh = new THREE.InstancedMesh(postGeo, postMat, part.length);
+    part.forEach((q, i) => mesh.setMatrixAt(i, m.compose(new THREE.Vector3(q.x, q.y, q.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (c0 + i) * 1.7), new THREE.Vector3(POST_SCALE, POST_SCALE, POST_SCALE))));
+    mesh.count = part.length;
+    mesh.computeBoundingSphere();
+    mesh.name = `vallas-hueso-${c0 / CHUNK + 1}`;
+    posts.add(mesh);
+  }
 
   // Cuerda: prisma fino entre postes consecutivos del mismo tramo, un poco caída en el centro.
   const pos: number[] = [];
@@ -359,6 +369,52 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
     mesh.name = `arboles-${model + 1}`;
     out.push(mesh);
   });
+  return out;
+}
+
+/**
+ * Arbolillos de relleno a los dos lados de la pista, a 8–25 m del borde exterior del arcén: los laterales de las curvas y de la recta
+ * de salida no quedan vacíos. El modelo retorcido pequeño, repartido en sectores de pista con su propia
+ * esfera de límites: lo que queda fuera de cámara no se dibuja (el presupuesto de triángulos no sube más que con lo visible).
+ */
+export function createFillTrees(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, count = 56, sectors = 8): THREE.InstancedMesh[] {
+  const geos = treeGeometries();
+  const mat = toonMaterial({ vertexColors: true });
+  type Slot = { x: number; y: number; z: number; model: number; s: number; rot: number; sector: number };
+  const slots: Slot[] = [];
+  let seed = 7771;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const stride = track.length / count;
+  for (let i = 0; i < count; i++) {
+    const d = (i * stride + rnd() * stride * 0.7) % track.length;
+    const side = i % 2 === 0 ? 1 : -1;
+    const p = pointAt(track, d);
+    const lat = side * (p.width / 2 + track.verge + 8 + rnd() * 17);
+    const at = pointAt(track, d, lat);
+    const c = closestPoint(track, at.x, at.z);
+    // Más cerca de otro tramo de pista que de este (cruces a distinto nivel): no se planta.
+    if (Math.abs(c.lateral) < c.width / 2 + track.verge + 6) continue;
+    if (!lagoonClear(at.x, at.z)) continue;
+    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: 2, s: 0.9 + rnd() * 0.7, rot: rnd() * Math.PI * 2, sector: Math.floor((d / track.length) * sectors) });
+  }
+  const out: THREE.InstancedMesh[] = [];
+  const m = new THREE.Matrix4();
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let sec = 0; sec < sectors; sec++) {
+    for (const model of [2]) {
+      const mine = slots.filter((q) => q.sector === sec && q.model === model);
+      if (!mine.length) continue;
+      const mesh = new THREE.InstancedMesh(geos[model]!, mat, mine.length);
+      mine.forEach((q, i) => mesh.setMatrixAt(i, m.compose(new THREE.Vector3(q.x, q.y, q.z), new THREE.Quaternion().setFromAxisAngle(up, q.rot), new THREE.Vector3(q.s, q.s, q.s))));
+      mesh.count = mine.length;
+      mesh.computeBoundingSphere();
+      mesh.name = `arbolillos-${sec + 1}-${model + 1}`;
+      out.push(mesh);
+    }
+  }
   return out;
 }
 

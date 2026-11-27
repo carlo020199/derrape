@@ -122,7 +122,8 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
       // Opacas: los discos se pisan sin mezclarse. Arriba, borde claro Niebla con un toque de Ánima; abajo, Sombra.
       // El borde claro es el mismo en las tres capas (más Ánima que antes): contra el horizonte, que es casi Niebla, el de las capas bajas se perdía y solo quedaba la base oscura.
       const top = base.clone().lerp(anima, 0.34 - 0.08 * L.mix).getHex();
-      const bot = shade.clone().getHex();
+      // La base ya no es un contorno oscuro: se aclara hacia el tono medio (transparente de verdad no se puede: sin prueba de profundidad taparía el terreno).
+      const bot = shade.clone().lerp(base.clone().lerp(anima, 0.34 - 0.08 * L.mix), 0.4).getHex();
       const puffs = 4 + Math.floor(r() * 3);
       const w = L.size * (0.8 + r() * 0.5);
       // Primero todas las bases (Sombra) y luego todos los bordes claros: una base nunca tapa el borde del puff vecino.
