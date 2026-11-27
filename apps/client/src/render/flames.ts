@@ -218,7 +218,7 @@ export function paintExhaust(
   const core = turbo ? PALETTE.espectro : PALETTE.llama;
   const mid = turbo ? PALETTE.espectro : PALETTE.brasa;
   const edge = turbo ? PALETTE.anima : PALETTE.ascua;
-  const n = boost ? 8 : 6;
+  const n = boost ? 12 : 9;
   _side.set(dir.z, 0, -dir.x);
   if (_side.lengthSq() < 1e-4) _side.set(1, 0, 0);
   _side.normalize();

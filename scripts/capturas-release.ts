@@ -185,7 +185,7 @@ page.on("pageerror", (e) => errores.push(String(e)));
 page.on("console", (m) => m.type() === "error" && errores.push(m.text()));
 
 for (const s of SHOTS) {
-  await page.goto(`${base}/?track=${TRACK}&foto=${s.foto}${s.vista ? `&vista=${s.vista}` : ""}`, { timeout: 120000 });
+  await page.goto(`${base}/?track=${TRACK}&foto=${s.foto}${s.vista ? `&vista=${s.vista}` : ""}${process.env.EXTRA ?? ""}`, { timeout: 120000 });
   await page.waitForFunction(() => (window as unknown as { __escena?: unknown }).__escena, null, { timeout: 60000 });
   await page.waitForTimeout(Number(process.env.ASENTAR ?? 6000)); // cámara asentada (por software va a ~20 fps)
   await page.addStyleTag({ content: "#countdown, #wrong-way, #loading, #touch-help { display: none !important }" });
