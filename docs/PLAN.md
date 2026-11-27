@@ -131,6 +131,9 @@ Cada fase termina con algo jugable, tests en verde y un commit. Prompts en `docs
   - [x] R1·Fase 3 — Fuego: escapes con sprites aditivos, chispas, turbo Espectro.
   - [x] R1·Fase 4 — Pilotos y coches: Lía + Hueso, Calavera Chispas + Medianoche, animaciones, selección sobre pedestal.
   - [x] R1·Fase 5 — Pulido y rendimiento; `medidas.json`.
+- **Circuito nuevo (rama `circuito/nuevo`, plan en `docs/circuito-nuevo/`):**
+  - [x] CN·Fase 1 — Trazado «Desván de las Maravillas» + turbos de suelo azul/naranja, jugable en práctica en solitario.
+  - [ ] CN·Fases 2–8 — Rampas-mueble, cohete v2, raíl triturbo, gigantes y plataforma, arte de muebles, pulido.
 - [ ] **Después de la 1.0:** bots, contrarreloj con fantasma, circuitos espejo, más objetos.
 
 Consejo: aunque la 1.0 sea con todo el contenido, no esperes a tenerlo todo para probar: la sensación

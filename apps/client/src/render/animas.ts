@@ -3,6 +3,7 @@ import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type 
 import { createAnimasMoon, createClouds, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 import { createFences, createLanterns, createTrees } from "./animasProps";
+import { groundBoostMesh } from "./groundBoost";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -764,4 +765,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     pads.frustumCulled = false;
     scene.add(pads);
   }
+  // Turbos de suelo azul/naranja (circuitos que los traen): una sola malla.
+  const groundPads = groundBoostMesh(track);
+  if (groundPads) scene.add(groundPads);
 }
