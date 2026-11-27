@@ -6,7 +6,7 @@ Capturas y `metricas.json` en `docs/screenshots/release1-c3c7/{antes,despues}`.
 | Toma | Laguna % (antes → después) | Región plana mayor % (antes → después) | Llamadas | Triángulos |
 |---|---|---|---|---|
 | a-salida | 0,90 → 2,5 | 26,1 → 4,0 | 61 → 63 | 107 032 → 88 888 |
-| b-recta-campanario | 1,54 → 7,0 (**≥ 6 %**) | 32,0 → 3,1 | 60 → 61 | 106 236 → 86 956 |
+| b-recta-campanario | 1,54 → 7,1 (**≥ 6 %**) | 32,0 → 3,1 | 60 → 61 | 106 236 → 86 956 |
 | c-curva-valla | 0,52 → 0,5 | 30,8 → 2,8 | 60 → 65 | 102 798 → 93 590 |
 | d-laguna | 7,98 → 8,0 | 14,6 → 6,8 | 67 → 74 | 107 930 → 100 930 |
 | e-frontal | 0,58 → 0,6 | 32,7 → 7,2 | 54 → 57 | 102 660 → 88 512 |
