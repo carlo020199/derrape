@@ -33,6 +33,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
   - Nota: en esa tanda la captura `d-laguna` de Calavera salió con la cámara sin asentar (73,7 % morado / 18,6 % laguna); es intermitente en la tanda completa y sale bien suelta (85,9 % / 7,3 %). Se regeneró.
 
+- **Control de coste (software).** A/B en la misma máquina de `a-salida` (3 + 3 tomas intercaladas, SwiftShader 390×844 @2x): antes de la noche (d859861) 51–61 ms (media 54,4); ahora 55–60 ms (media 57,6), ≈ +6 %, dentro del ruido (la máquina iba cargada). Solo orientativo: el fps real en móvil sigue pendiente de prueba en dispositivo.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
