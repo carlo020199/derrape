@@ -35,7 +35,7 @@ Carpeta `/workspace/derrape-circuito-capturas/fase1/`:
 ## Decisiones tomadas
 - **Nombre:** «Desván de las Maravillas» (fantasía + muebles viejos, el desván como sitio de los muebles — pregunta 4 del plan, por confirmar con Carlo).
 - **Tipos de zona:** 4 tipos (color × ancho/franja) en vez de una propiedad de zona, porque `Surface` es solo el tipo de zona y así no hay que tocar `surfaceAt`. Un test comprueba que el nombre cuadra con la anchura.
-- **Color:** azul = Espectro `#3FF2C8` (turbo 1 de las chispas); naranja = **Brasa `#FF6A1F`**, no Llama, porque Llama se lee amarillo y se confundía con el azul-verdoso menos de lo que me gustaba pero chocaba con las chispas. Las llamas/chispas siguen con sus colores: unificarlos queda para la fase de pulido/Dalí.
+- **Color:** azul = Espectro `#3FF2C8` (turbo 1 de las chispas); naranja = **Brasa `#FF6A1F`**, no Llama `#FFB423`, porque Llama se lee amarillo y se quería un naranja claro frente al azul. Las llamas/chispas siguen con sus colores: unificarlos queda para la fase de pulido/Dalí.
 - **«Gana el mayor»**: se mantiene el `giveBoost` actual, que aplica el mayor multiplicador durante la mayor duración. Consecuencia conocida: naranja con poco tiempo restante + pisar un azul mantiene ×1,75 hasta 1,5–2 s. Es lo que pidió Carlo («la duración se alarga como ya hace el motor»).
 - **Vuelta ≈74 s** = vuelta de bot **sin** turbos. Con turbos baja a ≈60 s (bot); un humano estará entre ambas.
 - Cajas: las 6 filas del plan (la de 1.510 m queda sobre asfalto normal hasta que exista la plataforma).
