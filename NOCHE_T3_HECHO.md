@@ -1,6 +1,6 @@
-ESTADO: PARCIAL
+ESTADO: COMPLETO
 
-> Estado a las 03:10 del 27/11. Continuación del T3 (orden de Carlo del 27/11: seguir mientras quede límite). La versión anterior (Hydrogen sin cuota, 26/11) sigue en el historial de git.
+> Cierre a las ~03:40 del 27/11: tras la última vuelta no queda ninguna mejora visual razonable dentro de las restricciones (lo pendiente necesita decisión de Carlo o rediseño, ver abajo). Continuación del T3 (orden de Carlo del 27/11: seguir mientras quede límite). La versión anterior (Hydrogen sin cuota, 26/11) sigue en el historial de git.
 
 ## Qué se ha hecho
 Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas de Lía+Hueso y Calavera Chispas+Medianoche, commit y push a `release/v1`).
