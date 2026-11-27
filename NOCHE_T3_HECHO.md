@@ -29,6 +29,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Probado y descartado · laguna en `a`/`b` por el terreno.** Aplanar las orillas del río lejano (pendiente 0,45 → 0,12 junto al cauce lejano) no cambia nada (0,88 % / 1,47 %): lo que oculta el agua en la salida no es el terreno sino el final elevado de la calzada. Con el río más alto (FAR_LIFT) ya se probó el 26/11 y empeoraba el aspecto. Queda como decisión de rediseño (ver abajo).
 
+- **Vuelta 12 · resplandor del río lejano (C3).** Como el agua de `a`/`b` la tapa el final elevado de la calzada (no el terreno), se añade una cortina de 26 m de Espectro aditivo sobre el cauce lejano (`riverGlow`, 1 llamada, ~80 triángulos, alfa por vértice que se apaga hacia arriba y en los extremos). Desde la salida la franja deja de ser una raya y se lee como un río luminoso hasta el campanario. No cambia el terreno ni los árboles.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
