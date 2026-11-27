@@ -2,7 +2,7 @@
 // El comportamiento imita a los juegos de karts de referencia; ver docs/FISICAS.md.
 
 import type { Surface } from "./track";
-import { BANK, ITEMS, KART, RAMP, SLOPE, SURFACE, type KartTuning, type RampSize } from "./tuning";
+import { BANK, ITEMS, KART, PADS, RAMP, SLOPE, SURFACE, isPadType, type KartTuning, type RampSize } from "./tuning";
 
 export interface KartInput {
   /** -1 (izquierda) .. 1 (derecha). */
@@ -196,6 +196,7 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   const steer = Math.max(-1, Math.min(1, input.steer));
   const icy = s.surface === "lowGrip";
   if (s.surface === "boostPad") giveBoost(s, SURFACE.boostPadTime, SURFACE.boostPadMult);
+  else if (isPadType(s.surface)) giveBoost(s, PADS[s.surface].time, PADS[s.surface].mult);
   // Rampa sin tamaño: salto de duración fija. Con tamaño, el vuelo lo dispara la pista en el labio.
   if (
     s.surface === "ramp" &&

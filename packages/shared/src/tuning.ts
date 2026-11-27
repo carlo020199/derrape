@@ -153,6 +153,25 @@ export const SURFACE = {
 };
 
 /**
+ * Turbos de suelo del circuito nuevo (azul y naranja), con ancho completo o franja estrecha.
+ * Como el resto de turbos, no se multiplican entre sí ni con el mini-turbo: gana el mayor `mult`
+ * y la duración se alarga (ver `giveBoost`). Se pisan cada paso, así que `time` cuenta desde el último paso encima.
+ * Revisar al rebasar sobre el port de Hydrogen (mini-turbo N3 ≈ ×1,52, casi un azul): ver docs/circuito-nuevo/FASE1_HECHO.md.
+ */
+export const PADS = {
+  boostBlue: { mult: 1.5, time: 1.5 },
+  boostBlueNarrow: { mult: 1.5, time: 2 },
+  boostOrange: { mult: 1.75, time: 2.5 },
+  boostOrangeNarrow: { mult: 1.75, time: 3 },
+} as const;
+
+export type PadType = keyof typeof PADS;
+
+export function isPadType(type: string): type is PadType {
+  return type in PADS;
+}
+
+/**
  * Cuestas. Solo en circuitos con relieve (`Track.relief`): en el resto la altura sigue siendo visual.
  * `k·g·sin(pendiente)` empuja en las bajadas y frena en las subidas, con tope para no cambiar la punta.
  */

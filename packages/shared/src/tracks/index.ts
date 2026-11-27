@@ -44,6 +44,13 @@ export const TRACKS: TrackEntry[] = [
     cup: null,
     load: () => import("./12-ribera-de-las-animas").then((m) => m.default),
   },
+  {
+    id: "desvan-de-las-maravillas",
+    number: 13,
+    name: "Desván de las Maravillas",
+    cup: null,
+    load: () => import("./13-desvan-de-las-maravillas").then((m) => m.default),
+  },
 ];
 
 export const DEFAULT_TRACK = "paseo-del-puerto";

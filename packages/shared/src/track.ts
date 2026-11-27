@@ -20,7 +20,17 @@ export interface TrackPoint {
 }
 
 /** Tipos de zona especial reutilizables por cualquier circuito. */
-export type ZoneType = "slow" | "lowGrip" | "boostPad" | "fall" | "ramp";
+export type ZoneType =
+  | "slow"
+  | "lowGrip"
+  | "boostPad"
+  | "fall"
+  | "ramp"
+  // Turbos de suelo (ver PADS en tuning.ts): azul ×1,5 y naranja ×1,75, en ancho completo o en franja estrecha.
+  | "boostBlue"
+  | "boostBlueNarrow"
+  | "boostOrange"
+  | "boostOrangeNarrow";
 
 export interface TrackZone {
   type: ZoneType;
