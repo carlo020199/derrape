@@ -23,21 +23,12 @@ if (!g.document) {
         height: 64,
         getContext() {
           const grad = { addColorStop() {} };
-          return {
-            fillStyle: "",
-            font: "",
-            textAlign: "",
-            textBaseline: "",
-            createRadialGradient: () => grad,
-            createLinearGradient: () => grad,
-            fillRect() {},
-            fillText() {},
-            beginPath() {},
-            moveTo() {},
-            lineTo() {},
-            closePath() {},
-            fill() {},
-          };
+          // Cualquier método de dibujo es un no-op (arc, stroke, roundRect…): solo se mide la geometría.
+          const state: Record<string, unknown> = { createRadialGradient: () => grad, createLinearGradient: () => grad, measureText: () => ({ width: 1 }) };
+          return new Proxy(state, {
+            get: (t, k: string) => (k in t ? t[k] : () => {}),
+            set: (t, k: string, v) => ((t[k] = v), true),
+          });
         },
       };
     },
