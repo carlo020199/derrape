@@ -615,7 +615,7 @@ function landKart(s: KartState, track: Track, c: ClosestPoint) {
   const kartPitch = Math.atan2(s.vy, Math.max(1, Math.abs(s.speed)));
   const trackPitch = Math.asin(Math.max(-1, Math.min(1, gradeAlong(track, c, s.heading))));
   const clean = Math.abs(kartPitch - trackPitch) < (15 * Math.PI) / 180;
-  if (s.trick && s.flightRamp) giveBoost(s, RAMP[s.flightRamp].trick, KART.boostSpeedMult);
+  if (s.trick && s.flightRamp) giveBoost(s, RAMP[s.flightRamp].trick, KART.boostMult1);
   s.airborne = false;
   s.y = ground;
   s.vy = 0;

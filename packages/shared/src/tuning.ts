@@ -17,7 +17,7 @@ export const MAX_PLAYERS = 8;
  *
  * Los valores imitan el comportamiento documentado de los juegos de karts de referencia
  * (ver docs/FISICAS.md): aceleración en dos fases, salto antes del derrape, carga del
- * mini-turbo más rápida girando hacia dentro y tres niveles con duraciones crecientes.
+ * mini-turbo más rápida girando hacia dentro y tres niveles con duraciones y fuerza crecientes.
  */
 export const KART = {
   /** Velocidad punta (m/s). */
@@ -46,8 +46,8 @@ export const KART = {
   radius: 0.9,
 
   /** Salto que inicia el derrape (s en el aire) y su altura (m, solo visual). */
-  hopTime: 0.22,
-  hopHeight: 0.35,
+  hopTime: 0.36,
+  hopHeight: 0.65,
   /** Velocidad mínima para empezar a derrapar (m/s). */
   driftMinSpeed: 10,
   /** Giro derrapando con el control neutro (rad/s): el derrape cierra más que el giro normal. */
@@ -59,8 +59,8 @@ export const KART = {
    */
   driftTurnClose: 1.1,
   driftTurnOpen: 1.1,
-  /** Rapidez con la que el giro se acerca al input durante el derrape (unidades de giro/s). Teclado: ~0,25 s de lado a lado. */
-  driftSteerRate: 8,
+  /** Rapidez con la que el giro se acerca al input durante el derrape (unidades de giro/s). */
+  driftSteerRate: 14,
   /** Mínimo de giro (0–1) para que un cambio de lado cuente como zigzag. */
   driftZigzagThreshold: 0.6,
   /** Tras un zigzag, la carga va más rápida este tiempo (s) y este multiplicador. */
@@ -68,9 +68,9 @@ export const KART = {
   driftZigzagMult: 1.25,
   /** Velocidad que se pierde derrapando (fracción de la punta). Casi nada. */
   driftSpeedLoss: 0.02,
-  /** Carga por segundo girando hacia dentro de la curva / en neutro o hacia fuera (5 y 2 por fotograma a 60 fps). */
+  /** Carga por segundo girando hacia dentro de la curva / en neutro o hacia fuera (5 y 4 por fotograma a 60 fps). */
   driftChargeFast: 300,
-  driftChargeSlow: 120,
+  driftChargeSlow: 240,
   /** A partir de qué parte del giro hacia dentro se carga rápido (0–1). */
   driftInsideThreshold: 0.4,
   /** Carga necesaria para cada nivel de chispas: azul, naranja, morado. */
@@ -79,17 +79,19 @@ export const KART = {
   driftLevel3: 870,
   /** Multiplicador de carga (el coche Derrapín tendrá +15 %). */
   driftChargeMult: 1,
-  /** Ángulo visual del kart derrapando (rad). Solo estético. */
+  /** Ángulo visual base del kart derrapando (rad). Solo estético (ver driftVisualSlip). */
   driftVisualAngle: 0.45,
 
   /** Duración del mini-turbo por nivel (s). */
-  boostTime1: 0.62,
-  boostTime2: 1.67,
-  boostTime3: 2.63,
-  /** Velocidad punta durante el mini-turbo (multiplicador). */
-  boostSpeedMult: 1.2,
+  boostTime1: 0.85,
+  boostTime2: 1.5,
+  boostTime3: 2.2,
+  /** Velocidad punta durante el mini-turbo por nivel (multiplicador). */
+  boostMult1: 1.28,
+  boostMult2: 1.4,
+  boostMult3: 1.52,
   /** Aceleración durante cualquier turbo (m/s²). */
-  boostAccel: 45,
+  boostAccel: 55,
 
   /** Velocidad que se conserva al chocar con un borde de frente (0–1). */
   wallBounceKeep: 0.45,
@@ -143,7 +145,7 @@ export const SURFACE = {
   lowGripAccelMult: 0.6,
   /** Panel de turbo: duración y fuerza. */
   boostPadTime: 1,
-  boostPadMult: 1.3,
+  boostPadMult: 1.4,
   /** Rampa: salto largo si llegas con velocidad. Sin `size`, el salto dura `rampHopTime`. */
   rampMinSpeed: 12,
   rampHopTime: 0.55,

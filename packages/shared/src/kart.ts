@@ -14,7 +14,7 @@ export interface KartInput {
   drift: boolean;
   /**
    * Lado del derrape pedido por un gesto (-1 izquierda, 1 derecha, como `steer`).
-   * Si viene, el derrape empieza al aterrizar aunque el giro esté centrado.
+   * Si viene, el derrape empieza en el mismo paso aunque el giro esté centrado.
    */
   driftSide?: number;
   /** Deslizar hacia arriba en el aire: mini-turbo al aterrizar. */
@@ -37,7 +37,7 @@ export interface KartState {
   /** Último lado fuerte del contravolante (1 = cierra, -1 = abre, 0 = ninguno) y tiempo de zigzag restante (s). */
   driftSwingSide: number;
   driftZigzag: number;
-  /** Tiempo de salto restante (s). Al aterrizar empieza el derrape si se sigue pidiendo. */
+  /** Tiempo de salto restante (s). */
   hopTime: number;
   /** Duración total del salto en curso (para la curva de altura: derrape o rampa). */
   hopTotal: number;
@@ -133,6 +133,16 @@ export function driftLevel(s: KartState, t: KartTuning = KART): number {
   return 0;
 }
 
+/** Ángulo visual del kart en derrape (rad), variable con el contravolante. */
+export function driftVisualSlip(
+  s: Pick<KartState, "driftDir" | "driftSteer">,
+  _t: KartTuning = KART,
+): number {
+  if (s.driftDir === 0) return 0;
+  const inside = Math.max(-1, Math.min(1, -s.driftSteer * s.driftDir));
+  return s.driftDir * (0.44 + inside * 0.16);
+}
+
 /** Altura del salto (m) para dibujarlo. */
 export function hopHeight(s: KartState, t: KartTuning = KART): number {
   if (s.hopTime <= 0) return 0;
@@ -154,8 +164,11 @@ export function giveBoost(s: KartState, time: number, mult: number): void {
   s.boostTime = Math.max(s.boostTime, time);
 }
 
-function boostForLevel(level: number, t: KartTuning): number {
-  return level === 3 ? t.boostTime3 : level === 2 ? t.boostTime2 : level === 1 ? t.boostTime1 : 0;
+function boostForLevel(level: number, t: KartTuning): { time: number; mult: number } {
+  if (level === 3) return { time: t.boostTime3, mult: t.boostMult3 };
+  if (level === 2) return { time: t.boostTime2, mult: t.boostMult2 };
+  if (level === 1) return { time: t.boostTime1, mult: t.boostMult1 };
+  return { time: 0, mult: 1 };
 }
 
 function approach(value: number, target: number, maxDelta: number): number {
@@ -164,7 +177,14 @@ function approach(value: number, target: number, maxDelta: number): number {
 }
 
 function endDrift(s: KartState, t: KartTuning, withBoost: boolean) {
-  if (withBoost) giveBoost(s, boostForLevel(driftLevel(s, t), t), t.boostSpeedMult);
+  if (withBoost) {
+    const { time, mult } = boostForLevel(driftLevel(s, t), t);
+    if (time > 0) {
+      giveBoost(s, time, mult);
+      const top = t.maxSpeed;
+      s.speed = Math.max(s.speed, top + (mult - 1) * top * 0.75);
+    }
+  }
   s.driftDir = 0;
   s.driftCharge = 0;
   s.driftSteer = 0;
@@ -210,26 +230,24 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   if (s.airborne && input.trick) s.trick = true;
 
   // --- Salto y derrape ---
-  // Pulsar derrape = saltito. Al aterrizar, si se sigue pulsando y hay dirección, empieza el derrape.
+  // Pulsar derrape lanza el saltito. Si se mantiene con dirección y velocidad suficiente,
+  // el derrape arranca en el mismo paso (sin esperar al aterrizaje), aunque la carga
+  // no sube mientras dure el salto ni en el aire.
   if (s.driftDir === 0) {
     if (pressed && s.hopTime === 0 && s.speed > 0 && !s.airborne) startHop(s, t.hopTime);
-    if (s.hopTime > 0) {
-      s.hopTime = Math.max(0, s.hopTime - dt);
-      if (s.hopTime === 0) {
-        const side = input.driftSide || (Math.abs(steer) > 0.3 ? steer : 0);
-        if (input.drift && side !== 0 && s.speed >= t.driftMinSpeed) {
-          // Girar a la izquierda (steer < 0) es rumbo positivo.
-          s.driftDir = side < 0 ? 1 : -1;
-          s.driftCharge = 0;
-          s.driftSteer = steer;
-          s.driftSwingSide = 0;
-          s.driftZigzag = 0;
-        }
-      }
+    const side = input.driftSide || (Math.abs(steer) > 0.15 ? steer : 0);
+    if (input.drift && side !== 0 && s.speed >= t.driftMinSpeed) {
+      // Girar a la izquierda (steer < 0) es rumbo positivo.
+      s.driftDir = side < 0 ? 1 : -1;
+      s.driftCharge = 0;
+      s.driftSteer = steer;
+      s.driftSwingSide = 0;
+      s.driftZigzag = 0;
     }
   } else if (!input.drift || s.speed < t.driftMinSpeed * 0.6) {
     endDrift(s, t, s.speed >= t.driftMinSpeed * 0.6);
   }
+  if (s.hopTime > 0) s.hopTime = Math.max(0, s.hopTime - dt);
 
   // --- Velocidad ---
   const boosting = s.boostTime > 0;

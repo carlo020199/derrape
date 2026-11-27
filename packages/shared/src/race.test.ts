@@ -136,7 +136,7 @@ describe("superficies", () => {
     s.surface = "offroad";
     s.speed = KART.maxSpeed;
     s.boostTime = 1;
-    s.boostMult = KART.boostSpeedMult;
+    s.boostMult = KART.boostMult1;
     stepKart(s, GAS, PHYSICS_DT);
     expect(s.speed).toBeGreaterThan(KART.maxSpeed);
   });
