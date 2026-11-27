@@ -224,7 +224,7 @@ export const BANK = {
   driftCharge: 1.15,
 };
 
-export type RampSize = "S" | "M" | "L";
+export type RampSize = "S" | "M" | "L" | "XL";
 
 /** Rampas-mueble (`landBoost`): turbo al aterrizar limpio. No se apila (ver `giveBoost`: gana el mayor). */
 export const LANDING = {
@@ -242,15 +242,19 @@ export const RAMP = {
   S: { lip: 0.6, len: 4, trick: 0.4 },
   M: { lip: 1.5, len: 8, trick: 0.6 },
   L: { lip: 3, len: 12, trick: 0.9 },
+  /** Rampa gigante del Desván (mueble enorme): labio de 4 m en 16 m. */
+  XL: { lip: 4, len: 16, trick: 1.2 },
   gGame: 14,
   /** Giro que se conserva en el aire. */
   airTurn: 0.3,
   /** Los muros miden esto (m). Por encima se pasa volando. */
   wallHeight: 0.9,
-  /** En el salto L hay un muro invisible más alto, para no atajar por el aire. */
+  /** En los saltos L y XL hay un muro invisible más alto, para no atajar por el aire. */
   tallWall: 4,
   /** Metros de vuelo tras el labio L en los que ese muro sigue contando. */
   tallSpan: 50,
+  /** Lo mismo para la rampa gigante XL: vuela más lejos (hasta ≈90 m a ×1,75). */
+  tallSpanXL: 95,
 };
 
 /** Puntos de copa por posición (1º…8º). */

@@ -62,7 +62,10 @@ export function updateProgress(p: LapProgress, track: Track, distance: number, t
 /** Pone el kart en el último checkpoint, parado y mirando hacia delante. */
 export function respawnKart(s: KartState, p: LapProgress, track: Track): void {
   // Un poco por delante del checkpoint para no volver a caer en lo mismo.
-  const pose = pointAt(track, p.respawnDistance + 2);
+  let at = p.respawnDistance + 2;
+  // Si cae encima de una rampa con tamaño (la cuña de una rampa gigante mide 4 m), mejor justo después del labio.
+  for (const z of track.zones) if (z.type === "ramp" && z.size && at >= z.from && at <= z.to) at = z.to + 2;
+  const pose = pointAt(track, at);
   s.x = pose.x;
   s.z = pose.z;
   s.heading = pose.heading;

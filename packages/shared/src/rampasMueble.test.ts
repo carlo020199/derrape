@@ -238,7 +238,8 @@ describe("rampas-mueble: vuelos de diseño (los números de herramientas/cadenas
 describe("Desván: cadenas de rampas-mueble", () => {
   it("hay 6 rampas S/M con landBoost: cadena de 3 S en la recta de meta, S sola, cadena de 2 M", async () => {
     const { track } = await load();
-    const rampas = track.zones.filter((z) => z.type === "ramp");
+    // Las dos rampas gigantes (XL) tienen su propio archivo de tests: `gigantes.test.ts`.
+    const rampas = track.zones.filter((z) => z.type === "ramp" && z.size !== "XL");
     expect(rampas.map((z) => z.size)).toEqual(["S", "S", "S", "S", "M", "M"]);
     expect(rampas.every((z) => z.landBoost === true)).toBe(true);
     expect(rampas.slice(0, 3).every((z) => z.from < 233)).toBe(true);

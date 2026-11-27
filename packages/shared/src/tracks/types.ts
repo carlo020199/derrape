@@ -1,6 +1,6 @@
 // Formato de un circuito como DATOS. Añadir un circuito = un archivo nuevo con un TrackDef.
 
-import { smoothTrack, type Track, type TrackHazard, type TrackPoint, type TrackZone, type ZoneType } from "../track";
+import { liftAt, smoothTrack, type Track, type TrackHazard, type TrackLift, type TrackPoint, type TrackZone, type ZoneType } from "../track";
 import type { RampSize } from "../tuning";
 
 /** Kits de tema disponibles (decoración, colores). El cliente sabe dibujar cada uno. */
@@ -30,6 +30,15 @@ export interface ZoneDef {
   size?: RampSize;
   /** Rampa-mueble: al aterrizar limpio da el turbo de `LANDING`. */
   landBoost?: boolean;
+}
+
+/** Tramo elevado (plataforma flotante), en metros desde meta. Ver `TrackLift`. */
+export interface LiftDef {
+  from: number;
+  to: number;
+  rise: number;
+  easeIn: number;
+  easeOut: number;
 }
 
 /** Obstáculo periódico (paso a nivel, etc.), en fracciones de vuelta. */
@@ -67,6 +76,8 @@ export interface TrackDef {
   itemRows: number[];
   zones?: ZoneDef[];
   hazards?: HazardDef[];
+  /** Plataformas elevadas de la propia pista (metros desde meta). */
+  lifts?: LiftDef[];
   landmarks?: Landmark[];
   seed: number;
 }
@@ -74,6 +85,11 @@ export interface TrackDef {
 export function buildTrackFromDef(def: TrackDef): Track {
   const track = smoothTrack(def.control, def.width, 3, def.verge);
   track.relief = def.control.some((p) => p.bank !== undefined) || (def.zones ?? []).some((z) => z.size !== undefined);
+  // Plataformas: se suman a la altura de los nodos; los datos de las zonas (en metros) no cambian.
+  track.lifts = (def.lifts ?? []).map((l): TrackLift => ({ ...l }));
+  if (track.lifts.length > 0) {
+    for (let i = 0; i < track.points.length; i++) track.points[i]!.y += liftAt(track.lifts, track.length, track.lengths[i]!);
+  }
   const outer = def.width / 2 + def.verge + 5;
   track.zones = (def.zones ?? []).map(
     (z): TrackZone => ({

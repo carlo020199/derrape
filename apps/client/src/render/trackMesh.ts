@@ -251,6 +251,8 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
     mat: THREE.Material,
     breaks: number[] = [],
     roadCoords = false,
+    /** Tramos (distancia media del segmento) donde no se dibuja la tira: p. ej. el arcén bajo una plataforma. */
+    skip?: (d: number) => boolean,
   ) {
     const rings: Ring[] = baseRings.slice();
     for (const b of breaks) if (b > 0 && b < track.length) rings.push(ringFor(b));
@@ -285,6 +287,10 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
       const a = rings[k]!;
       const b = rings[(k + 1) % total]!;
       const dB = k === total - 1 ? track.length + b.d : b.d;
+      if (skip?.((a.d + dB) / 2)) {
+        prevColor = null;
+        continue;
+      }
       const c = colorAt((a.d + dB) / 2, (a.bank + b.bank) / 2);
       const aBase = prevColor && prevColor.equals(c) ? prevBase : emit(a, c, a.d);
       const bBase = emit(b, c, dB);
@@ -347,10 +353,14 @@ export function createTrackMesh(track: Track, colors: TrackColors): THREE.Group 
   }
   if (colors.bankEdge) bankEdge(group, track, left, heightAt, nodeKappa, curb(0));
   // Arcén.
+  // Bajo una plataforma elevada (`track.lifts`) no hay arcén: fuera de la calzada es el vacío.
   if (v > 0) {
     const vergeColor = flat(new THREE.Color(colors.verge));
-    roadStrip((w) => w / 2, (w) => w / 2 + v, 0, 0, vergeColor, sharedVertexToonDouble());
-    roadStrip((w) => -w / 2 - v, (w) => -w / 2, 0, 0, vergeColor, sharedVertexToonDouble());
+    const spans = track.lifts.map((l) => [l.from - l.easeIn, l.to + l.easeOut] as const);
+    const edges = spans.flat();
+    const hole = spans.length ? (d: number) => spans.some(([a, b]) => d >= a && d <= b) : undefined;
+    roadStrip((w) => w / 2, (w) => w / 2 + v, 0, 0, vergeColor, sharedVertexToonDouble(), edges, false, hole);
+    roadStrip((w) => -w / 2 - v, (w) => -w / 2, 0, 0, vergeColor, sharedVertexToonDouble(), edges, false, hole);
   }
   // Muros bajos en el borde exterior del arcén, con tapa de hueso. En Ánimas los sustituyen las vallas de calaveras.
   if (!colors.animasAsphalt) {
