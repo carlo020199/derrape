@@ -74,3 +74,10 @@ Comando: `gemini -m gemini-4-hydrogen -p "Compara @docs/screenshots/release1/a-s
 > 8. **HUD, jerarquía visual y acabados de interfaz**
 >    - **Referencias (`ejemplo1`, `ejemplo3`):** `1º` compacto en **Lilita One** sin `/4` colgando; velocímetro grande (`68 KM/H`) con los **3 indicadores de turbo rellenos en naranja-amarillo**; caja de objeto brillante con borde naranja vivo; minimapa limpio con trazado grueso y 3–4 puntos de pilotos bien legibles.
 >    - **Capturas:** `1º` más vertical con `/4` separado abajo y botón de ajustes arriba a la derecha; velocímetro pequeño (`0 km/h`) con los 3 círculos vacíos casi invisibles sobre la pista oscura; caja de objeto vacía con borde marrón apagado; y minimapa con línea gris más fina cargada de pequeños triángulos de colores.
+
+### Qué se hizo con esta lista (27-nov, límite 3 arreglos)
+| Dif. | Acción | Resultado |
+|---|---|---|
+| 8 (HUD) | Casilla de objeto vacía conserva el borde brasa vivo; círculos de turbo con contorno Hueso | **Aplicado** (commit propio), 0 llamadas/triángulos extra |
+| 2 (árboles/vallas), 4 (cámara más alta) | No aplicados: los árboles grandes ya se revertieron el 25/11 por tapar campanario y laguna; la cámara cambia la jugabilidad y rompe C3/C5 | Descartado |
+| 3, 5, 6, 7 | Ruedas ya llevan llanta Brasa; resto exige rehacer terreno/modelos | Pendiente (decisión de Carlo) |

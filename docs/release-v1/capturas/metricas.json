@@ -1,58 +1,58 @@
 {
-  "fecha": "2026-11-27T00:38:28.340Z",
+  "fecha": "2026-11-27T00:45:11.987Z",
   "personaje": "lia",
   "kart": "hueso",
   "a-salida": {
-    "c2_moradoPct": 92.15,
+    "c2_moradoPct": 92.16,
     "c2_casiNegroPct": 1.03,
-    "c3_lagunaPct": 0.91,
-    "c3_lagunaTercioMedioSuperiorPct": 0.89,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 49.48,
-    "c7_regionPlanaMayorPctPantalla": 26.75,
+    "c3_lagunaPct": 0.9,
+    "c3_lagunaTercioMedioSuperiorPct": 0.87,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 48.96,
+    "c7_regionPlanaMayorPctPantalla": 26.44,
     "c7_bloquesPlanosRelativoPct": 22.4,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 56,
-      "triangles": 102382
+      "triangles": 102386
     },
-    "msPorFotogramaSoftware": 52.9
+    "msPorFotogramaSoftware": 48.4
   },
   "b-recta-campanario": {
-    "c2_moradoPct": 91.57,
-    "c2_casiNegroPct": 1.03,
-    "c3_lagunaPct": 1.56,
-    "c3_lagunaTercioMedioSuperiorPct": 1.54,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 55.73,
-    "c7_regionPlanaMayorPctPantalla": 32.98,
+    "c2_moradoPct": 91.72,
+    "c2_casiNegroPct": 1.02,
+    "c3_lagunaPct": 1.58,
+    "c3_lagunaTercioMedioSuperiorPct": 1.55,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 55.21,
+    "c7_regionPlanaMayorPctPantalla": 32.66,
     "c7_bloquesPlanosRelativoPct": 36.46,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 55,
-      "triangles": 101610
+      "triangles": 101582
     },
-    "msPorFotogramaSoftware": 49.8
+    "msPorFotogramaSoftware": 48.2
   },
   "c-curva-valla": {
-    "c2_moradoPct": 92.4,
+    "c2_moradoPct": 92.45,
     "c2_casiNegroPct": 1.13,
     "c3_lagunaPct": 0.52,
     "c3_lagunaTercioMedioSuperiorPct": 0.49,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 54.69,
-    "c7_regionPlanaMayorPctPantalla": 32.04,
-    "c7_bloquesPlanosRelativoPct": 23.44,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 54.17,
+    "c7_regionPlanaMayorPctPantalla": 31.73,
+    "c7_bloquesPlanosRelativoPct": 22.92,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 55,
-      "triangles": 98172
+      "triangles": 98148
     },
-    "msPorFotogramaSoftware": 52.7
+    "msPorFotogramaSoftware": 40.8
   },
   "d-laguna": {
-    "c2_moradoPct": 83.31,
-    "c2_casiNegroPct": 1.2,
+    "c2_moradoPct": 83.8,
+    "c2_casiNegroPct": 1.19,
     "c3_lagunaPct": 7.97,
     "c3_lagunaTercioMedioSuperiorPct": 7.26,
     "c7_bloquesPlanosPctDelTerrenoVisible": 34.9,
@@ -64,14 +64,14 @@
       "calls": 62,
       "triangles": 103280
     },
-    "msPorFotogramaSoftware": 50.5
+    "msPorFotogramaSoftware": 50.1
   },
   "e-frontal": {
-    "c2_moradoPct": 92.64,
+    "c2_moradoPct": 92.61,
     "c2_casiNegroPct": 1.65,
     "c3_lagunaPct": 0.58,
     "c3_lagunaTercioMedioSuperiorPct": 0.56,
-    "c7_bloquesPlanosPctDelTerrenoVisible": 58.85,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 59.38,
     "c7_regionPlanaMayorPctPantalla": 33.29,
     "c7_bloquesPlanosRelativoPct": 40.1,
     "ancho": 780,
@@ -80,7 +80,7 @@
       "calls": 49,
       "triangles": 98010
     },
-    "msPorFotogramaSoftware": 44.1
+    "msPorFotogramaSoftware": 46.7
   },
   "erroresDeConsola": [
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",

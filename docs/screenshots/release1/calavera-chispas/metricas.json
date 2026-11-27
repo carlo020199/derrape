@@ -1,0 +1,116 @@
+{
+  "fecha": "2026-11-27T00:39:21.835Z",
+  "personaje": "calavera-chispas",
+  "kart": "medianoche",
+  "a-salida": {
+    "c2_moradoPct": 93.57,
+    "c2_casiNegroPct": 1.05,
+    "c3_lagunaPct": 0.58,
+    "c3_lagunaTercioMedioSuperiorPct": 0.55,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 50,
+    "c7_regionPlanaMayorPctPantalla": 26.75,
+    "c7_bloquesPlanosRelativoPct": 22.92,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 53,
+      "triangles": 100520
+    },
+    "msPorFotogramaSoftware": 48.5
+  },
+  "b-recta-campanario": {
+    "c2_moradoPct": 92.99,
+    "c2_casiNegroPct": 1.07,
+    "c3_lagunaPct": 1.26,
+    "c3_lagunaTercioMedioSuperiorPct": 1.23,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 57.81,
+    "c7_regionPlanaMayorPctPantalla": 33.91,
+    "c7_bloquesPlanosRelativoPct": 35.42,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 52,
+      "triangles": 99744
+    },
+    "msPorFotogramaSoftware": 47.7
+  },
+  "c-curva-valla": {
+    "c2_moradoPct": 93.81,
+    "c2_casiNegroPct": 1.22,
+    "c3_lagunaPct": 0.19,
+    "c3_lagunaTercioMedioSuperiorPct": 0.16,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 54.17,
+    "c7_regionPlanaMayorPctPantalla": 31.73,
+    "c7_bloquesPlanosRelativoPct": 21.88,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 52,
+      "triangles": 96278
+    },
+    "msPorFotogramaSoftware": 51.3
+  },
+  "d-laguna": {
+    "c2_moradoPct": 85.63,
+    "c2_casiNegroPct": 1.33,
+    "c3_lagunaPct": 7.37,
+    "c3_lagunaTercioMedioSuperiorPct": 6.66,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 34.9,
+    "c7_regionPlanaMayorPctPantalla": 14.31,
+    "c7_bloquesPlanosRelativoPct": 22.92,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 59,
+      "triangles": 101358
+    },
+    "msPorFotogramaSoftware": 56.5
+  },
+  "e-frontal": {
+    "c2_moradoPct": 94.47,
+    "c2_casiNegroPct": 1.66,
+    "c3_lagunaPct": 0.11,
+    "c3_lagunaTercioMedioSuperiorPct": 0.08,
+    "c7_bloquesPlanosPctDelTerrenoVisible": 60.42,
+    "c7_regionPlanaMayorPctPantalla": 33.6,
+    "c7_bloquesPlanosRelativoPct": 38.54,
+    "ancho": 780,
+    "alto": 1688,
+    "renderInfo": {
+      "calls": 46,
+      "triangles": 96136
+    },
+    "msPorFotogramaSoftware": 42.9
+  },
+  "erroresDeConsola": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+  ]
+}
