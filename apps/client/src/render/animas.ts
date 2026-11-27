@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
-import { createAnimasMoon, createClouds, createHills } from "./sky";
+import { createAnimasMoon, createClouds, createHaze, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
 import { createFences, createLanterns, createRocks, createTrees } from "./animasProps";
 
@@ -624,6 +624,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     dome.add(stars());
     dome.add(createClouds(PALETTE.niebla, PALETTE.sombra));
     dome.add(createHills());
+    dome.add(createHaze(PALETTE.niebla));
     const moon = createAnimasMoon(9);
     // Delante del kart en la salida (la recta mira a +z), alta y algo a la izquierda del eje.
     moon.position.set(40, 62, 200).setLength(214);

@@ -204,6 +204,51 @@ export function createHills(radius = 204): THREE.Mesh {
   return mesh;
 }
 
+/**
+ * Bruma baja: un anillo con alfa por vértice (Niebla) que vela las colinas y la base de las nubes, más densa pegada al horizonte.
+ * Un solo mesh traslúcido que prueba profundidad sin escribirla: lo más cercano que 186 m lo tapa y solo vela el cielo y lo muy lejano. Cuelga de la cúpula.
+ */
+export function createHaze(color: number, radius = 186): THREE.Mesh {
+  const seg = 48;
+  const rows = [
+    [-30, 0.0],
+    [0, 0.0],
+    [5, 0.42],
+    [18, 0.2],
+    [44, 0.0],
+  ] as const;
+  const c = new THREE.Color(color);
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  for (const [y, a] of rows) {
+    for (let i = 0; i <= seg; i++) {
+      const t = (i / seg) * Math.PI * 2;
+      pos.push(Math.cos(t) * radius, y, Math.sin(t) * radius);
+      col.push(c.r, c.g, c.b, a);
+    }
+  }
+  for (let r = 0; r < rows.length - 1; r++) {
+    for (let i = 0; i < seg; i++) {
+      const a = r * (seg + 1) + i;
+      const b = a + seg + 1;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, fog: false, depthTest: true, depthWrite: false }),
+  );
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 2;
+  mesh.name = "bruma";
+  return mesh;
+}
+
 /** Luna grande de Hueso con cráteres y un halo aditivo suave. Un disco y un sprite. */
 export function createAnimasMoon(radius = 17): THREE.Group {
   const parts: { geo: THREE.BufferGeometry; color: number }[] = [{ geo: new THREE.CircleGeometry(radius, 36), color: 0xf3e7d3 }];
