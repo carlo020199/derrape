@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { closestPoint, pointAt, RAMP, surfaceNormal, surfaceY, type Track, type TrackDef } from "@derrape/shared";
-import { createAnimasMoon, createClouds, createHills } from "./sky";
+import { createAnimasMoon, createClouds, createHaze, createHills } from "./sky";
 import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonMaterial } from "./materials";
-import { createFences, createLanterns, createTrees } from "./animasProps";
+import { createFences, createFireflies, createLanterns, createRocks, createTrees } from "./animasProps";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -614,6 +614,38 @@ function lagoonMaterial() {
   return mat;
 }
 
+/**
+ * Resplandor del río lejano: una cortina de 26 m sobre el cauce lejano, Espectro aditivo que se apaga hacia arriba.
+ * Hace que la franja de agua que asoma tras la calzada se lea como un río de luz y no como una raya. Una malla, ~80 triángulos.
+ */
+export function riverGlow(shape: LagoonShape, waterY: number, height = 26): THREE.Mesh {
+  const arm = shape.rivers[1]!;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  const teal = new THREE.Color(PALETTE.espectro);
+  arm.forEach((q, i) => {
+    const y = waterY + q.lift;
+    pos.push(q.x, y, q.z, q.x, y + height, q.z);
+    // Más intenso abajo, junto al agua; las puntas del cauce se funden.
+    const edge = Math.min(1, i / 12, (arm.length - 1 - i) / 12);
+    col.push(teal.r, teal.g, teal.b, 0.36 * edge, teal.r, teal.g, teal.b, 0);
+    if (i < arm.length - 1) idx.push(i * 2, i * 2 + 2, i * 2 + 1, i * 2 + 1, i * 2 + 2, i * 2 + 3);
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, fog: false }),
+  );
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 1;
+  mesh.name = "resplandor-rio";
+  return mesh;
+}
+
 export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDef) {
   // Cielo de Ánimas: luna grande sobre la recta de salida, nubes en capas y colinas lejanas.
   // Todo cuelga de la cúpula, así que sigue a la cámara y no cuenta como geometría de pista.
@@ -624,6 +656,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     dome.add(stars());
     dome.add(createClouds(PALETTE.niebla, PALETTE.sombra));
     dome.add(createHills());
+    dome.add(createHaze(PALETTE.niebla));
     const moon = createAnimasMoon(9);
     // Delante del kart en la salida (la recta mira a +z), alta y algo a la izquierda del eje.
     moon.position.set(40, 62, 200).setLength(214);
@@ -641,7 +674,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   const placeTower = (groundY: number) => {
     const tower = new THREE.Mesh(campanarioGeometry(), bone);
     tower.position.set(spot.x, groundY - 0.4, spot.z);
-    tower.scale.setScalar(1.6);
+    tower.scale.setScalar(2.1);
     // De cara a la parrilla (d = 18), no a la calzada de al lado: así la campana y las ventanas se ven desde la salida.
     const grid = pointAt(track, 18, 0);
     tower.rotation.y = Math.atan2(grid.x - spot.x, grid.z - spot.z);
@@ -739,12 +772,15 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
       waterMat.uniforms.uTime!.value = performance.now() / 1000;
     };
     scene.add(lagoon);
+    scene.add(riverGlow(shape, waterY));
 
     // Árboles, farolillos y vallas de hueso. `height` es el mismo terreno que se dibuja.
     for (const mesh of createTrees(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8)) scene.add(mesh);
+    scene.add(createRocks(track, height, (x, z) => lagoonDistance(shape, x, z).d > 8));
     const lanterns = createLanterns(track, height, { x: shape.mid.x, z: shape.mid.z, y: waterY, rx: shape.rx, rz: shape.rz });
     scene.add(lanterns.bodies, lanterns.halos);
     if (lanterns.poles) scene.add(lanterns.poles);
+    scene.add(createFireflies({ x: shape.mid.x, z: shape.mid.z, y: waterY, rx: shape.rx, rz: shape.rz }, shape.rivers));
     const fences = createFences(track);
     scene.add(fences.posts, fences.rope);
   }

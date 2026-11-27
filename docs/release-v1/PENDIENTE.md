@@ -18,8 +18,8 @@ URL (cliente en local, misma Wi-Fi que el móvil): `http://IP-DEL-PC:5173/?track
 ## Métricas proxy medidas en el box (WebGL por software, no representativas de un móvil)
 | Qué | Valor | Presupuesto |
 |---|---|---|
-| `npm run medir` · Laguna (8 karts, cámara vertical) | 53 llamadas · 86 082 triángulos | ≤ 90 y ≤ 110 000 (duro 120 / 150 000) |
-| `renderer.info` en las capturas (4 karts) | 45–61 llamadas · 92 000–100 000 triángulos | ≤ 90 y ≤ 110 000 |
+| `npm run medir` · Laguna (8 karts, cámara vertical) | 55 llamadas · 92 688 triángulos | ≤ 90 y ≤ 110 000 (duro 120 / 150 000) |
+| `renderer.info` en las capturas (4 karts) | 48–64 llamadas · 99 600–106 700 triángulos (máx. en `d-laguna`) | ≤ 90 y ≤ 110 000 |
 | Piloto + coche de cerca (peor pareja, sin contorno) | 9 802 (Lía + Medianoche) | ≤ 10 000 |
 | Piloto + coche lejos (modelo barato) | 586 | ≤ 1 500 |
 | ms/fotograma por software (SwiftShader, 390×844 @2x) | 38–57 ms | solo orientativo |
@@ -41,7 +41,7 @@ La evidencia criterio por criterio (medidas, guías y recortes @1×) está en **
 | C7 Relleno lateral | Pasa a ojo; **la métrica proxy ya no pasa** | Región plana contigua 30–34 % (16–17 % en `d`) porque la calzada es ahora Ciruela plana por petición de Dalí; 58 árboles, farolillos con halo y colinas en los laterales. Decide Carlo/Dalí qué métrica vale |
 | C8 Pilotos | Pasa | Cabeza 46,4 % / 47,8 % de la altura sentado (test); colores y contorno en las selecciones |
 | C9 Legibilidad | Pasa | Captura `e-frontal` a 1× (cuencas y 5 dientes de ambas calaveras, morro de Hueso) y contraste HUD 14,1:1 y 17,7:1. En carrera normal la cámara va detrás: solo se ven las calaveras de las vallas |
-| C10 Técnico | Pasa | 53 llamadas / 86 082 triángulos; 191 tests |
+| C10 Técnico | Pasa | 55 llamadas / 92 688 triángulos; 191 tests |
 
 Veredicto (GOAL: C1, C2, C3, C7, C8, C10 y al menos 3 de C4/C5/C6/C9): **PASA**, con los cuatro opcionales.
 

@@ -126,20 +126,24 @@ function animasAsphaltGradient(): THREE.DataTexture {
 }
 
 /**
- * Manchas del asfalto: Ciruela #1E1830 liso y, como mucho, manchas grandes y suaves en Sombra #2E2547
- * (×1,5 de luminosidad) cortadas en 3 escalones toon, con ruido de valor en coordenadas de mundo (4–14 m).
- * Sin ruido fino: el grano de alta frecuencia se leía como estática gris. Sin texturas ni triángulos extra.
+ * Asfalto de Ánimas, todo en el shader y sin triángulos extra:
+ * - manchas grandes y suaves en Sombra #2E2547 (×1,5 de luminosidad), con ruido de valor en mundo (4–14 m);
+ * - dos rodadas pulidas, algo más claras, a ±30 % del semiancho y rotas a lo largo (ruido sobre la distancia recorrida);
+ * - manchas de aceite oscuras, más densas en el eje y en las rodadas;
+ * - borde oscuro (hacia Noche #120F1E) en el último metro y medio de cada lado.
+ * Sin ruido fino: el grano de alta frecuencia se leía como estática gris. `aRoad` = (metros desde el eje, distancia, semiancho).
  */
 function mottle(mat: THREE.MeshToonMaterial) {
   mat.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vWP;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWP;\nattribute vec3 aRoad;\nvarying vec3 vRoad;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvRoad = aRoad;");
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 varying vec3 vWP;
+varying vec3 vRoad;
 float mh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float mn(vec2 p) {
   vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -151,6 +155,15 @@ float mn(vec2 p) {
         `#include <color_fragment>
 float blot = mn(vWP.xz * 0.07) * 0.65 + mn(vWP.xz * 0.19) * 0.35;
 float mottle = 1.0 + 0.25 * smoothstep(0.52, 0.6, blot) + 0.25 * smoothstep(0.64, 0.72, blot);
+float side = vRoad.x < 0.0 ? 0.0 : 1.0;
+float rutD = abs(abs(vRoad.x) - vRoad.z * 0.3);
+float rutBreak = smoothstep(0.3, 0.5, mn(vec2(vRoad.y * 0.045, side * 9.0 + 2.0)));
+float rut = (1.0 - smoothstep(0.3, 0.7, rutD)) * rutBreak;
+mottle *= 1.0 + 0.95 * rut;
+float oil = mn(vec2(vRoad.y * 0.16, vRoad.x * 0.55 + 31.0));
+float oilZone = max(1.0 - smoothstep(0.0, 1.6, abs(vRoad.x)), rut);
+mottle *= 1.0 - 0.55 * smoothstep(0.58, 0.66, oil) * (0.45 + 0.55 * oilZone);
+mottle *= mix(0.38, 1.0, smoothstep(0.0, 2.2, vRoad.z - abs(vRoad.x)));
 diffuseColor.rgb *= mottle;`,
       )
       // El emisivo aporta casi toda la luz del asfalto: también lleva las manchas.
@@ -204,7 +217,34 @@ export function animasTerrainMaterial(): THREE.MeshToonMaterial {
     tex.generateMipmaps = false;
     tex.colorSpace = THREE.NoColorSpace;
     tex.needsUpdate = true;
-    animasTerrain = markShared(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: markShared(tex) }));
+    const mat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: markShared(tex) });
+    // Parches de color: el color por vértice (cada 7,6 m) es demasiado grueso, así que dos capas de ruido de valor
+    // en mundo (6 y 2 m) pintan manchas de borde duro: unas hundidas hacia Sombra y otras claras hacia Ánima #9B6BFF.
+    mat.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec2 vPatch;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvPatch = (modelMatrix * vec4(transformed, 1.0)).xz;");
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+varying vec2 vPatch;
+float ph(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float pn(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(ph(i), ph(i + vec2(1.0, 0.0)), f.x), mix(ph(i + vec2(0.0, 1.0)), ph(i + vec2(1.0, 1.0)), f.x), f.y);
+}`,
+        )
+        .replace(
+          "#include <color_fragment>",
+          `#include <color_fragment>
+float patchDark = smoothstep(0.56, 0.6, pn(vPatch * 0.16 + 3.0) * 0.7 + pn(vPatch * 0.41 + 17.0) * 0.3);
+float patchLight = smoothstep(0.64, 0.68, pn(vPatch * 0.31 + 11.0) * 0.6 + pn(vPatch * 0.9 + 5.0) * 0.4);
+diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.6, 0.52, 0.78), patchDark * 0.95);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.61, 0.42, 1.0), patchLight * 0.3);`,
+        );
+    };
+    animasTerrain = markShared(mat);
   }
   return animasTerrain;
 }

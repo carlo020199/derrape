@@ -332,6 +332,20 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
     if (!lagoonClear(at.x, at.z)) continue;
     slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: i % 3, s: 1.5 + rnd() * 0.5, rot: rnd() * Math.PI * 2 });
   }
+  // Tres árboles grandes solo a la derecha de la recta de salida (lateral negativo): enmarcan el borde como en ejemplo1 sin tapar
+  // el campanario ni los farolillos de la izquierda. Las copas asoman sobre la calzada elevada.
+  for (const [d, extra, model] of [[22, 6, 0], [46, 9, 1], [74, 7, 2]] as const) {
+    const p = pointAt(track, d);
+    const at = pointAt(track, d, -(p.width / 2 + track.verge + extra));
+    if (!lagoonClear(at.x, at.z)) continue;
+    slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model, s: 3.2, rot: d });
+  }
+  // Y uno a la izquierda, bien abierto y más cerca de la cámara: su copa queda en la esquina superior izquierda, sobre los farolillos.
+  {
+    const p = pointAt(track, 30);
+    const at = pointAt(track, 30, p.width / 2 + track.verge + 14);
+    if (lagoonClear(at.x, at.z)) slots.push({ x: at.x, y: height(at.x, at.z) - 0.15, z: at.z, model: 1, s: 3.4, rot: 2 });
+  }
   const out: THREE.InstancedMesh[] = [];
   const m = new THREE.Matrix4();
   geos.forEach((geo, model) => {
@@ -348,6 +362,140 @@ export function createTrees(track: Track, height: (x: number, z: number) => numb
   return out;
 }
 
+/** Roca pequeña de 20 caras con los vértices movidos (mismo desplazamiento en cada copia de un vértice): Niebla arriba, Sombra en los flancos. */
+function rockGeometry(): THREE.BufferGeometry {
+  const geo = new THREE.IcosahedronGeometry(1, 0);
+  const pos = geo.getAttribute("position");
+  const top = new THREE.Color(PALETTE.niebla);
+  const side = new THREE.Color(SOMBRA);
+  const col = new Float32Array(pos.count * 3);
+  const jit = (x: number, y: number, z: number, k: number) => {
+    const h = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + k * 11.13) * 43758.5453;
+    return h - Math.floor(h) - 0.5;
+  };
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const k = 1 + jit(x, y, z, 1) * 0.55;
+    pos.setXYZ(i, x * k, y * k * 0.62, z * k);
+    const c = side.clone().lerp(top, THREE.MathUtils.clamp(0.5 + y * 0.9, 0, 1));
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Rocas pequeñas (0,3–1,3 m) en las laderas junto a la pista: una sola malla instanciada, en grupos de 1 a 3.
+ * Rompen las zonas planas del terreno a los lados del encuadre sin acercarse al arcén.
+ */
+export function createRocks(track: Track, height: (x: number, z: number) => number, lagoonClear: (x: number, z: number) => boolean, groups = 110): THREE.InstancedMesh {
+  const slots: { x: number; y: number; z: number; s: number; sy: number; rot: number }[] = [];
+  let seed = 9173;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const stride = track.length / groups;
+  for (let g = 0; g < groups; g++) {
+    const d = (g * stride + rnd() * stride * 0.8) % track.length;
+    const side = g % 2 === 0 ? 1 : -1;
+    const p = pointAt(track, d);
+    const lat = side * (p.width / 2 + track.verge + 1.8 + rnd() * 9);
+    const n = 1 + Math.floor(rnd() * 3);
+    for (let k = 0; k < n; k++) {
+      const at = pointAt(track, d + (rnd() - 0.5) * 4, lat + (rnd() - 0.5) * 2.4);
+      const c = closestPoint(track, at.x, at.z);
+      if (Math.abs(c.lateral) < c.width / 2 + track.verge + 1.2) continue;
+      if (!lagoonClear(at.x, at.z)) continue;
+      const s = 0.3 + rnd() * rnd() * 1.1;
+      slots.push({ x: at.x, y: height(at.x, at.z) - s * 0.1, z: at.z, s, sy: 0.7 + rnd() * 0.7, rot: rnd() * Math.PI * 2 });
+    }
+  }
+  const mesh = new THREE.InstancedMesh(rockGeometry(), toonMaterial({ vertexColors: true }), Math.max(1, slots.length));
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  slots.forEach((r, i) => mesh.setMatrixAt(i, m.compose(new THREE.Vector3(r.x, r.y, r.z), q.setFromAxisAngle(up, r.rot), new THREE.Vector3(r.s, r.s * r.sy, r.s))));
+  mesh.count = slots.length;
+  mesh.frustumCulled = false;
+  mesh.name = "rocas";
+  return mesh;
+}
+
+const FLY_VERT = /* glsl */ `
+attribute float aPhase;
+uniform float uTime;
+varying float vTw;
+void main() {
+  vec3 p = position;
+  p.y += sin(uTime * 0.9 + aPhase * 6.283) * 0.8;
+  p.x += sin(uTime * 0.5 + aPhase * 17.0) * 1.2;
+  p.z += cos(uTime * 0.45 + aPhase * 11.0) * 1.2;
+  vec4 mv = viewMatrix * vec4(p, 1.0);
+  vTw = 0.55 + 0.45 * sin(uTime * 2.2 + aPhase * 40.0);
+  gl_PointSize = clamp(620.0 / max(-mv.z, 1.0), 3.0, 26.0);
+  gl_Position = projectionMatrix * mv;
+}
+`;
+
+const FLY_FRAG = /* glsl */ `
+varying float vTw;
+void main() {
+  float d = length(gl_PointCoord - 0.5) * 2.0;
+  float k = clamp(1.0 - d, 0.0, 1.0);
+  gl_FragColor = vec4(mix(vec3(0.247, 0.949, 0.784), vec3(0.95, 1.0, 0.9), k * k), (k * k * 0.9 + pow(k, 3.0)) * vTw);
+}
+`;
+
+/**
+ * Luciérnagas Espectro (#3FF2C8) sobre la laguna y el cauce: unos 200 puntos aditivos en una sola llamada, sin triángulos.
+ * Suben y bajan ±0,8 m y parpadean; dan vida al agua lejana sin tocar el terreno.
+ */
+export function createFireflies(over: { x: number; z: number; y: number; rx: number; rz: number }, rivers: { x: number; z: number; half: number; lift: number }[][], count = 200): THREE.Points {
+  let seed = 7771;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const pos = new Float32Array(count * 3);
+  const phase = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    if (i % 2 === 0) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * 0.8;
+      pos.set([over.x + Math.cos(a) * over.rx * r, over.y + 1.5 + rnd() * 3.5, over.z + Math.sin(a) * over.rz * r], i * 3);
+    } else {
+      const river = rivers[i % rivers.length]!;
+      const q = river[Math.floor(rnd() * river.length)]!;
+      pos.set([q.x + (rnd() - 0.5) * q.half * 1.4, over.y + q.lift + 1.5 + rnd() * 4, q.z + (rnd() - 0.5) * q.half * 1.4], i * 3);
+    }
+    phase[i] = rnd();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("aPhase", new THREE.BufferAttribute(phase, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 } },
+    vertexShader: FLY_VERT,
+    fragmentShader: FLY_FRAG,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    fog: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pts.renderOrder = 4;
+  pts.name = "luciernagas";
+  pts.onBeforeRender = () => {
+    mat.uniforms.uTime!.value = performance.now() / 1000;
+  };
+  return pts;
+}
+
 const HALO_VERT = /* glsl */ `
 attribute vec3 aOffset;
 uniform float uTime;
@@ -357,7 +505,7 @@ void main() {
   vec3 c = aOffset;
   c.y += sin(uTime * 1.7 + c.x * 0.37 + c.z * 0.21) * 0.15;
   vec4 mv = viewMatrix * vec4(c, 1.0);
-  mv.xy += position.xy * 5.2;
+  mv.xy += position.xy * 7.4;
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -366,18 +514,22 @@ const HALO_FRAG = /* glsl */ `
 varying vec2 vUv;
 void main() {
   float d = length(vUv - 0.5) * 2.0;
-  float a = pow(clamp(1.0 - d, 0.0, 1.0), 1.8) * 0.55;
+  float k = clamp(1.0 - d, 0.0, 1.0);
+  float a = (k * k * k * 0.5 + pow(k, 1.4) * 0.14);
   gl_FragColor = vec4(1.0, 0.416, 0.122, a);
 }
 `;
 
-/** Farolillo de papel: cuerpo Llama con aros Brasa y hueso arriba y abajo. */
+/** Farolillo de papel: cuerpo Llama con aro Brasa y tapas de Sombra (el Hueso duro arriba y abajo parecía un plato). */
 function lanternGeometry() {
   const p: Parts = [];
   p.push(piece(new THREE.SphereGeometry(0.34, 6, 4), M(0, 0, 0, 0, 0, 0, 1, 1.2, 1), LLAMA));
-  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, 0.44, 0), HUESO));
-  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, -0.44, 0), HUESO));
+  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, 0.44, 0), SOMBRA));
+  p.push(piece(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 5), M(0, -0.44, 0), SOMBRA));
   p.push(piece(new THREE.TorusGeometry(0.31, 0.04, 3, 6), M(0, 0.0, 0, Math.PI / 2), BRASA));
+  // Borla colgando bajo el farolillo (ejemplo1): hilo de Sombra y flecos de Brasa.
+  p.push(piece(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 4), M(0, -0.56, 0), SOMBRA));
+  p.push(piece(new THREE.ConeGeometry(0.09, 0.3, 5), M(0, -0.78, 0, Math.PI), BRASA));
   return merge(p);
 }
 
