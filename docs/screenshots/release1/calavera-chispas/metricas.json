@@ -1,27 +1,27 @@
 {
-  "fecha": "2026-11-27T01:33:10.020Z",
+  "fecha": "2026-11-27T01:36:18.087Z",
   "personaje": "calavera-chispas",
   "kart": "medianoche",
   "a-salida": {
-    "c2_moradoPct": 93.29,
-    "c2_casiNegroPct": 0.9,
+    "c2_moradoPct": 93.3,
+    "c2_casiNegroPct": 0.91,
     "c3_lagunaPct": 0.58,
     "c3_lagunaTercioMedioSuperiorPct": 0.56,
     "c7_bloquesPlanosPctDelTerrenoVisible": 48.44,
     "c7_regionPlanaMayorPctPantalla": 25.82,
-    "c7_bloquesPlanosRelativoPct": 20.83,
+    "c7_bloquesPlanosRelativoPct": 21.35,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 55,
-      "triangles": 101424
+      "triangles": 103174
     },
-    "msPorFotogramaSoftware": 49.5
+    "msPorFotogramaSoftware": 60.5
   },
   "b-recta-campanario": {
-    "c2_moradoPct": 92.92,
-    "c2_casiNegroPct": 0.92,
-    "c3_lagunaPct": 1.23,
+    "c2_moradoPct": 92.91,
+    "c2_casiNegroPct": 0.93,
+    "c3_lagunaPct": 1.24,
     "c3_lagunaTercioMedioSuperiorPct": 1.21,
     "c7_bloquesPlanosPctDelTerrenoVisible": 56.25,
     "c7_regionPlanaMayorPctPantalla": 32.66,
@@ -30,30 +30,30 @@
     "alto": 1688,
     "renderInfo": {
       "calls": 54,
-      "triangles": 100624
+      "triangles": 102374
     },
-    "msPorFotogramaSoftware": 65.5
+    "msPorFotogramaSoftware": 60.8
   },
   "c-curva-valla": {
-    "c2_moradoPct": 93.78,
+    "c2_moradoPct": 93.77,
     "c2_casiNegroPct": 1.07,
     "c3_lagunaPct": 0.19,
     "c3_lagunaTercioMedioSuperiorPct": 0.16,
     "c7_bloquesPlanosPctDelTerrenoVisible": 53.13,
     "c7_regionPlanaMayorPctPantalla": 31.11,
-    "c7_bloquesPlanosRelativoPct": 21.88,
+    "c7_bloquesPlanosRelativoPct": 21.35,
     "ancho": 780,
     "alto": 1688,
     "renderInfo": {
       "calls": 54,
-      "triangles": 97182
+      "triangles": 98932
     },
-    "msPorFotogramaSoftware": 51.1
+    "msPorFotogramaSoftware": 50.9
   },
   "d-laguna": {
-    "c2_moradoPct": 85.88,
+    "c2_moradoPct": 85.87,
     "c2_casiNegroPct": 1.17,
-    "c3_lagunaPct": 7.34,
+    "c3_lagunaPct": 7.35,
     "c3_lagunaTercioMedioSuperiorPct": 6.63,
     "c7_bloquesPlanosPctDelTerrenoVisible": 33.33,
     "c7_regionPlanaMayorPctPantalla": 13.69,
@@ -62,12 +62,12 @@
     "alto": 1688,
     "renderInfo": {
       "calls": 61,
-      "triangles": 102310
+      "triangles": 104036
     },
-    "msPorFotogramaSoftware": 55.6
+    "msPorFotogramaSoftware": 60.2
   },
   "e-frontal": {
-    "c2_moradoPct": 94.33,
+    "c2_moradoPct": 94.36,
     "c2_casiNegroPct": 1.52,
     "c3_lagunaPct": 0.11,
     "c3_lagunaTercioMedioSuperiorPct": 0.08,
@@ -78,11 +78,13 @@
     "alto": 1688,
     "renderInfo": {
       "calls": 48,
-      "triangles": 97040
+      "triangles": 98790
     },
-    "msPorFotogramaSoftware": 43.6
+    "msPorFotogramaSoftware": 48.1
   },
   "erroresDeConsola": [
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    "Failed to load resource: net::ERR_CONNECTION_REFUSED",
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",
     "Failed to load resource: net::ERR_CONNECTION_REFUSED",

@@ -11,6 +11,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Vuelta 4 · HUD menos recargado (C9).** Fuera el «/4» junto al puesto, velocímetro de 34 → 46 px y engranaje de ajustes más pequeño y translúcido (sigue tocable). Solo CSS, sin coste de render.
 
+- **Vuelta 5 · nubes (C4).** Cada nube suma una panza de tono medio (mitad entre el borde claro y Sombra) entre el borde superior claro y la base: tres bandas de toon en lugar de un escalón duro; el borde superior sigue siendo el más claro. +1 disco por puff (nubes ~3 500 → ~5 200 triángulos, la misma llamada).
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts
 - /workspace/derrape-release/docs/release-v1/capturas/ y /workspace/derrape-release/docs/screenshots/release1/ (regeneradas en cada vuelta)

@@ -128,18 +128,21 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
       // Primero todas las bases (Sombra) y luego todos los bordes claros: una base nunca tapa el borde del puff vecino.
       const bots: typeof parts = [];
       const tops: typeof parts = [];
+      const bellies: typeof parts = [];
+      // Panza en tono medio entre el borde claro y la base: tres bandas (claro, medio, Sombra) en vez de un salto duro.
+      const mid = base.clone().lerp(anima, 0.34 - 0.08 * L.mix).lerp(shade, 0.5).getHex();
       for (let i = 0; i < puffs; i++) {
         const u = (i / (puffs - 1) - 0.5) * w;
         const rad = w * (0.16 + 0.1 * Math.cos((i / (puffs - 1) - 0.5) * Math.PI)) * (0.8 + r() * 0.4);
-        for (const [color, dy, dz, list] of [[bot, -rad * 0.22, 0, bots], [top, rad * 0.08, 0.05, tops]] as const) {
-          const g = new THREE.CircleGeometry(rad, 10);
+        for (const [color, dy, dz, list, k] of [[bot, -rad * 0.22, 0, bots, 1], [top, rad * 0.08, 0.05, tops, 1], [mid, -rad * 0.1, 0.1, bellies, 0.9]] as const) {
+          const g = new THREE.CircleGeometry(rad * k, 10);
           g.scale(1, 0.6, 1);
           g.applyMatrix4(new THREE.Matrix4().makeTranslation(u, dy * 0.6, dz));
           g.applyMatrix4(place);
           list.push({ geo: g, color });
         }
       }
-      parts.push(...bots, ...tops);
+      parts.push(...bots, ...tops, ...bellies);
     }
   }
   const mesh = new THREE.Mesh(
