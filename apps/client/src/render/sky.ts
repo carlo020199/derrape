@@ -128,18 +128,21 @@ export function createClouds(niebla: number, sombra: number, radius = 218): THRE
       // Primero todas las bases (Sombra) y luego todos los bordes claros: una base nunca tapa el borde del puff vecino.
       const bots: typeof parts = [];
       const tops: typeof parts = [];
+      const bellies: typeof parts = [];
+      // Panza en tono medio entre el borde claro y la base: tres bandas (claro, medio, Sombra) en vez de un salto duro.
+      const mid = base.clone().lerp(anima, 0.34 - 0.08 * L.mix).lerp(shade, 0.5).getHex();
       for (let i = 0; i < puffs; i++) {
         const u = (i / (puffs - 1) - 0.5) * w;
         const rad = w * (0.16 + 0.1 * Math.cos((i / (puffs - 1) - 0.5) * Math.PI)) * (0.8 + r() * 0.4);
-        for (const [color, dy, dz, list] of [[bot, -rad * 0.22, 0, bots], [top, rad * 0.08, 0.05, tops]] as const) {
-          const g = new THREE.CircleGeometry(rad, 10);
+        for (const [color, dy, dz, list, k] of [[bot, -rad * 0.22, 0, bots, 1], [top, rad * 0.08, 0.05, tops, 1], [mid, -rad * 0.1, 0.1, bellies, 0.9]] as const) {
+          const g = new THREE.CircleGeometry(rad * k, 10);
           g.scale(1, 0.6, 1);
           g.applyMatrix4(new THREE.Matrix4().makeTranslation(u, dy * 0.6, dz));
           g.applyMatrix4(place);
           list.push({ geo: g, color });
         }
       }
-      parts.push(...bots, ...tops);
+      parts.push(...bots, ...tops, ...bellies);
     }
   }
   const mesh = new THREE.Mesh(
@@ -201,6 +204,51 @@ export function createHills(radius = 204): THREE.Mesh {
   mesh.renderOrder = -0.4;
   mesh.frustumCulled = false;
   mesh.name = "colinas";
+  return mesh;
+}
+
+/**
+ * Bruma baja: un anillo con alfa por vértice (Niebla) que vela las colinas y la base de las nubes, más densa pegada al horizonte.
+ * Un solo mesh traslúcido que prueba profundidad sin escribirla: lo más cercano que 186 m lo tapa y solo vela el cielo y lo muy lejano. Cuelga de la cúpula.
+ */
+export function createHaze(color: number, radius = 186): THREE.Mesh {
+  const seg = 48;
+  const rows = [
+    [-30, 0.0],
+    [0, 0.0],
+    [5, 0.42],
+    [18, 0.2],
+    [44, 0.0],
+  ] as const;
+  const c = new THREE.Color(color);
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  for (const [y, a] of rows) {
+    for (let i = 0; i <= seg; i++) {
+      const t = (i / seg) * Math.PI * 2;
+      pos.push(Math.cos(t) * radius, y, Math.sin(t) * radius);
+      col.push(c.r, c.g, c.b, a);
+    }
+  }
+  for (let r = 0; r < rows.length - 1; r++) {
+    for (let i = 0; i < seg; i++) {
+      const a = r * (seg + 1) + i;
+      const b = a + seg + 1;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.DoubleSide, fog: false, depthTest: true, depthWrite: false }),
+  );
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 2;
+  mesh.name = "bruma";
   return mesh;
 }
 

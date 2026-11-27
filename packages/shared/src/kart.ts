@@ -2,7 +2,7 @@
 // El comportamiento imita a los juegos de karts de referencia; ver docs/FISICAS.md.
 
 import type { Surface } from "./track";
-import { BANK, ITEMS, KART, RAMP, SLOPE, SURFACE, type KartTuning, type RampSize } from "./tuning";
+import { BANK, ITEMS, KART, PADS, RAMP, SLOPE, SURFACE, TRI_RAIL, isPadType, type KartTuning, type RampSize } from "./tuning";
 
 export interface KartInput {
   /** -1 (izquierda) .. 1 (derecha). */
@@ -46,6 +46,11 @@ export interface KartState {
   /** Turbo restante (s) y su fuerza (multiplicador de velocidad punta). */
   boostTime: number;
   boostMult: number;
+  /**
+   * Raíl triturbo: tiempo restante (s) del ×3. Va aparte del turbo normal para que ningún otro turbo
+   * (naranja, nitro…) pueda alargar el ×3 con su duración (ver `giveBoost`: gana el mayor y dura lo mayor).
+   */
+  triTime: number;
   /** Trompo restante (s): sin control y frenando. */
   spinTime: number;
   /** Escudo restante (s). */
@@ -73,6 +78,8 @@ export interface KartState {
   rampSize: RampSize | null;
   /** Rampa que originó el vuelo, para el truco al aterrizar. */
   flightRamp: RampSize | null;
+  /** La rampa que originó el vuelo es una rampa-mueble (turbo al aterrizar). */
+  flightLandBoost: boolean;
   /** El piloto pidió el truco durante este salto. */
   trick: boolean;
   /** El último choque fue contra el muro exterior de un peralte. */
@@ -104,6 +111,7 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     driftHeld: false,
     boostTime: 0,
     boostMult: 1,
+    triTime: 0,
     spinTime: 0,
     shieldTime: 0,
     surface: "road",
@@ -117,6 +125,7 @@ export function createKart(x = 0, z = 0, heading = 0): KartState {
     groundY: 0,
     rampSize: null,
     flightRamp: null,
+    flightLandBoost: false,
     trick: false,
     outsideWall: false,
     along: -1,
@@ -155,6 +164,11 @@ export function hopHeight(s: KartState, t: KartTuning = KART): number {
 function startHop(s: KartState, duration: number) {
   s.hopTime = duration;
   s.hopTotal = duration;
+}
+
+/** ¿Hay algún turbo en marcha (incluido el raíl triturbo)? */
+export function isBoosting(s: KartState): boolean {
+  return s.boostTime > 0 || s.triTime > 0;
 }
 
 /** Da un turbo: dura al menos `time` s y se queda con la fuerza mayor. */
@@ -206,6 +220,7 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
     s.hopTime = 0;
     s.hopTotal = 0;
     s.boostTime = 0;
+    s.triTime = 0;
     s.speed = approach(s.speed, 0, ITEMS.spinDecel * dt);
     if (s.airborne) fly(s, dt);
     s.x += Math.sin(s.heading) * s.speed * dt;
@@ -216,6 +231,8 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   const steer = Math.max(-1, Math.min(1, input.steer));
   const icy = s.surface === "lowGrip";
   if (s.surface === "boostPad") giveBoost(s, SURFACE.boostPadTime, SURFACE.boostPadMult);
+  else if (s.surface === "boostTri") s.triTime = PADS.boostTri.time;
+  else if (isPadType(s.surface)) giveBoost(s, PADS[s.surface].time, PADS[s.surface].mult);
   // Rampa sin tamaño: salto de duración fija. Con tamaño, el vuelo lo dispara la pista en el labio.
   if (
     s.surface === "ramp" &&
@@ -250,15 +267,20 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   if (s.hopTime > 0) s.hopTime = Math.max(0, s.hopTime - dt);
 
   // --- Velocidad ---
-  const boosting = s.boostTime > 0;
+  const boosting = isBoosting(s);
   const terrain = s.surface === "offroad" ? SURFACE.offroadSpeedMult : s.surface === "slow" ? SURFACE.slowSpeedMult : 1;
   const normalTop = t.maxSpeed * terrain * (s.driftDir !== 0 ? 1 - t.driftSpeedLoss : 1);
-  const topSpeed = boosting ? t.maxSpeed * s.boostMult : normalTop;
+  const topSpeed = boosting ? t.maxSpeed * (s.triTime > 0 ? Math.max(s.boostMult, PADS.boostTri.mult) : s.boostMult) : normalTop;
+  // Por encima de la punta del naranja solo se llega con el raíl triturbo: al acabarse, frena suave (no a `boostAccel`).
+  const overNaranja = s.speed > t.maxSpeed * PADS.boostOrange.mult;
 
   if (boosting) {
-    s.speed = approach(s.speed, topSpeed, t.boostAccel * dt);
-    s.boostTime = Math.max(0, s.boostTime - dt);
-    if (s.boostTime === 0) s.boostMult = 1;
+    s.speed = approach(s.speed, topSpeed, (s.speed > topSpeed && overNaranja ? TRI_RAIL.decel : t.boostAccel) * dt);
+    s.triTime = Math.max(0, s.triTime - dt);
+    if (s.boostTime > 0) {
+      s.boostTime = Math.max(0, s.boostTime - dt);
+      if (s.boostTime === 0) s.boostMult = 1;
+    }
   } else if (input.brake) {
     if (s.speed > 0.5) s.speed = Math.max(0, s.speed - t.brake * dt);
     else s.speed = approach(s.speed, -t.maxReverse, t.reverseAccel * dt);
@@ -274,7 +296,7 @@ export function stepKart(s: KartState, input: KartInput, dt: number, t: KartTuni
   }
   // Tras acabar el turbo, volver suavemente a la velocidad punta normal.
   if (!boosting && s.speed > topSpeed) {
-    const decel = terrain < 1 ? SURFACE.roughDecel : t.coastDrag * 2;
+    const decel = terrain < 1 ? SURFACE.roughDecel : overNaranja ? TRI_RAIL.decel : t.coastDrag * 2;
     s.speed = approach(s.speed, topSpeed, decel * dt);
   }
   // Cuesta: solo si la pista ha escrito una pendiente. En llano (grade 0) no cambia la punta.

@@ -7,8 +7,8 @@ import {
   DEFAULT_CHARACTER,
   DEFAULT_KART,
   DEFAULT_TRACK,
-  KART,
   KART_COLORS,
+  MAX_PLAUSIBLE_SPEED,
   MAX_PLAYERS,
   MIN_PLAYERS,
   RACE,
@@ -50,8 +50,8 @@ import {
 
 /** Segundos que se espera a los demás cuando alguien ya ha llegado a meta. */
 export const FINISH_GRACE = 30;
-/** Más rápido que esto (m/s) entre dos estados es un salto sospechoso: no cuenta para el progreso. */
-const MAX_PLAUSIBLE_SPEED = KART.maxSpeed * 2;
+/** Más rápido que esto (m/s) entre dos estados es un salto sospechoso (ver `MAX_PLAUSIBLE_SPEED`: el raíl triturbo llega a 78). */
+export { MAX_PLAUSIBLE_SPEED };
 /** Subpasos de la simulación de objetos por cada tick del servidor (para que los cohetes no se salten a nadie). */
 const ITEM_SUBSTEPS = 3;
 const ITEM_ACTIONS: readonly ItemAction[] = ["use", "forward", "back"];

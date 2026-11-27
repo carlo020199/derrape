@@ -233,6 +233,39 @@
         "arboles": 38,
         "pilotoYkartCerca": 9754
       }
+    },
+    "c7_asfaltoYLaderas": {
+      "fecha": "2026-11-27",
+      "cambio": "Asfalto con rodadas, manchas de aceite y borde oscuro (shader, atributo aRoad); parches de color en el terreno (shader) y ~110 grupos de rocas pequeñas instanciadas (1 llamada, ~3 700 tris). Nubes: ya tenían borde claro (cdb652a), sin tocar.",
+      "antes": {
+        "lagunaLlamadas": 53,
+        "lagunaTriangulos": 86082
+      },
+      "despues": {
+        "lagunaLlamadas": 54,
+        "lagunaTriangulos": 89762,
+        "renderInfoCapturas": {
+          "llamadas": "46–62",
+          "triangulos": "96 136–103 280"
+        }
+      },
+      "pendiente": "fps reales en iPhone/Android: pendiente de prueba en dispositivo"
+    },
+    "pulidoT3": {
+      "fecha": "2026-11-27",
+      "nota": "Vueltas de la noche del 27/11: farolillos con tapas de Sombra y halo suave, bruma baja, neumáticos con aro de flanco, escape con más sprites, HUD sin «/4», nubes de tres bandas, campanario ×2,1, 3 árboles grandes a la derecha de la salida.",
+      "lagunaLlamadas": 55,
+      "lagunaTriangulos": 92688,
+      "rendererInfoCapturas": {
+        "llamadas": "48–64",
+        "triangulos": "99 582–106 702 (máximo en d-laguna)"
+      },
+      "antes": {
+        "lagunaLlamadas": 54,
+        "lagunaTriangulos": 89762
+      },
+      "dentroDePresupuesto": true,
+      "fps": "pendiente de prueba en dispositivo"
     }
   }
 }

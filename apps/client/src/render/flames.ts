@@ -214,11 +214,11 @@ export function paintExhaust(
 ) {
   const boost = mode === "boost";
   const turbo = boost || mode === "drift";
-  // Reposo: Llama en la boca, Brasa en medio y Ascua en la punta. Turbo: Espectro con borde Ánima.
+  // Reposo: Llama en la boca y Brasa en medio y en la punta (el Ascua rojo sumado al morado de fondo viraba a rosa). Turbo: Espectro con borde Ánima.
   const core = turbo ? PALETTE.espectro : PALETTE.llama;
   const mid = turbo ? PALETTE.espectro : PALETTE.brasa;
-  const edge = turbo ? PALETTE.anima : PALETTE.ascua;
-  const n = boost ? 8 : 6;
+  const edge = turbo ? PALETTE.anima : PALETTE.brasa;
+  const n = boost ? 12 : 9;
   _side.set(dir.z, 0, -dir.x);
   if (_side.lengthSq() < 1e-4) _side.set(1, 0, 0);
   _side.normalize();

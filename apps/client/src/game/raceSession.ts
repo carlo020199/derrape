@@ -25,6 +25,7 @@ import {
   findKart,
   formatTime,
   giveBoost,
+  isBoosting,
   gridPose,
   hopHeight,
   needsRespawn,
@@ -391,9 +392,24 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     const at = pointAt(track, d ?? 0, lat ?? 0);
     const s = createKart(at.x, at.z, at.heading + ((giro ?? 0) * Math.PI) / 180);
     player.race = createRaceKart(player.race.id, s, track);
+    // &turbo=1: el kart de la foto sale con turbo (para ver el fuego del escape).
+    if (new URLSearchParams(location.search).get("turbo")) player.race.state.boostTime = 1e6;
     player.prev = { ...s };
     countdown = -1e6;
-    (window as unknown as { __escena: unknown }).__escena = { scene, camera, renderer };
+    // ?correr (con ?foto): sin cuenta atrás, el kart conduce desde ese punto (smoke de rampas y turbos).
+    const correr = new URLSearchParams(location.search).get("correr");
+    if (correr !== null) phase = "racing";
+    // ?correr=bot: el piloto automático conduce al jugador (el smoke recorre rampas sin dedo).
+    if (correr === "bot") player.bot = { lane: 0, lookAhead: 12 };
+    // `kart` (solo con ?foto): estado vivo del kart, para que el smoke compruebe saltos y turbos.
+    (window as unknown as { __escena: unknown }).__escena = {
+      scene,
+      camera,
+      renderer,
+      get kart() {
+        return player.race.state;
+      },
+    };
     // Los demás, detrás de la cámara.
     locals.filter((r) => r !== player).forEach((r, i) => {
       const b = pointAt(track, ((d ?? 0) - 40 - i * 8 + track.length) % track.length);
@@ -593,7 +609,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
       hop: hopHeight(s),
       y: player.y,
       vy: s.vy,
-      boosting: s.boostTime > 0,
+      boosting: isBoosting(s),
       spinning: s.spinTime > 0,
       shield: s.shieldTime > 0,
       respawns: player.respawns,
@@ -912,7 +928,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
           driftSteer: s.driftSteer,
           level: driftLevel(s),
           spinning: s.spinTime > 0,
-          boosting: s.boostTime > 0,
+          boosting: isBoosting(s),
           shield: s.shieldTime > 0,
           shieldLeft: s.shieldTime,
           finished: r.progress.finishTime !== null,
@@ -987,7 +1003,7 @@ export function createRaceSession(view: GameView, opts: SessionOptions): RaceSes
     ];
     minimap.draw(dots, 0, track);
 
-    updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), me.boostTime > 0);
+    updateHud(Math.abs(me.speed) * 3.6, driftLevel(me), isBoosting(me));
     if (online) updateItemSlot(serverMe?.item ?? null, serverMe?.rolling ?? false, time);
     else updateItemSlot(player.race.item, player.race.rollTime > 0, time);
     updateRaceHud();

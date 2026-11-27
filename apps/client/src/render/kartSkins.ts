@@ -26,7 +26,9 @@ export interface BuiltKartSkin {
 function wheel(p: Parts, r: number, w: number, x: number, z: number, rim: number) {
   const sign = Math.sign(x || 1);
   const tube = r * 0.36;
-  p.add(new THREE.TorusGeometry(r * 0.66, tube, 8, 14), TYRE, [x, r, z], [0, half, 0], [1, 1, w / (2 * tube)]);
+  p.add(new THREE.TorusGeometry(r * 0.66, tube, 6, 14), TYRE, [x, r, z], [0, half, 0], [1, 1, w / (2 * tube)]);
+  // Aro de flanco en morado medio (#4A3F66): da volumen y lee la rueda como neumático, no como mancha negra (3×12 = 72 triángulos).
+  p.add(new THREE.TorusGeometry(r * 0.86, r * 0.06, 3, 12), 0x4a3f66, [x + sign * w * 0.4, r, z], [0, half, 0]);
   p.add(new THREE.CylinderGeometry(r * 0.5, r * 0.5, w * 0.56, 12), rim, [x + sign * w * 0.18, r, z], [0, 0, half]);
   p.add(new THREE.CylinderGeometry(r * 0.2, r * 0.2, w * 0.64, 6), NOCHE, [x + sign * w * 0.18, r, z], [0, 0, half]);
   p.add(new THREE.SphereGeometry(r * 0.2, 6, 4), HUESO, [x + sign * w * 0.47, r, z], [0, 0, 0], [0.4, 1, 1]);
