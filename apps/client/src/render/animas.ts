@@ -312,7 +312,7 @@ function boostMarks(track: Track) {
  * más un óvalo bajo el salto. `aCentre` vale 1 en el eje y 0 en la orilla (color y espuma).
  * Las posiciones están en mundo (x, z); el mesh solo pone la altura.
  */
-const FAR_LIFT = 74;
+const FAR_LIFT = 22;
 
 export interface LagoonShape {
   mid: { x: number; z: number };
@@ -323,8 +323,8 @@ export interface LagoonShape {
 }
 
 export function lagoonShape(mid: { x: number; z: number }, end: { x: number; z: number }): LagoonShape {
-  const rx = 78;
-  const rz = 38;
+  const rx = 62;
+  const rz = 72;
   const dx = end.x - mid.x;
   const dz = end.z - mid.z;
   const len = Math.hypot(dx, dz) || 1;
@@ -349,16 +349,16 @@ export function lagoonShape(mid: { x: number; z: number }, end: { x: number; z: 
   // salida, y entra en el óvalo por debajo de la calzada (el talud lo tapa).
   const far = new THREE.CatmullRomCurve3(
     [
-      [-300, 400, 45],
-      [-170, 360, 50],
-      [-60, 342, 56],
-      [40, 336, 52],
-      [60, 290, 36],
+      [-300, 440, 45],
+      [-170, 400, 50],
+      [-60, 382, 56],
+      [40, 376, 52],
+      [60, 300, 36],
       [mid.x + 6, 250, 24],
       [mid.x, mid.z + rz * 0.6, 14],
     ].map(([x, z]) => new THREE.Vector3(x, 0, z)),
   );
-  const halfs = [80, 90, 98, 90, 58, 32, 14];
+  const halfs = [60, 68, 76, 70, 44, 26, 14];
   const arm: LagoonShape["rivers"][number] = [];
   for (let i = 0; i <= 40; i++) {
     const t = i / 40;
@@ -469,7 +469,20 @@ export function terrainHeightField(track: Track, shape: LagoonShape, waterY: num
     const lat = THREE.MathUtils.clamp(c.lateral, -edge, edge);
     let out = Math.max(0, Math.abs(c.lateral) - edge);
     const roadY = surfaceY({ y: c.y, lateral: lat, bank: c.bank });
-    let h = roadY - 1.0 - out * 0.42;
+    // Arcén ancho en la recta de salida: el terreno sigue casi a la altura de la calzada 7 m más allá del borde antes de bajar, así los
+    // laterales de la primera toma tienen suelo donde plantar y no una caída oscura bajo el borde.
+    const shoulder = c.distance < track.length / 2 ? 1 - THREE.MathUtils.smoothstep(c.distance, 95, 135) : THREE.MathUtils.smoothstep(c.distance, track.length - 80, track.length - 40);
+    let h = roadY - 1.0 - Math.max(0, out - 7 * shoulder) * 0.42;
+    // Lomas bajas pegadas a la calzada (3–6 m de alto, a 8–25 m del borde, con huecos; el borde queda siempre por debajo de la calzada): rompen la franja de asfalto y oscuridad de los laterales
+    // y dan donde plantar los arbolillos a la altura de la cámara. No se levantan junto a la laguna ni bajo los saltos.
+    {
+      const lump = vnoise(c.distance * 0.045 + (c.lateral < 0 ? 40 : 0), 3.7);
+      const berm = THREE.MathUtils.smoothstep(out, 8, 12) * (1 - THREE.MathUtils.smoothstep(out, 18, 25)) * THREE.MathUtils.smoothstep(lump, 0.28, 0.5);
+      let airborne = 0;
+      for (const zn of track.zones) if (zn.type === "ramp" || zn.type === "fall") airborne = Math.max(airborne, 1 - THREE.MathUtils.smoothstep(Math.max(0, zn.from - 25 - c.distance, c.distance - zn.to - 25), 0, 20));
+      const lagoonFar = THREE.MathUtils.smoothstep(lagoonDistance(shape, x, z).d, 8, 22);
+      h += berm * (3 + 3 * vnoise(c.distance * 0.11, 9.1)) * (1 - airborne) * lagoonFar;
+    }
     // Otros tramos de pista (por debajo o por encima): el terreno no los tapa ni los deja flotando.
     for (const q of samples) {
       let sep = Math.abs(q.d - c.distance);
@@ -484,11 +497,12 @@ export function terrainHeightField(track: Track, shape: LagoonShape, waterY: num
     const bumps = vnoise(x * 0.045, z * 0.045) * 0.65 + vnoise(x * 0.11, z * 0.11) * 0.35;
     h += amp * bumps * THREE.MathUtils.smoothstep(out, 8, 42);
     const { d, lift } = lagoonDistance(shape, x, z);
-    h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * 0.45);
+    // Junto a la recta de salida la orilla cae en talud empinado: el arcén ancho de arriba se conserva.
+    h = Math.min(h, waterY + lift - 1.2 + Math.max(0, d) * (0.45 + 1.4 * shoulder));
     // Isla-colina del campanario, al final del río: el agua la rodea.
     if (hill) {
       const hd = Math.hypot(x - hill.x, z - hill.z);
-      if (hd < 40) h = Math.max(h, hill.top - Math.max(0, hd - 7) * 0.6);
+      if (hd < 30) h = Math.max(h, hill.top - Math.max(0, hd - 7) * 0.5);
     }
     // El piso nunca puede quedar por encima de la calzada cercana (el peralte la baja más que groundY).
     return Math.max(h, Math.min(groundY - 0.3, roadY - 1.0));
@@ -673,7 +687,6 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   // Campanario a un lado de la recta, a unos 50 m de la parrilla: silueta entera, no un muro en la cámara.
   // Se asienta sobre el terreno (ver más abajo), que abraza la pista y ya hace de cerro.
   const spot = pointAt(track, 92, 16);
-  const road = pointAt(track, 92, 0);
   const towerFoot = { x: spot.x, z: spot.z };
   const placeTower = (groundY: number) => {
     const tower = new THREE.Mesh(campanarioGeometry(), bone);
@@ -760,10 +773,10 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
     const waterY = low - 1.8;
     // El óvalo queda en el interior del gancho que forma la pista, entre la recta de salida y el salto.
     const lip2 = pointAt(track, big.to);
-    const mid = { x: (towerFoot.x + lip2.x) / 2 - 2, z: Math.max(towerFoot.z, lip2.z) + 15 };
+    const mid = { x: (towerFoot.x + lip2.x) / 2 + 6, z: Math.max(towerFoot.z, lip2.z) - 56 };
     const shape = lagoonShape(mid, towerFoot);
     const lagoon = new THREE.Mesh(lagoonGeometry(shape), lagoonMaterial());
-    const height = terrainHeightField(track, shape, waterY, GROUND_Y, { x: spot.x, z: spot.z, top: road.y - 6 });
+    const height = terrainHeightField(track, shape, waterY, GROUND_Y, { x: spot.x, z: spot.z, top: waterY + 14 });
     for (const chunk of terrainMeshes(height, GROUND_Y, animasTerrainMaterial())) scene.add(chunk);
     placeTower(height(towerFoot.x, towerFoot.z));
     towerPlaced = true;
