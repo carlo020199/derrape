@@ -9,7 +9,7 @@
 
 import { smoothTrack } from "../track";
 import { TRI_RAIL } from "../tuning";
-import type { TrackDef, ZoneDef } from "./types";
+import type { PaintedAreaDef, TrackDef, ZoneDef } from "./types";
 
 /** Escala del plano del boceto (0,8 da vuelta de ≈74 s; con menos las eses no caben). */
 const S = 0.8;
@@ -165,6 +165,16 @@ const voids: ZoneDef[] = [1, -1].map((side) => ({
   lateralMax: side > 0 ? 40 : -PLATFORM.edge,
 }));
 
+/**
+ * Asfalto pintado decorativo (fase 5): dos escapatorias en los huecos interiores del sur, sin efecto de juego.
+ * Rosa = triángulo dentro de la curva grande G; morada = trapecio entre la horquilla/diagonal F y la recta inferior H.
+ * Quedan a ≥ 17 m del eje (el muro está a 14 m): un test lo comprueba.
+ */
+const paint: PaintedAreaDef[] = [
+  { kind: "rosa", points: [{ x: -103.2, z: -174.4 }, { x: -143.2, z: -198.4 }, { x: -110.4, z: -224 }] },
+  { kind: "morada", points: [{ x: 56, z: -220 }, { x: 22, z: -219 }, { x: 24, z: -241 }, { x: 55, z: -241 }] },
+];
+
 const def: TrackDef = {
   id: "desvan-de-las-maravillas",
   name: "Desván de las Maravillas",
@@ -185,6 +195,7 @@ const def: TrackDef = {
       easeOut: PLATFORM.descentTo - PLATFORM.plateauTo,
     },
   ],
+  paint,
   seed: 4813,
 };
 

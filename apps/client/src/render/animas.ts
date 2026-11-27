@@ -5,6 +5,7 @@ import { PALETTE, animasTerrainMaterial, boneToonMaterial, sharedBoneToon, toonM
 import { createFences, createFireflies, createLanterns, createRocks, createTrees } from "./animasProps";
 import { groundBoostMesh } from "./groundBoost";
 import { furnitureMesh } from "./furniture";
+import { paintedAsphaltMesh } from "./paintedAsphalt";
 
 // Kit de Laguna de las Ánimas. Paleta del proyecto, formas redondas y toon.
 // Los faroles son una sola malla instanciada: el brillo es el color, sin luces reales.
@@ -808,4 +809,7 @@ export function decorateAnimas(scene: THREE.Object3D, track: Track, def: TrackDe
   // Rampas-mueble (Desván): cuñas de tablones o somier con muebles viejos al borde.
   const furniture = furnitureMesh(track);
   if (furniture) scene.add(furniture);
+  // Asfalto pintado decorativo (Desván): escapatorias rosa y morada fuera del muro, sin efecto de juego.
+  const painted = paintedAsphaltMesh(track, def);
+  if (painted) scene.add(painted);
 }

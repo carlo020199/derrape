@@ -1,4 +1,4 @@
-// Smoke del Desván de las Maravillas (fases 1 a 4: turbos de suelo, rampas-mueble, raíl triturbo, rampas gigantes y plataforma) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
+// Smoke del Desván de las Maravillas (fases 1 a 5: turbos de suelo, rampas-mueble, raíl triturbo, rampas gigantes, plataforma y asfalto pintado) en móvil 390×844 @2x: capturas fijas (?foto) y una práctica en solitario real
 // con un dedo simulado (CDP) mientras se vigilan los errores de consola.
 //
 // Uso (con el cliente en marcha: `npm run dev -w @derrape/client`):
@@ -9,7 +9,7 @@ import { chromium, type Page } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 
 const base = process.argv[2] ?? "http://localhost:5173";
-const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase4";
+const out = process.argv[3] ?? "/workspace/derrape-circuito-capturas/fase5";
 const TRACK = "desvan-de-las-maravillas";
 mkdirSync(out, { recursive: true });
 
@@ -37,7 +37,16 @@ const SHOTS = [
   // Vistas libres (?vista=x,y,z,mirax,miray,miraz con la niebla quitada): el tablero y la cuña desde fuera.
   { name: "26-plataforma-lateral", foto: "0,0,0&vista=-60,16,-310,-55,2,-262", libre: true },
   { name: "27-xl-cuna-lateral", foto: "0,0,0&vista=-150,14,-285,-112,1,-261", libre: true },
+  // Fase 5: asfalto pintado decorativo (zona rosa en el interior de la curva G, morada entre la diagonal F y la recta H).
+  { name: "31-rosa-cenital", foto: "0,0,0&vista=-119,70,-165,-119,0,-199", libre: true },
+  { name: "32-morada-cenital", foto: "0,0,0&vista=39,55,-195,39,0,-231", libre: true },
+  { name: "33-rosa-desde-pista", foto: "1236,-3,0" }, // en la curva G, con la zona rosa a la derecha
+  { name: "34-morada-desde-pista", foto: "1160,-5,0" }, // en la diagonal F, la morada queda al sur
+  { name: "35-rosa-lateral", foto: "0,0,0&vista=-60,14,-170,-119,0,-199", libre: true },
+  { name: "36-morada-lateral", foto: "0,0,0&vista=75,12,-215,39,0,-231", libre: true },
 ];
+// SOLO_CAPTURAS=1: solo las capturas fijas (para ajustar vistas rápido).
+const soloCapturas = process.env.SOLO_CAPTURAS === "1";
 
 const errors: string[] = [];
 const browser = await chromium.launch({
@@ -75,6 +84,12 @@ for (const shot of SHOTS) {
     return { ...e.renderer.info.render };
   });
   await page.close();
+}
+
+if (soloCapturas) {
+  await browser.close();
+  console.log(JSON.stringify({ errores: errors, renderer: info }, null, 1));
+  process.exit(errors.length ? 1 : 0);
 }
 
 // --- Vista general: cámara alta, sin niebla ---

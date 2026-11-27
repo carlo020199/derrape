@@ -65,6 +65,15 @@ export interface Landmark {
   scale?: number;
 }
 
+/**
+ * Área de asfalto pintado FUERA de la pista (como los logos de patrocinadores de las escapatorias de F1).
+ * Es solo decoración: no es zona de juego, `surfaceAt` no la conoce. Polígono convexo en coordenadas del mundo (x, z).
+ */
+export interface PaintedAreaDef {
+  kind: "rosa" | "morada";
+  points: { x: number; z: number }[];
+}
+
 export interface TrackDef {
   id: string;
   name: string;
@@ -78,6 +87,8 @@ export interface TrackDef {
   hazards?: HazardDef[];
   /** Plataformas elevadas de la propia pista (metros desde meta). */
   lifts?: LiftDef[];
+  /** Asfalto pintado decorativo (sin efecto de juego). */
+  paint?: PaintedAreaDef[];
   landmarks?: Landmark[];
   seed: number;
 }
