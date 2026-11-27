@@ -1,6 +1,6 @@
 ESTADO: PARCIAL
 
-> Continuación del T3 (orden de Carlo del 27/11: seguir mientras quede límite). La versión anterior (Hydrogen sin cuota, 26/11) sigue en el historial de git.
+> Estado a las 03:10 del 27/11. Continuación del T3 (orden de Carlo del 27/11: seguir mientras quede límite). La versión anterior (Hydrogen sin cuota, 26/11) sigue en el historial de git.
 
 ## Qué se ha hecho
 Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas de Lía+Hueso y Calavera Chispas+Medianoche, commit y push a `release/v1`).
@@ -24,17 +24,30 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 - **Vuelta 9 · color del fuego del escape (C5).** En reposo el borde de la llama era Ascua (#D9362B); sumado al fondo morado salía rosa/magenta (se veía sobre todo en Medianoche). Ahora Llama→Brasa→Brasa, todo naranja. Turbo (Espectro/Ánima) sin cambios.
 
 ## Archivos producidos (rutas absolutas)
-- /workspace/derrape-release/apps/client/src/render/animasProps.ts
-- /workspace/derrape-release/docs/release-v1/capturas/ y /workspace/derrape-release/docs/screenshots/release1/ (regeneradas en cada vuelta)
+- /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
+- /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
+- /workspace/derrape-release/apps/client/src/render/kartSkins.ts (aro de flanco de las ruedas) y flames.ts (+ flames.test.ts)
+- /workspace/derrape-release/apps/client/src/game/raceSession.ts (`&turbo=1` con `?foto=`) y scripts/capturas-release.ts (`EXTRA`)
+- /workspace/derrape-release/apps/client/src/style.css (HUD, fondo del inicio)
+- /workspace/derrape-release/medidas.json (`release1.pulidoT3`) y docs/release-v1/PENDIENTE.md
+- /workspace/derrape-release/docs/release-v1/capturas/ y /workspace/derrape-release/docs/screenshots/release1/ (regeneradas; incluye menu-inicio.png)
 
 ## Qué falta
-- Prueba de fps en iPhone/Android: pendiente de prueba en dispositivo.
+- Prueba de fps en iPhone/Android: **pendiente de prueba en dispositivo** (solo hay métricas proxy).
+- Laguna ancha visible desde la salida (C3 en `a`/`b`: 0,9 % / 1,5 %): requiere rediseñar el terreno o la calzada elevada; con la restricción «sin subir el terreno» no hay arreglo barato (en `d` pasa: 8,0 % / 7,3 %).
+- Árboles grandes en el lado izquierdo de la salida: taparían campanario y farolillos (falló el 25/11); solo se hizo el derecho.
+- Cortes del contorno en la coleta de Lía vistos de cerca (menor).
+- Nubes opacas (no traslúcidas): con discos solapados la mezcla alfa se vería doble.
 
 ## Cómo comprobarlo
-- `git log`, `npm test`, `npm run lint`, `npm run build`, `npm run medir`; mirar `docs/release-v1/capturas/a-salida.png`.
+- `git log --oneline -12` (una vuelta por commit), `npm test` (191), `npm run lint`, `npm run build`, `npm run medir` (Laguna 55 llamadas · 92 688 tris).
+- Ver `docs/release-v1/capturas/a-salida.png` (campanario, árbol derecho, farolillos, bruma), `b-recta-campanario.png`, `d-laguna.png` (nubes), `menu-inicio.png`, y las del piloto 2 en `capturas/calavera-chispas/`.
+- Fuego con turbo: `EXTRA="&turbo=1" FOTOS="x:14,0,0:k,3.5,0.9,110" npm run capturas -- http://localhost:5173 /tmp/x lia`.
 
 ## Bloqueos
-- Ninguno por ahora.
+- Ninguno. `git push origin release/v1` funciona; nada a main.
 
 ## Decisiones para Carlo
-- Ninguna nueva por ahora.
+- ¿Rediseñar el terreno/calzada para que la laguna se vea ancha desde la salida (C3 en `a`/`b`)? Ahora solo pasa en `d`.
+- ¿Te gustan los 3 árboles grandes del borde derecho de la salida? Si no, quitar el bloque «Tres árboles grandes» de `createTrees` en `animasProps.ts`.
+- Margen de presupuesto: las capturas de la Laguna llegan a 64 llamadas y 106 700 triángulos (4 karts); `medir` con 8 karts da 55 y 92 688. El límite del release es 110 000: queda poco para añadir más escenario.
