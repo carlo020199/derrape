@@ -43,6 +43,8 @@ Una entrada por vuelta (cada una: tests, lint, build, `npm run medir`, capturas 
 
 - **Por qué las nubes no necesitan ser traslúcidas.** El telón de fondo (cúpula, nubes, colinas) tiene que pintarse en el pase opaco, antes del mundo, para que el terreno lo tape bien; en ese pase no hay mezcla alfa. Lo único que la traslucidez aportaría es ver estrellas y luna a través de la nube, y los colores de la nube ya están elegidos contra el degradado del cielo. Se da por cerrado: no es una mejora pendiente.
 
+- **Cámara más alta en la salida (medido, sin aplicar).** Con la cámara de `a-salida` 0 / +3 / +6 m más alta y la misma mirada, la laguna sube de 0,87 % a 1,43 % y 2,33 %: ni con +6 m llega al 6 %, así que subir la cámara no compensa lo que cuesta en C1 y en jugabilidad. Además el criterio C3 de Dalí es «en a), b) **o** d) ≥ 6 %», y se cumple en `d-laguna` (8,0 % Lía / 7,3 % Calavera): la laguna de `a`/`b` es un deseo estético, no un incumplimiento.
+
 ## Archivos producidos (rutas absolutas)
 - /workspace/derrape-release/apps/client/src/render/animasProps.ts (farolillos, árboles grandes de la salida)
 - /workspace/derrape-release/apps/client/src/render/sky.ts (bruma `createHaze`, nubes de tres bandas) y animas.ts (bruma, campanario ×2,1)
